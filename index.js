@@ -1,16 +1,46 @@
+const express = require("express");
+const line = require("@line/bot-sdk");
+
+const app = express();
+
+const config = {
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_CHANNEL_SECRET,
+};
+
+const client = new line.Client(config);
+
+app.get("/", (req, res) => {
+  res.send("BlackDomain AI Running");
+});
+
+app.post("/webhook", line.middleware(config), async (req, res) => {
+  try {
+    await Promise.all(req.body.events.map(handleEvent));
+    res.status(200).end();
+  } catch (err) {
+    console.log(err);
+    res.status(500).end();
+  }
+});
+
 async function handleEvent(event) {
-  if (event.type !== "message" || event.message.type !== "text") {
+  if (event.type !== "message") {
+    return null;
+  }
+
+  if (event.message.type !== "text") {
     return null;
   }
 
   const userText = event.message.text.trim();
 
+  const randomResult = Math.random() < 0.5 ? "莊" : "閒";
+
   // 啟動
   if (
-    userText === "DG" ||
-    userText === "MT" ||
-    userText === "dg" ||
-    userText === "mt"
+    userText.toLowerCase() === "dg" ||
+    userText.toLowerCase() === "mt"
   ) {
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -28,15 +58,12 @@ async function handleEvent(event) {
     });
   }
 
-  // 房號判斷
-  const roomRegex =
-    /^(DG|dg|MT|mt)\s?(3A|3a|[0-9]{1,2})$/;
-
-  if (roomRegex.test(userText)) {
-
-    const randomResult =
-      Math.random() < 0.5 ? "莊" : "閒";
-
+  // 房號
+  if (
+    /^dg\s*\d+/i.test(userText) ||
+    /^mt\s*\d+/i.test(userText) ||
+    /^mt\s*3a/i.test(userText)
+  ) {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
@@ -56,29 +83,37 @@ ${randomResult}
     });
   }
 
-  // 莊閒和判斷
+  // 玩家輸入 莊閒和
   if (
     userText === "莊" ||
     userText === "閒" ||
     userText === "和"
   ) {
-
-    const randomResult =
-      Math.random() < 0.5 ? "莊" : "閒";
+    const nextResult = Math.random() < 0.5 ? "莊" : "閒";
 
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
-`目前建議：
-${randomResult}
+`━━━━━━━━━━
+🤖 黑域AI運算完成
+━━━━━━━━━━
 
-再進行下一顆`
+目前建議：
+${nextResult}
+
+請輸入目前開出：
+莊 / 閒 / 和`
     });
   }
 
-  // 其他訊息
   return client.replyMessage(event.replyToken, {
     type: "text",
-    text: "請輸入 DG / MT 啟動系統"
+    text: "請輸入 DG 或 MT 啟動系統",
   });
 }
+
+const port = process.env.PORT || 8080;
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
