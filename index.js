@@ -49,6 +49,57 @@ mt
 
 就回覆：
 
+━━━━━━━━━━const express = require("express");
+const line = require("@line/bot-sdk");
+const OpenAI = require("openai");
+
+const app = express();
+
+const config = {
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_CHANNEL_SECRET,
+};
+
+const client = new line.Client(config);
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+app.get("/", (req, res) => {
+  res.send("BlackDomain AI is running.");
+});
+
+app.post("/webhook", line.middleware(config), async (req, res) => {
+  try {
+    await Promise.all(req.body.events.map(handleEvent));
+    res.status(200).end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).end();
+  }
+});
+
+async function handleEvent(event) {
+  if (event.type !== "message" || event.message.type !== "text") {
+    return null;
+  }
+
+  const userText = event.message.text;
+
+  const prompt = `
+你是「黑域AI」，一個專門分析百家樂牌路的AI系統。
+
+規則：
+
+1. 使用者只要輸入：
+DG
+MT
+dg
+mt
+
+就回覆：
+
 ━━━━━━━━━━
 🤖 黑域AI已啟動
 ━━━━━━━━━━
@@ -80,9 +131,6 @@ dg 66
 目前建議：
 莊 或 閒
 
-信號強度：
-75%~98% 隨機
-
 請輸入目前開出：
 莊 / 閒
 
@@ -96,18 +144,12 @@ dg 66
 目前建議：
 莊
 
-信號強度：
-88%
-
 再進行下一顆
 
 或
 
 目前建議：
 閒
-
-信號強度：
-91%
 
 再進行下一顆
 
