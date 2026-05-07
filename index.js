@@ -29,9 +29,13 @@ function randomPick(arr) {
 }
 
 function getPredictionDate() {
+
   const now = new Date();
+
   const taiwanNow = new Date(
-    now.toLocaleString("en-US", { timeZone: "Asia/Taipei" })
+    now.toLocaleString("en-US", {
+      timeZone: "Asia/Taipei"
+    })
   );
 
   const targetDate = new Date(
@@ -41,102 +45,181 @@ function getPredictionDate() {
   );
 
   const hour = taiwanNow.getHours();
+  const minute = taiwanNow.getMinutes();
   const day = taiwanNow.getDay();
 
+  // 星期日直接預測星期一
   if (day === 0) {
-    targetDate.setDate(targetDate.getDate() + 1);
-  } else if (hour >= 20) {
-    targetDate.setDate(targetDate.getDate() + 1);
 
+    targetDate.setDate(
+      targetDate.getDate() + 1
+    );
+
+  }
+
+  // 晚上20:20後預測隔天
+  else if (
+    hour > 20 ||
+    (hour === 20 && minute >= 20)
+  ) {
+
+    targetDate.setDate(
+      targetDate.getDate() + 1
+    );
+
+    // 如果隔天是星期日
     if (targetDate.getDay() === 0) {
-      targetDate.setDate(targetDate.getDate() + 1);
+
+      targetDate.setDate(
+        targetDate.getDate() + 1
+      );
     }
   }
 
   const y = targetDate.getFullYear();
-  const m = String(targetDate.getMonth() + 1).padStart(2, "0");
-  const d = String(targetDate.getDate()).padStart(2, "0");
+
+  const m = String(
+    targetDate.getMonth() + 1
+  ).padStart(2, "0");
+
+  const d = String(
+    targetDate.getDate()
+  ).padStart(2, "0");
 
   return `${y}/${m}/${d}`;
 }
 
 function generate539Numbers(mode) {
+
   let pool;
 
   if (mode === "hot") {
-    pool = [3, 5, 8, 11, 13, 16, 19, 22, 27, 31, 33, 36, 38, 39];
+
+    pool = [
+      3,5,8,11,13,16,19,
+      22,27,31,33,36,38,39
+    ];
+
   } else if (mode === "cold") {
-    pool = [1, 4, 6, 9, 12, 15, 18, 21, 24, 26, 29, 32, 34, 37];
+
+    pool = [
+      1,4,6,9,12,15,18,
+      21,24,26,29,32,34,37
+    ];
+
   } else {
-    pool = [2, 5, 7, 10, 13, 17, 20, 23, 25, 28, 30, 33, 35, 38, 39];
+
+    pool = [
+      2,5,7,10,13,17,20,
+      23,25,28,30,33,35,38,39
+    ];
   }
 
   const numbers = [];
 
   while (numbers.length < 5) {
+
     let n;
 
     if (Math.random() < 0.7) {
+
       n = randomPick(pool);
+
     } else {
-      n = Math.floor(Math.random() * 39) + 1;
+
+      n =
+        Math.floor(Math.random() * 39) + 1;
     }
 
     if (!numbers.includes(n)) {
+
       numbers.push(n);
     }
   }
 
   return numbers
     .sort((a, b) => a - b)
-    .map((n) => String(n).padStart(2, "0"));
+    .map((n) =>
+      String(n).padStart(2, "0")
+    );
 }
 
 async function handleEvent(event) {
-  if (event.type !== "message") return null;
-  if (event.message.type !== "text") return null;
 
-  const userText = event.message.text.trim();
-  const lowerText = userText.toLowerCase();
+  if (event.type !== "message")
+    return null;
 
-  const bankerPlayer = randomPick(["莊", "閒"]);
+  if (event.message.type !== "text")
+    return null;
 
+  const userText =
+    event.message.text.trim();
+
+  const lowerText =
+    userText.toLowerCase();
+
+  const bankerPlayer =
+    randomPick(["莊", "閒"]);
+
+  // 百家樂
   if (userText === "百家樂") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
 `━━━━━━━━━━
 ⚡ 黑域AI已啟動
 ━━━━━━━━━━
 
-請選擇遊戲：`,
-      quickReply: {
-        items: [
-          {
-            type: "action",
-            action: {
-              type: "message",
-              label: "DG",
-              text: "DG"
+請選擇遊戲：
+
+• DG
+• MT`,
+
+        quickReply: {
+          items: [
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "DG",
+                text: "DG"
+              }
+            },
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "MT",
+                text: "MT"
+              }
             }
-          },
-          {
-            type: "action",
-            action: {
-              type: "message",
-              label: "MT",
-              text: "MT"
-            }
-          }
-        ]
+
+          ]
+        }
       }
-    });
+    );
   }
 
-  if (lowerText === "dg" || lowerText === "mt") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
+  // DG / MT
+  if (
+    lowerText === "dg" ||
+    lowerText === "mt"
+  ) {
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
 `━━━━━━━━━━
 🤖 黑域AI已啟動
 ━━━━━━━━━━
@@ -156,54 +239,82 @@ DG S01 ~ S07
 範例：
 DG RB01
 MT 3A`
-    });
+      }
+    );
   }
 
-  if (userText === "電子" || userText === "電子AI") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
+  // 電子AI
+  if (
+    userText === "電子" ||
+    userText === "電子AI"
+  ) {
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
 `━━━━━━━━━━
 ⚡ 黑域電子AI已啟動
 ━━━━━━━━━━
 
-請選擇遊戲：`,
-      quickReply: {
-        items: [
-          {
-            type: "action",
-            action: {
-              type: "message",
-              label: "戰神賽特1",
-              text: "戰神賽特1"
+請選擇遊戲：
+
+• 戰神賽特1
+• 戰神賽特2`,
+
+        quickReply: {
+          items: [
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "戰神賽特1",
+                text: "戰神賽特1"
+              }
+            },
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "戰神賽特2",
+                text: "戰神賽特2"
+              }
             }
-          },
-          {
-            type: "action",
-            action: {
-              type: "message",
-              label: "戰神賽特2",
-              text: "戰神賽特2"
-            }
-          }
-        ]
+
+          ]
+        }
       }
-    });
+    );
   }
 
-  if (userText === "戰神賽特1" || userText === "戰神賽特2") {
-    const room = Math.floor(Math.random() * 3500) + 1;
-    const suggestion = randomPick([
-      "可進場",
-      "不可進場",
-      "數據偏弱",
-      "數據中等",
-      "數據偏強"
-    ]);
+  // 電子同步
+  if (
+    userText === "戰神賽特1" ||
+    userText === "戰神賽特2"
+  ) {
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
+    const room =
+      Math.floor(Math.random() * 3500) + 1;
+
+    const suggestion =
+      randomPick([
+        "可進場",
+        "數據中等",
+        "數據偏強"
+      ]);
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
 `━━━━━━━━━━
 ⚡ 黑域電子AI同步完成
 ━━━━━━━━━━
@@ -219,56 +330,89 @@ ${room}
 
 目前建議：
 ${suggestion}`
-    });
+      }
+    );
   }
 
-  if (userText === "539" || userText === "539AI" || userText === "539 AI") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
+  // 539
+  if (
+    userText === "539" ||
+    userText === "539AI" ||
+    userText === "539 AI"
+  ) {
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
 `━━━━━━━━━━
 📊 黑域539AI已啟動
 ━━━━━━━━━━
 
-請選擇模式：`,
-      quickReply: {
-        items: [
-          {
-            type: "action",
-            action: {
-              type: "message",
-              label: "539穩定",
-              text: "539穩定"
+請選擇模式：
+
+• 539穩定
+• 539熱號
+• 539冷號
+
+系統將開始同步號碼波動資料。`,
+
+        quickReply: {
+          items: [
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "539穩定",
+                text: "539穩定"
+              }
+            },
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "539熱號",
+                text: "539熱號"
+              }
+            },
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "539冷號",
+                text: "539冷號"
+              }
             }
-          },
-          {
-            type: "action",
-            action: {
-              type: "message",
-              label: "539熱號",
-              text: "539熱號"
-            }
-          },
-          {
-            type: "action",
-            action: {
-              type: "message",
-              label: "539冷號",
-              text: "539冷號"
-            }
-          }
-        ]
+
+          ]
+        }
       }
-    });
+    );
   }
 
+  // 539穩定
   if (userText === "539穩定") {
-    const nums = generate539Numbers("stable");
-    const predictionDate = getPredictionDate();
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
+    const nums =
+      generate539Numbers("stable");
+
+    const predictionDate =
+      getPredictionDate();
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
 `━━━━━━━━━━
 📊 539 AI穩定模式
 ━━━━━━━━━━
@@ -288,16 +432,25 @@ ${nums.join("　")}
 ${nums[1]} / ${nums[3]}
 
 ⚠️ 僅供娛樂分析參考`
-    });
+      }
+    );
   }
 
+  // 539熱號
   if (userText === "539熱號") {
-    const nums = generate539Numbers("hot");
-    const predictionDate = getPredictionDate();
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
+    const nums =
+      generate539Numbers("hot");
+
+    const predictionDate =
+      getPredictionDate();
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
 `━━━━━━━━━━
 🔥 539 AI熱號模式
 ━━━━━━━━━━
@@ -317,16 +470,25 @@ ${nums.join("　")}
 ${nums[0]} / ${nums[2]} / ${nums[4]}
 
 ⚠️ 僅供娛樂分析參考`
-    });
+      }
+    );
   }
 
+  // 539冷號
   if (userText === "539冷號") {
-    const nums = generate539Numbers("cold");
-    const predictionDate = getPredictionDate();
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
+    const nums =
+      generate539Numbers("cold");
+
+    const predictionDate =
+      getPredictionDate();
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
 `━━━━━━━━━━
 📉 539 AI冷號模式
 ━━━━━━━━━━
@@ -346,17 +508,33 @@ ${nums.join("　")}
 ${nums[1]} / ${nums[4]}
 
 ⚠️ 僅供娛樂分析參考`
-    });
+      }
+    );
   }
 
-  const isValidMT = /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(userText);
-  const isValidDG = /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i.test(userText);
-  const isWrongRoom = /^mt/i.test(userText) || /^dg/i.test(userText);
+  // MT房間
+  const isValidMT =
+    /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i
+    .test(userText);
 
+  // DG房間
+  const isValidDG =
+    /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i
+    .test(userText);
+
+  const isWrongRoom =
+    /^mt/i.test(userText) ||
+    /^dg/i.test(userText);
+
+  // 百家樂同步
   if (isValidMT || isValidDG) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
 `━━━━━━━━━━
 🤖 黑域AI同步完成
 ━━━━━━━━━━
@@ -370,22 +548,38 @@ ${bankerPlayer}
 
 請輸入目前開出：
 莊 / 閒 / 和`
-    });
+      }
+    );
   }
 
+  // 查無房間
   if (isWrongRoom) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "查無此房間"
-    });
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+        text: "查無此房間"
+      }
+    );
   }
 
-  if (userText === "莊" || userText === "閒" || userText === "和") {
-    const nextResult = randomPick(["莊", "閒"]);
+  // 莊閒和
+  if (
+    userText === "莊" ||
+    userText === "閒" ||
+    userText === "和"
+  ) {
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text:
+    const nextResult =
+      randomPick(["莊", "閒"]);
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
 `━━━━━━━━━━
 🤖 黑域AI運算完成
 ━━━━━━━━━━
@@ -395,12 +589,17 @@ ${nextResult}
 
 請輸入目前開出：
 莊 / 閒 / 和`
-    });
+      }
+    );
   }
 
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text:
+  // 預設
+  return client.replyMessage(
+    event.replyToken,
+    {
+      type: "text",
+
+      text:
 `━━━━━━━━━━
 🧠 BLACKDOMAIN AI
 ━━━━━━━━━━
@@ -410,11 +609,15 @@ ${nextResult}
 • 百家樂
 • 電子
 • 539`
-  });
+    }
+  );
 }
 
-const port = process.env.PORT || 8080;
+const port =
+  process.env.PORT || 8080;
 
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(
+    `Server running on port ${port}`
+  );
 });
