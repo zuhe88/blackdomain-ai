@@ -25,13 +25,32 @@ app.post("/webhook", line.middleware(config), async (req, res) => {
 });
 
 async function handleEvent(event) {
+
   if (event.type !== "message") return null;
   if (event.message.type !== "text") return null;
 
   const userText = event.message.text.trim();
   const lowerText = userText.toLowerCase();
 
-  const randomResult = Math.random() < 0.5 ? "莊" : "閒";
+  const randomResult =
+    Math.random() < 0.5 ? "莊" : "閒";
+
+  // 百家樂選單
+  if (userText === "百家樂") {
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text:
+`━━━━━━━━━━
+⚡ 黑域AI已啟動
+━━━━━━━━━━
+
+請選擇遊戲：
+
+• DG
+• MT`
+    });
+  }
 
   // 電子AI啟動
   if (
@@ -96,8 +115,11 @@ ${randomSuggestion}`
     });
   }
 
-  // 百家樂AI啟動
-  if (lowerText === "dg" || lowerText === "mt") {
+  // DG / MT 啟動
+  if (
+    lowerText === "dg" ||
+    lowerText === "mt"
+  ) {
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -125,7 +147,8 @@ ${randomSuggestion}`
 
   // 錯誤房間
   const isWrongRoom =
-    /^mt/i.test(userText) || /^dg/i.test(userText);
+    /^mt/i.test(userText) ||
+    /^dg/i.test(userText);
 
   // 百家樂同步完成
   if (isValidMT || isValidDG) {
@@ -186,7 +209,15 @@ ${nextResult}
   // 預設訊息
   return client.replyMessage(event.replyToken, {
     type: "text",
-    text: "請輸入 DG / MT / 電子 啟動系統"
+    text:
+`━━━━━━━━━━
+🧠 BLACKDOMAIN AI
+━━━━━━━━━━
+
+請輸入：
+
+• 百家樂
+• 電子`
   });
 }
 
