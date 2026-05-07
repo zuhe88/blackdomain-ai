@@ -219,26 +219,16 @@ async function handleEvent(event) {
       {
         type: "text",
 
-        text:
+ text:
 `━━━━━━━━━━
 🤖 黑域AI已啟動
 ━━━━━━━━━━
 
 請輸入房間號碼
 
-支援範圍：
-
-MT 1 ~ MT 13
-MT 01 ~ MT13
-MT 3A / MT 13A
-
-DG 01 ~ DG 07
-DG RB01 ~ RB07
-DG S01 ~ S07
-
 範例：
 DG RB01
-MT 3A`
+MT 01`
       }
     );
   }
