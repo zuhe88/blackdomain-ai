@@ -48,7 +48,7 @@ function getPredictionDate() {
   const minute = taiwanNow.getMinutes();
   const day = taiwanNow.getDay();
 
-  // 星期日直接預測星期一
+  // 星期日預測星期一
   if (day === 0) {
 
     targetDate.setDate(
@@ -139,7 +139,7 @@ function generate539Numbers(mode) {
 
   return numbers
     .sort((a, b) => a - b)
-    .map((n) =>
+    .map(n =>
       String(n).padStart(2, "0")
     );
 }
@@ -219,7 +219,7 @@ async function handleEvent(event) {
       {
         type: "text",
 
- text:
+        text:
 `━━━━━━━━━━
 🤖 黑域AI已啟動
 ━━━━━━━━━━
@@ -519,9 +519,12 @@ ${nums[1]} / ${nums[4]}
   // 百家樂同步
   if (isValidMT || isValidDG) {
 
-    return client.replyMessage(event.replyToken, {
-  type: "text",
-  text:
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
 `━━━━━━━━━━
 🤖 黑域AI同步完成
 ━━━━━━━━━━
@@ -535,14 +538,45 @@ ${bankerPlayer}
 
 請輸入目前開出：
 莊 / 閒 / 和`,
-  quickReply: {
-    items: [
-      { type: "action", action: { type: "message", label: "莊", text: "莊" } },
-      { type: "action", action: { type: "message", label: "閒", text: "閒" } },
-      { type: "action", action: { type: "message", label: "和", text: "和" } }
-    ]
+
+        quickReply: {
+          items: [
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "莊",
+                text: "莊"
+              }
+            },
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "閒",
+                text: "閒"
+              }
+            },
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "和",
+                text: "和"
+              }
+            }
+
+          ]
+        }
+      }
+    );
   }
-});
 
   // 查無房間
   if (isWrongRoom) {
@@ -580,7 +614,43 @@ ${bankerPlayer}
 ${nextResult}
 
 請輸入目前開出：
-莊 / 閒 / 和`
+莊 / 閒 / 和`,
+
+        quickReply: {
+          items: [
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "莊",
+                text: "莊"
+              }
+            },
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "閒",
+                text: "閒"
+              }
+            },
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "和",
+                text: "和"
+              }
+            }
+
+          ]
+        }
       }
     );
   }
