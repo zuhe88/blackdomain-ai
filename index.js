@@ -35,9 +35,10 @@ async function handleEvent(event) {
 
   const userText = event.message.text.trim();
 
+  // 隨機 莊 / 閒
   const randomResult = Math.random() < 0.5 ? "莊" : "閒";
 
-  // 啟動
+  // 啟動系統
   if (
     userText.toLowerCase() === "dg" ||
     userText.toLowerCase() === "mt"
@@ -58,11 +59,14 @@ async function handleEvent(event) {
     });
   }
 
-  // 房號
+  // 房間同步
   if (
     /^dg\s*\d+/i.test(userText) ||
+    /^dg\s*rb\d+/i.test(userText) ||
+    /^dg\s*s\d+/i.test(userText) ||
     /^mt\s*\d+/i.test(userText) ||
-    /^mt\s*3a/i.test(userText)
+    /^mt\s*3a/i.test(userText) ||
+    /^mt\s*13a/i.test(userText)
   ) {
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -83,12 +87,13 @@ ${randomResult}
     });
   }
 
-  // 玩家輸入 莊閒和
+  // 玩家輸入結果後 繼續下一顆
   if (
     userText === "莊" ||
     userText === "閒" ||
     userText === "和"
   ) {
+
     const nextResult = Math.random() < 0.5 ? "莊" : "閒";
 
     return client.replyMessage(event.replyToken, {
@@ -106,9 +111,10 @@ ${nextResult}
     });
   }
 
+  // 其他訊息
   return client.replyMessage(event.replyToken, {
     type: "text",
-    text: "請輸入 DG 或 MT 啟動系統",
+    text: "請輸入 DG 或 MT 啟動系統"
   });
 }
 
