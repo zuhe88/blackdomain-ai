@@ -33,7 +33,72 @@ async function handleEvent(event) {
 
   const randomResult = Math.random() < 0.5 ? "莊" : "閒";
 
+  // 電子AI啟動
+  if (
+    userText === "電子" ||
+    userText === "電子AI"
+  ) {
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text:
+`━━━━━━━━━━
+⚡ 黑域電子AI已啟動
+━━━━━━━━━━
+
+請選擇遊戲：
+
+• 戰神賽特1
+• 戰神賽特2`
+    });
+  }
+
+  // 電子遊戲選擇
+  if (
+    userText === "戰神賽特1" ||
+    userText === "戰神賽特2"
+  ) {
+
+    const room =
+      Math.floor(Math.random() * 3500) + 1;
+
+    const suggestions = [
+      "可進場",
+      "不可進場",
+      "數據偏弱",
+      "數據中等",
+      "數據偏強"
+    ];
+
+    const randomSuggestion =
+      suggestions[
+        Math.floor(Math.random() * suggestions.length)
+      ];
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text:
+`━━━━━━━━━━
+⚡ 黑域電子AI同步完成
+━━━━━━━━━━
+
+✓ 爆分數據載入
+✓ AI模型運算完成
+
+目前遊戲：
+${userText}
+
+房間號碼：
+${room}
+
+目前建議：
+${randomSuggestion}`
+    });
+  }
+
+  // 百家樂AI啟動
   if (lowerText === "dg" || lowerText === "mt") {
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
@@ -50,16 +115,21 @@ async function handleEvent(event) {
     });
   }
 
+  // MT房間判斷
   const isValidMT =
     /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(userText);
 
+  // DG房間判斷
   const isValidDG =
     /^dg\s*(?:0?[1-7]|rb0?[1-7]|s0?[1-7])$/i.test(userText);
 
+  // 錯誤房間
   const isWrongRoom =
     /^mt/i.test(userText) || /^dg/i.test(userText);
 
+  // 百家樂同步完成
   if (isValidMT || isValidDG) {
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
@@ -79,15 +149,24 @@ ${randomResult}
     });
   }
 
+  // 查無房間
   if (isWrongRoom) {
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: "查無此房間"
     });
   }
 
-  if (userText === "莊" || userText === "閒" || userText === "和") {
-    const nextResult = Math.random() < 0.5 ? "莊" : "閒";
+  // 莊閒和輸入
+  if (
+    userText === "莊" ||
+    userText === "閒" ||
+    userText === "和"
+  ) {
+
+    const nextResult =
+      Math.random() < 0.5 ? "莊" : "閒";
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -104,9 +183,10 @@ ${nextResult}
     });
   }
 
+  // 預設訊息
   return client.replyMessage(event.replyToken, {
     type: "text",
-    text: "請輸入 DG 或 MT 啟動系統"
+    text: "請輸入 DG / MT / 電子 啟動系統"
   });
 }
 
