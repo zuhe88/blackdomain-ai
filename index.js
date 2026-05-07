@@ -29,16 +29,12 @@ function randomPick(arr) {
 }
 
 function getPredictionDate() {
-
   const now = new Date();
-
   const taiwanNow = new Date(
-    now.toLocaleString("en-US", {
-      timeZone: "Asia/Taipei"
-    })
+    now.toLocaleString("en-US", { timeZone: "Asia/Taipei" })
   );
 
-  let targetDate = new Date(
+  const targetDate = new Date(
     taiwanNow.getFullYear(),
     taiwanNow.getMonth(),
     taiwanNow.getDate()
@@ -47,17 +43,11 @@ function getPredictionDate() {
   const hour = taiwanNow.getHours();
   const day = taiwanNow.getDay();
 
-  // 星期日直接預測星期一
   if (day === 0) {
     targetDate.setDate(targetDate.getDate() + 1);
-  }
-
-  // 晚上8點後預測隔天
-  else if (hour >= 20) {
-
+  } else if (hour >= 20) {
     targetDate.setDate(targetDate.getDate() + 1);
 
-    // 如果隔天是星期日跳星期一
     if (targetDate.getDay() === 0) {
       targetDate.setDate(targetDate.getDate() + 1);
     }
@@ -71,35 +61,19 @@ function getPredictionDate() {
 }
 
 function generate539Numbers(mode) {
-
   let pool;
 
   if (mode === "hot") {
-
-    pool = [
-      3,5,8,11,13,16,19,
-      22,27,31,33,36,38,39
-    ];
-
+    pool = [3, 5, 8, 11, 13, 16, 19, 22, 27, 31, 33, 36, 38, 39];
   } else if (mode === "cold") {
-
-    pool = [
-      1,4,6,9,12,15,18,
-      21,24,26,29,32,34,37
-    ];
-
+    pool = [1, 4, 6, 9, 12, 15, 18, 21, 24, 26, 29, 32, 34, 37];
   } else {
-
-    pool = [
-      2,5,7,10,13,17,20,
-      23,25,28,30,33,35,38,39
-    ];
+    pool = [2, 5, 7, 10, 13, 17, 20, 23, 25, 28, 30, 33, 35, 38, 39];
   }
 
   const numbers = [];
 
   while (numbers.length < 5) {
-
     let n;
 
     if (Math.random() < 0.7) {
@@ -115,23 +89,19 @@ function generate539Numbers(mode) {
 
   return numbers
     .sort((a, b) => a - b)
-    .map(n => String(n).padStart(2, "0"));
+    .map((n) => String(n).padStart(2, "0"));
 }
 
 async function handleEvent(event) {
-
   if (event.type !== "message") return null;
   if (event.message.type !== "text") return null;
 
   const userText = event.message.text.trim();
   const lowerText = userText.toLowerCase();
 
-  const bankerPlayer =
-    Math.random() < 0.5 ? "莊" : "閒";
+  const bankerPlayer = randomPick(["莊", "閒"]);
 
-  // 百家樂選單
   if (userText === "百家樂") {
-
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
@@ -163,15 +133,7 @@ async function handleEvent(event) {
     });
   }
 
-  // DG / MT 啟動
-  if (
-    lowerText === "dg" ||
-    lowerText === "mt"
-  ) {
-
-    const gameType =
-      lowerText.toUpperCase();
-
+  if (lowerText === "dg" || lowerText === "mt") {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
@@ -193,44 +155,11 @@ DG S01 ~ S07
 
 範例：
 DG RB01
-MT 3A`,
-      quickReply: {
-        items: [
-          {
-            type: "action",
-            action: {
-              type: "message",
-              label: `${gameType}01`,
-              text: `${gameType}01`
-            }
-          },
-          {
-            type: "action",
-            action: {
-              type: "message",
-              label: `${gameType}02`,
-              text: `${gameType}02`
-            }
-          },
-          {
-            type: "action",
-            action: {
-              type: "message",
-              label: `${gameType}03`,
-              text: `${gameType}03`
-            }
-          }
-        ]
-      }
+MT 3A`
     });
   }
 
-  // 電子AI
-  if (
-    userText === "電子" ||
-    userText === "電子AI"
-  ) {
-
+  if (userText === "電子" || userText === "電子AI") {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
@@ -262,25 +191,15 @@ MT 3A`,
     });
   }
 
-  // 電子AI同步
-  if (
-    userText === "戰神賽特1" ||
-    userText === "戰神賽特2"
-  ) {
-
-    const room =
-      Math.floor(Math.random() * 3500) + 1;
-
-    const suggestions = [
+  if (userText === "戰神賽特1" || userText === "戰神賽特2") {
+    const room = Math.floor(Math.random() * 3500) + 1;
+    const suggestion = randomPick([
       "可進場",
       "不可進場",
       "數據偏弱",
       "數據中等",
       "數據偏強"
-    ];
-
-    const randomSuggestion =
-      randomPick(suggestions);
+    ]);
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -299,17 +218,11 @@ ${userText}
 ${room}
 
 目前建議：
-${randomSuggestion}`
+${suggestion}`
     });
   }
 
-  // 539 AI
-  if (
-    userText === "539" ||
-    userText === "539AI" ||
-    userText === "539 AI"
-  ) {
-
+  if (userText === "539" || userText === "539AI" || userText === "539 AI") {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
@@ -349,14 +262,9 @@ ${randomSuggestion}`
     });
   }
 
-  // 539穩定
   if (userText === "539穩定") {
-
-    const nums =
-      generate539Numbers("stable");
-
-    const predictionDate =
-      getPredictionDate();
+    const nums = generate539Numbers("stable");
+    const predictionDate = getPredictionDate();
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -383,14 +291,9 @@ ${nums[1]} / ${nums[3]}
     });
   }
 
-  // 539熱號
   if (userText === "539熱號") {
-
-    const nums =
-      generate539Numbers("hot");
-
-    const predictionDate =
-      getPredictionDate();
+    const nums = generate539Numbers("hot");
+    const predictionDate = getPredictionDate();
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -417,14 +320,9 @@ ${nums[0]} / ${nums[2]} / ${nums[4]}
     });
   }
 
-  // 539冷號
   if (userText === "539冷號") {
-
-    const nums =
-      generate539Numbers("cold");
-
-    const predictionDate =
-      getPredictionDate();
+    const nums = generate539Numbers("cold");
+    const predictionDate = getPredictionDate();
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -451,23 +349,11 @@ ${nums[1]} / ${nums[4]}
     });
   }
 
-  // MT房間
-  const isValidMT =
-    /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i
-    .test(userText);
+  const isValidMT = /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(userText);
+  const isValidDG = /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i.test(userText);
+  const isWrongRoom = /^mt/i.test(userText) || /^dg/i.test(userText);
 
-  // DG房間
-  const isValidDG =
-    /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i
-    .test(userText);
-
-  const isWrongRoom =
-    /^mt/i.test(userText) ||
-    /^dg/i.test(userText);
-
-  // 百家樂同步完成
   if (isValidMT || isValidDG) {
-
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
@@ -487,26 +373,15 @@ ${bankerPlayer}
     });
   }
 
-  // 查無房間
   if (isWrongRoom) {
-
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: "查無此房間"
     });
   }
 
-  // 莊閒和
-  if (
-    userText === "莊" ||
-    userText === "閒" ||
-    userText === "和"
-  ) {
-
-    const nextResult =
-      Math.random() < 0.5
-      ? "莊"
-      : "閒";
+  if (userText === "莊" || userText === "閒" || userText === "和") {
+    const nextResult = randomPick(["莊", "閒"]);
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -523,7 +398,6 @@ ${nextResult}
     });
   }
 
-  // 預設
   return client.replyMessage(event.replyToken, {
     type: "text",
     text:
@@ -542,7 +416,5 @@ ${nextResult}
 const port = process.env.PORT || 8080;
 
 app.listen(port, () => {
-  console.log(
-    \`Server running on port \${port}\`
-  );
+  console.log(`Server running on port ${port}`);
 });
