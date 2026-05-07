@@ -25,24 +25,15 @@ app.post("/webhook", line.middleware(config), async (req, res) => {
 });
 
 async function handleEvent(event) {
-  if (event.type !== "message") {
-    return null;
-  }
-
-  if (event.message.type !== "text") {
-    return null;
-  }
+  if (event.type !== "message") return null;
+  if (event.message.type !== "text") return null;
 
   const userText = event.message.text.trim();
+  const lowerText = userText.toLowerCase();
 
-  // 隨機 莊 / 閒
   const randomResult = Math.random() < 0.5 ? "莊" : "閒";
 
-  // 啟動系統
-  if (
-    userText.toLowerCase() === "dg" ||
-    userText.toLowerCase() === "mt"
-  ) {
+  if (lowerText === "dg" || lowerText === "mt") {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
@@ -59,15 +50,16 @@ async function handleEvent(event) {
     });
   }
 
-  // 房間同步
-  if (
-    /^dg\s*\d+/i.test(userText) ||
-    /^dg\s*rb\d+/i.test(userText) ||
-    /^dg\s*s\d+/i.test(userText) ||
-    /^mt\s*\d+/i.test(userText) ||
-    /^mt\s*3a/i.test(userText) ||
-    /^mt\s*13a/i.test(userText)
-  ) {
+  const isValidMT =
+    /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(userText);
+
+  const isValidDG =
+    /^dg\s*(?:0?[1-7]|rb0?[1-7]|s0?[1-7])$/i.test(userText);
+
+  const isWrongRoom =
+    /^mt/i.test(userText) || /^dg/i.test(userText);
+
+  if (isValidMT || isValidDG) {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text:
@@ -87,13 +79,14 @@ ${randomResult}
     });
   }
 
-  // 玩家輸入結果後 繼續下一顆
-  if (
-    userText === "莊" ||
-    userText === "閒" ||
-    userText === "和"
-  ) {
+  if (isWrongRoom) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "查無此房間"
+    });
+  }
 
+  if (userText === "莊" || userText === "閒" || userText === "和") {
     const nextResult = Math.random() < 0.5 ? "莊" : "閒";
 
     return client.replyMessage(event.replyToken, {
@@ -111,7 +104,6 @@ ${nextResult}
     });
   }
 
-  // 其他訊息
   return client.replyMessage(event.replyToken, {
     type: "text",
     text: "請輸入 DG 或 MT 啟動系統"
