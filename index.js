@@ -48,7 +48,7 @@ function getPredictionDate() {
   const minute = taiwanNow.getMinutes();
   const day = taiwanNow.getDay();
 
-  // 星期日預測星期一
+  // 星期日直接預測星期一
   if (day === 0) {
 
     targetDate.setDate(
@@ -144,6 +144,78 @@ function generate539Numbers(mode) {
     );
 }
 
+function quick539() {
+
+  return {
+    items: [
+
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "539穩定",
+          text: "539穩定"
+        }
+      },
+
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "539熱號",
+          text: "539熱號"
+        }
+      },
+
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "539冷號",
+          text: "539冷號"
+        }
+      }
+
+    ]
+  };
+}
+
+function quickBaccarat() {
+
+  return {
+    items: [
+
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "莊",
+          text: "莊"
+        }
+      },
+
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "閒",
+          text: "閒"
+        }
+      },
+
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "和",
+          text: "和"
+        }
+      }
+
+    ]
+  };
+}
+
 async function handleEvent(event) {
 
   if (event.type !== "message")
@@ -184,7 +256,6 @@ async function handleEvent(event) {
 
             {
               type: "action",
-
               action: {
                 type: "message",
                 label: "DG",
@@ -194,7 +265,6 @@ async function handleEvent(event) {
 
             {
               type: "action",
-
               action: {
                 type: "message",
                 label: "MT",
@@ -259,7 +329,6 @@ MT 01`
 
             {
               type: "action",
-
               action: {
                 type: "message",
                 label: "戰神賽特1",
@@ -269,7 +338,6 @@ MT 01`
 
             {
               type: "action",
-
               action: {
                 type: "message",
                 label: "戰神賽特2",
@@ -349,41 +417,7 @@ ${suggestion}`
 
 系統將開始同步號碼波動資料。`,
 
-        quickReply: {
-          items: [
-
-            {
-              type: "action",
-
-              action: {
-                type: "message",
-                label: "539穩定",
-                text: "539穩定"
-              }
-            },
-
-            {
-              type: "action",
-
-              action: {
-                type: "message",
-                label: "539熱號",
-                text: "539熱號"
-              }
-            },
-
-            {
-              type: "action",
-
-              action: {
-                type: "message",
-                label: "539冷號",
-                text: "539冷號"
-              }
-            }
-
-          ]
-        }
+        quickReply: quick539()
       }
     );
   }
@@ -421,7 +455,9 @@ ${nums.join("　")}
 特別關注：
 ${nums[1]} / ${nums[3]}
 
-⚠️ 僅供娛樂分析參考`
+⚠️ 僅供娛樂分析參考`,
+
+        quickReply: quick539()
       }
     );
   }
@@ -459,7 +495,9 @@ ${nums.join("　")}
 熱區關注：
 ${nums[0]} / ${nums[2]} / ${nums[4]}
 
-⚠️ 僅供娛樂分析參考`
+⚠️ 僅供娛樂分析參考`,
+
+        quickReply: quick539()
       }
     );
   }
@@ -497,7 +535,9 @@ ${nums.join("　")}
 冷區關注：
 ${nums[1]} / ${nums[4]}
 
-⚠️ 僅供娛樂分析參考`
+⚠️ 僅供娛樂分析參考`,
+
+        quickReply: quick539()
       }
     );
   }
@@ -539,41 +579,7 @@ ${bankerPlayer}
 請輸入目前開出：
 莊 / 閒 / 和`,
 
-        quickReply: {
-          items: [
-
-            {
-              type: "action",
-
-              action: {
-                type: "message",
-                label: "莊",
-                text: "莊"
-              }
-            },
-
-            {
-              type: "action",
-
-              action: {
-                type: "message",
-                label: "閒",
-                text: "閒"
-              }
-            },
-
-            {
-              type: "action",
-
-              action: {
-                type: "message",
-                label: "和",
-                text: "和"
-              }
-            }
-
-          ]
-        }
+        quickReply: quickBaccarat()
       }
     );
   }
@@ -616,41 +622,7 @@ ${nextResult}
 請輸入目前開出：
 莊 / 閒 / 和`,
 
-        quickReply: {
-          items: [
-
-            {
-              type: "action",
-
-              action: {
-                type: "message",
-                label: "莊",
-                text: "莊"
-              }
-            },
-
-            {
-              type: "action",
-
-              action: {
-                type: "message",
-                label: "閒",
-                text: "閒"
-              }
-            },
-
-            {
-              type: "action",
-
-              action: {
-                type: "message",
-                label: "和",
-                text: "和"
-              }
-            }
-
-          ]
-        }
+        quickReply: quickBaccarat()
       }
     );
   }
