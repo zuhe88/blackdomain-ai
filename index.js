@@ -89,7 +89,21 @@ function getPredictionDate() {
   return `${y}/${m}/${d}`;
 }
 
+// 固定每日號碼
+const daily539Cache = {};
+
 function generate539Numbers(mode) {
+
+  const predictionDate =
+    getPredictionDate();
+
+  const cacheKey =
+    `${predictionDate}-${mode}`;
+
+  // 已存在就固定回傳
+  if (daily539Cache[cacheKey]) {
+    return daily539Cache[cacheKey];
+  }
 
   let pool;
 
@@ -137,46 +151,50 @@ function generate539Numbers(mode) {
     }
   }
 
-  return numbers
+  const finalNumbers = numbers
     .sort((a, b) => a - b)
     .map(n =>
       String(n).padStart(2, "0")
     );
+
+  // 快取固定
+  daily539Cache[cacheKey] =
+    finalNumbers;
+
+  return finalNumbers;
 }
 
-function quick539() {
+function quick539(excludeMode) {
+
+  const modes = [
+    {
+      label: "539穩定",
+      text: "539穩定"
+    },
+    {
+      label: "539熱號",
+      text: "539熱號"
+    },
+    {
+      label: "539冷號",
+      text: "539冷號"
+    }
+  ];
 
   return {
-    items: [
-
-      {
+    items: modes
+      .filter(
+        mode =>
+          mode.text !== excludeMode
+      )
+      .map(mode => ({
         type: "action",
         action: {
           type: "message",
-          label: "539穩定",
-          text: "539穩定"
+          label: mode.label,
+          text: mode.text
         }
-      },
-
-      {
-        type: "action",
-        action: {
-          type: "message",
-          label: "539熱號",
-          text: "539熱號"
-        }
-      },
-
-      {
-        type: "action",
-        action: {
-          type: "message",
-          label: "539冷號",
-          text: "539冷號"
-        }
-      }
-
-    ]
+      }))
   };
 }
 
@@ -457,7 +475,8 @@ ${nums[1]} / ${nums[3]}
 
 ⚠️ 僅供娛樂分析參考`,
 
-        quickReply: quick539()
+        quickReply:
+          quick539("539穩定")
       }
     );
   }
@@ -497,7 +516,8 @@ ${nums[0]} / ${nums[2]} / ${nums[4]}
 
 ⚠️ 僅供娛樂分析參考`,
 
-        quickReply: quick539()
+        quickReply:
+          quick539("539熱號")
       }
     );
   }
@@ -537,7 +557,8 @@ ${nums[1]} / ${nums[4]}
 
 ⚠️ 僅供娛樂分析參考`,
 
-        quickReply: quick539()
+        quickReply:
+          quick539("539冷號")
       }
     );
   }
@@ -579,7 +600,8 @@ ${bankerPlayer}
 請輸入目前開出：
 莊 / 閒 / 和`,
 
-        quickReply: quickBaccarat()
+        quickReply:
+          quickBaccarat()
       }
     );
   }
@@ -622,7 +644,8 @@ ${nextResult}
 請輸入目前開出：
 莊 / 閒 / 和`,
 
-        quickReply: quickBaccarat()
+        quickReply:
+          quickBaccarat()
       }
     );
   }
