@@ -59,7 +59,7 @@ function getPredictionDate() {
 
   const day = taiwanNow.getDay();
 
-  // 星期日直接預測星期一
+  // 星期日預測星期一
   if (day === 0) {
 
     targetDate.setDate(
@@ -248,6 +248,33 @@ function quickBaccarat() {
   };
 }
 
+function quickSlot() {
+
+  return {
+    items: [
+
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "戰神賽特1",
+          text: "戰神賽特1"
+        }
+      },
+
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "戰神賽特2",
+          text: "戰神賽特2"
+        }
+      }
+
+    ]
+  };
+}
+
 async function handleEvent(event) {
 
   if (event.type !== "message")
@@ -356,29 +383,7 @@ MT 01`
 • 戰神賽特1
 • 戰神賽特2`,
 
-        quickReply: {
-          items: [
-
-            {
-              type: "action",
-              action: {
-                type: "message",
-                label: "戰神賽特1",
-                text: "戰神賽特1"
-              }
-            },
-
-            {
-              type: "action",
-              action: {
-                type: "message",
-                label: "戰神賽特2",
-                text: "戰神賽特2"
-              }
-            }
-
-          ]
-        }
+        quickReply: quickSlot()
       }
     );
   }
@@ -419,7 +424,9 @@ ${userText}
 ${room}
 
 目前建議：
-${suggestion}`
+${suggestion}`,
+
+        quickReply: quickSlot()
       }
     );
   }
@@ -562,7 +569,7 @@ ${predictionDate}
 ✓ 遺漏值分析
 ✓ AI模型運算完成
 
-本期建議號碼：
+本期冷號建議：
 
 ${nums.join("　")}
 
