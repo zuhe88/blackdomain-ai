@@ -30,10 +30,23 @@ function randomPick(arr) {
 
 function getPredictionDate() {
 
-  const now = new Date();
-
   const taiwanNow = new Date(
-    now.toLocaleString("en-US", {
+    new Date().toLocaleString("en-US", {
+      timeZone: "Asia/Taipei"
+    })
+  );
+
+  const taiwanHour = Number(
+    taiwanNow.toLocaleString("en-US", {
+      hour: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Taipei"
+    })
+  );
+
+  const taiwanMinute = Number(
+    taiwanNow.toLocaleString("en-US", {
+      minute: "2-digit",
       timeZone: "Asia/Taipei"
     })
   );
@@ -44,8 +57,6 @@ function getPredictionDate() {
     taiwanNow.getDate()
   );
 
-  const hour = taiwanNow.getHours();
-  const minute = taiwanNow.getMinutes();
   const day = taiwanNow.getDay();
 
   // 星期日直接預測星期一
@@ -59,8 +70,11 @@ function getPredictionDate() {
 
   // 晚上20:20後預測隔天
   else if (
-    hour > 20 ||
-    (hour === 20 && minute >= 20)
+    taiwanHour > 20 ||
+    (
+      taiwanHour === 20 &&
+      taiwanMinute >= 20
+    )
   ) {
 
     targetDate.setDate(
@@ -548,7 +562,7 @@ ${predictionDate}
 ✓ 遺漏值分析
 ✓ AI模型運算完成
 
-本期冷號建議：
+本期建議號碼：
 
 ${nums.join("　")}
 
