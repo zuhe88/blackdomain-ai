@@ -1,40 +1,44 @@
 const express = require("express");
 const line = require("@line/bot-sdk");
-const { createClient } = require("@supabase/supabase-js");
+const { createClient } =
+require("@supabase/supabase-js");
 
 const app = express();
 
 const config = {
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.LINE_CHANNEL_SECRET,
+  channelAccessToken:
+    process.env.LINE_CHANNEL_ACCESS_TOKEN,
+
+  channelSecret:
+    process.env.LINE_CHANNEL_SECRET,
 };
 
-const client = new line.Client(config);
+const client =
+  new line.Client(config);
 
-// ===== Supabase =====
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+const supabase =
+  createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
+  );
 
-// ===== 管理員設定 =====
-const adminId = "Uaf293ee976e5170d4e8672d2c12b3f76";
+const adminId =
+  "你的LINE_USER_ID";
 
-// ===== 暫存申請帳號 =====
 const pendingAccounts = {};
 
 function randomPick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+
+  return arr[
+    Math.floor(
+      Math.random() * arr.length
+    )
+  ];
 }
 
-// ===== VIP查詢 =====
-if (
-  userText === "VIP" ||
-  userText === "查詢VIP" ||
-  userText === "查詢VIP權限" ||
-  userText === "查詢VIP權限時間" ||
-  userText === "VIP時間"
-) {
+// ===== VIP檢查 =====
+async function checkVip(userId) {
+
   const { data } =
     await supabase
       .from("vip_users")
@@ -42,80 +46,16 @@ if (
       .eq("user_id", userId)
       .single();
 
-  if (!data || data.expire_time <= Date.now()) {
-    return client.replyMessage(
-      event.replyToken,
-      {
-        type: "text",
-        text: noVipMessage()
-      }
-    );
+  if (!data) {
+    return false;
   }
 
-  const expireTime = data.expire_time;
-  const now = Date.now();
-
-  const diffMs =
-    expireTime - now;
-
-  const diffDays =
-    Math.ceil(
-      diffMs /
-      (1000 * 60 * 60 * 24)
-    );
-
-  const expireText =
-    new Date(expireTime).toLocaleString(
-      "zh-TW",
-      {
-        timeZone: "Asia/Taipei"
-      }
-    );
-
-  return client.replyMessage(
-    event.replyToken,
-    {
-      type: "text",
-
-      text:
-`━━━━━━━━━━
-👑 黑域 VIP
-━━━━━━━━━━
-
-VIP狀態：
-已開通
-
-剩餘天數：
-${diffDays} 天
-
-到期時間：
-${expireText}`
-    }
+  return (
+    data.expire_time > Date.now()
   );
 }
-// ===== 開通VIP =====
-async function openVip(
-  userId,
-  account,
-  days
-) {
 
-  const expireTime =
-    Date.now() +
-    days * 24 * 60 * 60 * 1000;
-
-  await supabase
-    .from("vip_users")
-    .upsert([
-      {
-        user_id: userId,
-        account: account,
-        expire_time: expireTime
-      }
-    ]);
-}
-
-// ===== VIP到期時間 =====
+// ===== VIP到期 =====
 async function vipExpireText(
   userId
 ) {
@@ -141,7 +81,29 @@ async function vipExpireText(
   );
 }
 
-// ===== 未開通 =====
+// ===== 開通VIP =====
+async function openVip(
+  userId,
+  account,
+  days
+) {
+
+  const expireTime =
+    Date.now() +
+    days * 24 * 60 * 60 * 1000;
+
+  await supabase
+    .from("vip_users")
+    .upsert([
+      {
+        user_id: userId,
+        account: account,
+        expire_time: expireTime
+      }
+    ]);
+}
+
+// ===== 未開通訊息 =====
 function noVipMessage() {
 
   return `━━━━━━━━━━
@@ -156,257 +118,6 @@ function noVipMessage() {
 📲 聯繫管理員：
 LINE：zu88.8`;
 }
-
-// ===== Quick Reply =====
-function quick539(excludeMode) {
-
-  const modes = [
-    {
-      label: "539穩定",
-      text: "539穩定"
-    },
-    {
-      label: "539熱號",
-      text: "539熱號"
-    },
-    {
-      label: "539冷號",
-      text: "539冷號"
-    }
-  ];
-
-  return {
-    items: modes
-      .filter(
-        mode =>
-          mode.text !== excludeMode
-      )
-      .map(mode => ({
-        type: "action",
-        action: {
-          type: "message",
-          label: mode.label,
-          text: mode.text
-        }
-      }))
-  };
-}
-
-function quickBaccarat() {
-
-  return {
-    items: [
-
-      {
-        type: "action",
-        action: {
-          type: "message",
-          label: "莊",
-          text: "莊"
-        }
-      },
-
-      {
-        type: "action",
-        action: {
-          type: "message",
-          label: "閒",
-          text: "閒"
-        }
-      },
-
-      {
-        type: "action",
-        action: {
-          type: "message",
-          label: "和",
-          text: "和"
-        }
-      }
-
-    ]
-  };
-}
-
-function quickSlot() {
-
-  return {
-    items: [
-
-      {
-        type: "action",
-        action: {
-          type: "message",
-          label: "戰神賽特1",
-          text: "戰神賽特1"
-        }
-      },
-
-      {
-        type: "action",
-        action: {
-          type: "message",
-          label: "戰神賽特2",
-          text: "戰神賽特2"
-        }
-      }
-
-    ]
-  };
-}
-
-// ===== 539日期 =====
-function getPredictionDate() {
-
-  const taiwanNow = new Date(
-    new Date().toLocaleString("en-US", {
-      timeZone: "Asia/Taipei"
-    })
-  );
-
-  const taiwanHour = Number(
-    taiwanNow.toLocaleString("en-US", {
-      hour: "2-digit",
-      hour12: false,
-      timeZone: "Asia/Taipei"
-    })
-  );
-
-  const taiwanMinute = Number(
-    taiwanNow.toLocaleString("en-US", {
-      minute: "2-digit",
-      timeZone: "Asia/Taipei"
-    })
-  );
-
-  const targetDate = new Date(
-    taiwanNow.getFullYear(),
-    taiwanNow.getMonth(),
-    taiwanNow.getDate()
-  );
-
-  const day = taiwanNow.getDay();
-
-  if (day === 0) {
-
-    targetDate.setDate(
-      targetDate.getDate() + 1
-    );
-
-  }
-
-  else if (
-    taiwanHour > 20 ||
-    (
-      taiwanHour === 20 &&
-      taiwanMinute >= 20
-    )
-  ) {
-
-    targetDate.setDate(
-      targetDate.getDate() + 1
-    );
-
-    if (targetDate.getDay() === 0) {
-
-      targetDate.setDate(
-        targetDate.getDate() + 1
-      );
-    }
-  }
-
-  const y = targetDate.getFullYear();
-
-  const m = String(
-    targetDate.getMonth() + 1
-  ).padStart(2, "0");
-
-  const d = String(
-    targetDate.getDate()
-  ).padStart(2, "0");
-
-  return `${y}/${m}/${d}`;
-}
-
-// ===== 固定每日539 =====
-const daily539Cache = {};
-
-function generate539Numbers(mode) {
-
-  const predictionDate =
-    getPredictionDate();
-
-  const cacheKey =
-    `${predictionDate}-${mode}`;
-
-  if (daily539Cache[cacheKey]) {
-    return daily539Cache[cacheKey];
-  }
-
-  let pool;
-
-  if (mode === "hot") {
-
-    pool = [
-      3,5,8,11,13,16,19,
-      22,27,31,33,36,38,39
-    ];
-
-  }
-
-  else if (mode === "cold") {
-
-    pool = [
-      1,4,6,9,12,15,18,
-      21,24,26,29,32,34,37
-    ];
-
-  }
-
-  else {
-
-    pool = [
-      2,5,7,10,13,17,20,
-      23,25,28,30,33,35,38,39
-    ];
-  }
-
-  const numbers = [];
-
-  while (numbers.length < 5) {
-
-    let n;
-
-    if (Math.random() < 0.7) {
-
-      n = randomPick(pool);
-
-    }
-
-    else {
-
-      n =
-        Math.floor(Math.random() * 39) + 1;
-    }
-
-    if (!numbers.includes(n)) {
-
-      numbers.push(n);
-    }
-  }
-
-  const finalNumbers = numbers
-    .sort((a, b) => a - b)
-    .map(n =>
-      String(n).padStart(2, "0")
-    );
-
-  daily539Cache[cacheKey] =
-    finalNumbers;
-
-  return finalNumbers;
-}
-
 app.get("/", (req, res) => {
   res.send("BLACKDOMAIN AI Running");
 });
@@ -414,12 +125,15 @@ app.get("/", (req, res) => {
 app.post(
   "/webhook",
   line.middleware(config),
+
   async (req, res) => {
 
     try {
 
       await Promise.all(
-        req.body.events.map(handleEvent)
+        req.body.events.map(
+          handleEvent
+        )
       );
 
       res.status(200).end();
@@ -437,11 +151,13 @@ app.post(
 
 async function handleEvent(event) {
 
-  if (event.type !== "message")
-    return null;
+  if (
+    event.type !== "message"
+  ) return null;
 
-  if (event.message.type !== "text")
-    return null;
+  if (
+    event.message.type !== "text"
+  ) return null;
 
   const userId =
     event.source.userId;
@@ -455,21 +171,123 @@ async function handleEvent(event) {
   const bankerPlayer =
     randomPick(["莊", "閒"]);
 
-  // ===== 我的ID =====
-  if (userText === "我的ID") {
+  // ===== VIP查詢 =====
+  if (
+    userText === "VIP" ||
+    userText === "查詢VIP" ||
+    userText === "查詢VIP權限" ||
+    userText === "查詢VIP權限時間" ||
+    userText === "VIP時間"
+  ) {
+
+    const { data } =
+      await supabase
+        .from("vip_users")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+    if (
+      !data ||
+      data.expire_time <=
+      Date.now()
+    ) {
+
+      return client.replyMessage(
+        event.replyToken,
+        {
+          type: "text",
+          text: noVipMessage()
+        }
+      );
+    }
+
+    const expireTime =
+      data.expire_time;
+
+    const now =
+      Date.now();
+
+    const diffMs =
+      expireTime - now;
+
+    const diffDays =
+      Math.ceil(
+        diffMs /
+        (
+          1000 *
+          60 *
+          60 *
+          24
+        )
+      );
+
+    const expireText =
+      new Date(
+        expireTime
+      ).toLocaleString(
+        "zh-TW",
+        {
+          timeZone:
+            "Asia/Taipei"
+        }
+      );
 
     return client.replyMessage(
       event.replyToken,
       {
         type: "text",
-        text: userId
+
+        text:
+`━━━━━━━━━━
+👑 BLACKDOMAIN VIP
+━━━━━━━━━━
+
+VIP狀態：
+已開通
+
+剩餘天數：
+${diffDays} 天
+
+到期時間：
+${expireText}`
+      }
+    );
+  }
+
+  // ===== 開通會員 =====
+  if (
+    userText === "開通會員" ||
+    userText === "我要開通" ||
+    userText === "開通"
+  ) {
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
+`━━━━━━━━━━
+🔐 黑域AI權限尚未開通
+━━━━━━━━━━
+
+請提供3A帳號申請開通。
+
+輸入範例：
+申請開通 abc123
+
+📲 聯繫管理員：
+LINE：zu88.8`
       }
     );
   }
 
   // ===== 申請開通 =====
   if (
-    userText.startsWith("申請開通 ")
+    userText.startsWith(
+      "申請開通 "
+    )
   ) {
 
     const account =
@@ -478,8 +296,9 @@ async function handleEvent(event) {
         ""
       ).trim();
 
-    pendingAccounts[account] =
-      userId;
+    pendingAccounts[
+      account
+    ] = userId;
 
     return client.replyMessage(
       event.replyToken,
@@ -498,8 +317,7 @@ ${account}
       }
     );
   }
-
-  // ===== 管理員開通 =====
+    // ===== 管理員開通 =====
   if (
     userText.startsWith("開通 ")
   ) {
@@ -518,12 +336,16 @@ ${account}
     const parts =
       userText.split(" ");
 
-    const account = parts[1];
+    const account =
+      parts[1];
 
     const days =
       parseInt(parts[2]);
 
-    if (!account || !days) {
+    if (
+      !account ||
+      !days
+    ) {
 
       return client.replyMessage(
         event.replyToken,
@@ -531,7 +353,10 @@ ${account}
           type: "text",
 
           text:
-"格式錯誤\n範例：開通 abc123 2"
+`格式錯誤
+
+範例：
+開通 abc123 2`
         }
       );
     }
@@ -548,6 +373,7 @@ ${account}
 
           text:
 `查無此申請帳號：
+
 ${account}`
         }
       );
@@ -581,140 +407,24 @@ ${await vipExpireText(targetUserId)}`
     );
   }
 
-  // ===== VIP查詢 =====
-  if (userText === "VIP") {
-
-    const isVip =
-      await checkVip(userId);
-
-    if (!isVip) {
-
-      return client.replyMessage(
-        event.replyToken,
-        {
-          type: "text",
-          text: noVipMessage()
-        }
-      );
-    }
-
-    return client.replyMessage(
-      event.replyToken,
-      {
-        type: "text",
-
-        text:
-`━━━━━━━━━━
-👑 BLACKDOMAIN VIP
-━━━━━━━━━━
-
-VIP狀態：
-已開通
-
-到期時間：
-${await vipExpireText(userId)}`
-      }
-    );
-  }
-
-  // ===== 權限檢查 =====
-  const vipCommands = [
-
-    "百家樂",
-    "電子",
-    "電子AI",
-
-    "539",
-    "539AI",
-    "539 AI",
-
-    "539穩定",
-    "539熱號",
-    "539冷號",
-
-    "戰神賽特1",
-    "戰神賽特2",
-
-    "莊",
-    "閒",
-    "和"
-
-  ];
-
-  const isBaccaratRoom =
-    /^mt/i.test(userText) ||
-    /^dg/i.test(userText);
-
-  if (
-    vipCommands.includes(userText) ||
-    isBaccaratRoom
-  ) {
-
-    const isVip =
-      await checkVip(userId);
-
-    if (!isVip) {
-
-      return client.replyMessage(
-        event.replyToken,
-        {
-          type: "text",
-          text: noVipMessage()
-        }
-      );
-    }
-  }
-
   // ===== 百家樂 =====
-  if (userText === "百家樂") {
-
-    return client.replyMessage(
-      event.replyToken,
-      {
-        type: "text",
-
-        text:
-`━━━━━━━━━━
-⚡ 黑域AI已啟動
-━━━━━━━━━━
-
-請選擇遊戲：
-
-• DG
-• MT`,
-
-        quickReply: {
-          items: [
-
-            {
-              type: "action",
-              action: {
-                type: "message",
-                label: "DG",
-                text: "DG"
-              }
-            },
-
-            {
-              type: "action",
-              action: {
-                type: "message",
-                label: "MT",
-                text: "MT"
-              }
-            }
-
-          ]
-        }
-      }
-    );
-  }
-
-  // ===== DG MT =====
   if (
-    lowerText === "dg" ||
-    lowerText === "mt"
+    userText === "百家樂"
   ) {
+
+    const isVip =
+      await checkVip(userId);
+
+    if (!isVip) {
+
+      return client.replyMessage(
+        event.replyToken,
+        {
+          type: "text",
+          text: noVipMessage()
+        }
+      );
+    }
 
     return client.replyMessage(
       event.replyToken,
@@ -726,20 +436,207 @@ ${await vipExpireText(userId)}`
 🤖 黑域AI已啟動
 ━━━━━━━━━━
 
-請輸入房間號碼
+請輸入：
 
-範例：
 DG RB01
-MT 01`
+MT 01`,
+
+        quickReply: {
+          items: [
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "DG",
+                text: "DG RB01"
+              }
+            },
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "MT",
+                text: "MT 01"
+              }
+            }
+          ]
+        }
       }
     );
   }
 
-  // ===== 電子 =====
+  // ===== DG / MT =====
+  if (
+    lowerText.startsWith("dg") ||
+    lowerText.startsWith("mt")
+  ) {
+
+    const isVip =
+      await checkVip(userId);
+
+    if (!isVip) {
+
+      return client.replyMessage(
+        event.replyToken,
+        {
+          type: "text",
+          text: noVipMessage()
+        }
+      );
+    }
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
+`━━━━━━━━━━
+🤖 黑域AI同步完成
+━━━━━━━━━━
+
+✓ 房間同步成功
+✓ 牌路數據載入
+✓ AI模型運算完成
+
+目前建議：
+${bankerPlayer}
+
+請輸入目前開出：
+莊 / 閒 / 和`,
+
+        quickReply: {
+          items: [
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "莊",
+                text: "莊"
+              }
+            },
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "閒",
+                text: "閒"
+              }
+            },
+
+            {
+              type: "action",
+
+              action: {
+                type: "message",
+                label: "和",
+                text: "和"
+              }
+            }
+          ]
+        }
+      }
+    );
+  }
+    // ===== 莊閒和 =====
+  if (
+    userText === "莊" ||
+    userText === "閒" ||
+    userText === "和"
+  ) {
+
+    const isVip =
+      await checkVip(userId);
+
+    if (!isVip) {
+
+      return client.replyMessage(
+        event.replyToken,
+        {
+          type: "text",
+          text: noVipMessage()
+        }
+      );
+    }
+
+    const nextResult =
+      randomPick(["莊", "閒"]);
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
+`━━━━━━━━━━
+🤖 黑域AI運算完成
+━━━━━━━━━━
+
+目前建議：
+${nextResult}
+
+請輸入目前開出：
+莊 / 閒 / 和`,
+
+        quickReply: {
+          items: [
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "莊",
+                text: "莊"
+              }
+            },
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "閒",
+                text: "閒"
+              }
+            },
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "和",
+                text: "和"
+              }
+            }
+          ]
+        }
+      }
+    );
+  }
+
+  // ===== 電子AI =====
   if (
     userText === "電子" ||
     userText === "電子AI"
   ) {
+
+    const isVip =
+      await checkVip(userId);
+
+    if (!isVip) {
+
+      return client.replyMessage(
+        event.replyToken,
+        {
+          type: "text",
+          text: noVipMessage()
+        }
+      );
+    }
 
     return client.replyMessage(
       event.replyToken,
@@ -756,8 +653,26 @@ MT 01`
 • 戰神賽特1
 • 戰神賽特2`,
 
-        quickReply:
-          quickSlot()
+        quickReply: {
+          items: [
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "戰神賽特1",
+                text: "戰神賽特1"
+              }
+            },
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "戰神賽特2",
+                text: "戰神賽特2"
+              }
+            }
+          ]
+        }
       }
     );
   }
@@ -767,6 +682,20 @@ MT 01`
     userText === "戰神賽特1" ||
     userText === "戰神賽特2"
   ) {
+
+    const isVip =
+      await checkVip(userId);
+
+    if (!isVip) {
+
+      return client.replyMessage(
+        event.replyToken,
+        {
+          type: "text",
+          text: noVipMessage()
+        }
+      );
+    }
 
     const room =
       Math.floor(
@@ -802,8 +731,26 @@ ${room}
 目前建議：
 ${suggestion}`,
 
-        quickReply:
-          quickSlot()
+        quickReply: {
+          items: [
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "戰神賽特1",
+                text: "戰神賽特1"
+              }
+            },
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "戰神賽特2",
+                text: "戰神賽特2"
+              }
+            }
+          ]
+        }
       }
     );
   }
@@ -814,6 +761,20 @@ ${suggestion}`,
     userText === "539AI" ||
     userText === "539 AI"
   ) {
+
+    const isVip =
+      await checkVip(userId);
+
+    if (!isVip) {
+
+      return client.replyMessage(
+        event.replyToken,
+        {
+          type: "text",
+          text: noVipMessage()
+        }
+      );
+    }
 
     return client.replyMessage(
       event.replyToken,
@@ -833,14 +794,27 @@ ${suggestion}`,
 
 系統將開始同步號碼波動資料。`,
 
-        quickReply:
-          quick539()
+        quickReply: quick539()
       }
     );
   }
 
   // ===== 539穩定 =====
   if (userText === "539穩定") {
+
+    const isVip =
+      await checkVip(userId);
+
+    if (!isVip) {
+
+      return client.replyMessage(
+        event.replyToken,
+        {
+          type: "text",
+          text: noVipMessage()
+        }
+      );
+    }
 
     const nums =
       generate539Numbers("stable");
@@ -883,6 +857,20 @@ ${nums[1]} / ${nums[3]}
   // ===== 539熱號 =====
   if (userText === "539熱號") {
 
+    const isVip =
+      await checkVip(userId);
+
+    if (!isVip) {
+
+      return client.replyMessage(
+        event.replyToken,
+        {
+          type: "text",
+          text: noVipMessage()
+        }
+      );
+    }
+
     const nums =
       generate539Numbers("hot");
 
@@ -924,6 +912,20 @@ ${nums[0]} / ${nums[2]} / ${nums[4]}
   // ===== 539冷號 =====
   if (userText === "539冷號") {
 
+    const isVip =
+      await checkVip(userId);
+
+    if (!isVip) {
+
+      return client.replyMessage(
+        event.replyToken,
+        {
+          type: "text",
+          text: noVipMessage()
+        }
+      );
+    }
+
     const nums =
       generate539Numbers("cold");
 
@@ -962,93 +964,6 @@ ${nums[1]} / ${nums[4]}
     );
   }
 
-  // ===== MT =====
-  const isValidMT =
-    /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i
-    .test(userText);
-
-  // ===== DG =====
-  const isValidDG =
-    /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i
-    .test(userText);
-
-  const isWrongRoom =
-    /^mt/i.test(userText) ||
-    /^dg/i.test(userText);
-
-  // ===== 百家樂同步 =====
-  if (isValidMT || isValidDG) {
-
-    return client.replyMessage(
-      event.replyToken,
-      {
-        type: "text",
-
-        text:
-`━━━━━━━━━━
-🤖 黑域AI同步完成
-━━━━━━━━━━
-
-✓ 房間同步成功
-✓ 牌路數據載入
-✓ AI模型運算完成
-
-目前建議：
-${bankerPlayer}
-
-請輸入目前開出：
-莊 / 閒 / 和`,
-
-        quickReply:
-          quickBaccarat()
-      }
-    );
-  }
-
-  // ===== 查無房間 =====
-  if (isWrongRoom) {
-
-    return client.replyMessage(
-      event.replyToken,
-      {
-        type: "text",
-        text: "查無此房間"
-      }
-    );
-  }
-
-  // ===== 莊閒和 =====
-  if (
-    userText === "莊" ||
-    userText === "閒" ||
-    userText === "和"
-  ) {
-
-    const nextResult =
-      randomPick(["莊", "閒"]);
-
-    return client.replyMessage(
-      event.replyToken,
-      {
-        type: "text",
-
-        text:
-`━━━━━━━━━━
-🤖 黑域AI運算完成
-━━━━━━━━━━
-
-目前建議：
-${nextResult}
-
-請輸入目前開出：
-莊 / 閒 / 和`,
-
-        quickReply:
-          quickBaccarat()
-      }
-    );
-  }
-
   // ===== 預設 =====
   return client.replyMessage(
     event.replyToken,
@@ -1057,7 +972,7 @@ ${nextResult}
 
       text:
 `━━━━━━━━━━
-🤖 歡迎使用黑域AI
+🧠 BLACKDOMAIN AI
 ━━━━━━━━━━
 
 請選擇功能：
@@ -1070,6 +985,221 @@ ${nextResult}
 申請開通 你的3A帳號`
     }
   );
+}
+
+// ===== 539按鈕 =====
+function quick539(excludeMode) {
+
+  const modes = [
+    {
+      label: "539穩定",
+      text: "539穩定"
+    },
+    {
+      label: "539熱號",
+      text: "539熱號"
+    },
+    {
+      label: "539冷號",
+      text: "539冷號"
+    }
+  ];
+
+  return {
+    items: modes
+      .filter(
+        mode =>
+          mode.text !== excludeMode
+      )
+      .map(mode => ({
+        type: "action",
+        action: {
+          type: "message",
+          label: mode.label,
+          text: mode.text
+        }
+      }))
+  };
+}
+
+// ===== 539日期 =====
+function getPredictionDate() {
+
+  const taiwanNow =
+    new Date(
+      new Date().toLocaleString(
+        "en-US",
+        {
+          timeZone:
+            "Asia/Taipei"
+        }
+      )
+    );
+
+  const taiwanHour =
+    Number(
+      taiwanNow.toLocaleString(
+        "en-US",
+        {
+          hour: "2-digit",
+          hour12: false,
+          timeZone:
+            "Asia/Taipei"
+        }
+      )
+    );
+
+  const taiwanMinute =
+    Number(
+      taiwanNow.toLocaleString(
+        "en-US",
+        {
+          minute: "2-digit",
+          timeZone:
+            "Asia/Taipei"
+        }
+      )
+    );
+
+  const targetDate =
+    new Date(
+      taiwanNow.getFullYear(),
+      taiwanNow.getMonth(),
+      taiwanNow.getDate()
+    );
+
+  const day =
+    taiwanNow.getDay();
+
+  if (day === 0) {
+
+    targetDate.setDate(
+      targetDate.getDate() + 1
+    );
+
+  } else if (
+    taiwanHour > 20 ||
+    (
+      taiwanHour === 20 &&
+      taiwanMinute >= 20
+    )
+  ) {
+
+    targetDate.setDate(
+      targetDate.getDate() + 1
+    );
+
+    if (
+      targetDate.getDay() === 0
+    ) {
+
+      targetDate.setDate(
+        targetDate.getDate() + 1
+      );
+    }
+  }
+
+  const y =
+    targetDate.getFullYear();
+
+  const m =
+    String(
+      targetDate.getMonth() + 1
+    ).padStart(2, "0");
+
+  const d =
+    String(
+      targetDate.getDate()
+    ).padStart(2, "0");
+
+  return `${y}/${m}/${d}`;
+}
+
+// ===== 固定每日539 =====
+const daily539Cache = {};
+
+function generate539Numbers(mode) {
+
+  const predictionDate =
+    getPredictionDate();
+
+  const cacheKey =
+    `${predictionDate}-${mode}`;
+
+  if (
+    daily539Cache[cacheKey]
+  ) {
+    return daily539Cache[cacheKey];
+  }
+
+  let pool;
+
+  if (mode === "hot") {
+
+    pool = [
+      3, 5, 8, 11, 13,
+      16, 19, 22, 27,
+      31, 33, 36, 38, 39
+    ];
+
+  } else if (mode === "cold") {
+
+    pool = [
+      1, 4, 6, 9, 12,
+      15, 18, 21, 24,
+      26, 29, 32, 34, 37
+    ];
+
+  } else {
+
+    pool = [
+      2, 5, 7, 10, 13,
+      17, 20, 23, 25,
+      28, 30, 33, 35, 38, 39
+    ];
+  }
+
+  const numbers = [];
+
+  while (
+    numbers.length < 5
+  ) {
+
+    let n;
+
+    if (
+      Math.random() < 0.7
+    ) {
+
+      n =
+        randomPick(pool);
+
+    } else {
+
+      n =
+        Math.floor(
+          Math.random() * 39
+        ) + 1;
+    }
+
+    if (
+      !numbers.includes(n)
+    ) {
+      numbers.push(n);
+    }
+  }
+
+  const finalNumbers =
+    numbers
+      .sort((a, b) => a - b)
+      .map(n =>
+        String(n).padStart(2, "0")
+      );
+
+  daily539Cache[cacheKey] =
+    finalNumbers;
+
+  return finalNumbers;
 }
 
 const port =
