@@ -249,6 +249,7 @@ async function handleEvent(event) {
   }
 
   if (
+    userText === "VIP查詢" ||
     userText === "VIP" ||
     userText === "查詢VIP" ||
     userText === "查詢VIP權限" ||
@@ -272,7 +273,7 @@ async function handleEvent(event) {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
-👑 BLACKDOMAIN VIP
+👑 黑域 VIP
 ━━━━━━━━━━
 
 3A帳號：
