@@ -18,7 +18,7 @@ const supabase = createClient(
 );
 
 // ===== 管理員設定 =====
-const adminId = "你的LINE_USER_ID";
+const adminId = "Uaf293ee976e5170d4e8672d2c12b3f76";
 
 // ===== 暫存申請帳號 =====
 const pendingAccounts = {};
