@@ -27,16 +27,7 @@ function randomPick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// ===== VIP檢查 =====
-async function checkVip(userId) {
-
-  const { data } =
-    await supabase
-      .from("vip_users")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-  
+// ===== VIP查詢 =====
 if (
   userText === "VIP" ||
   userText === "查詢VIP" ||
@@ -59,6 +50,24 @@ if (
     );
   }
 
+  const expireText =
+    await vipExpireText(userId);
+
+  const expireDate =
+    new Date(expireText);
+
+  const now =
+    new Date();
+
+  const diffMs =
+    expireDate - now;
+
+  const diffDays =
+    Math.ceil(
+      diffMs /
+      (1000 * 60 * 60 * 24)
+    );
+
   return client.replyMessage(
     event.replyToken,
     {
@@ -66,70 +75,35 @@ if (
 
       text:
 `━━━━━━━━━━
-👑 黑域 VIP
+👑 BLACKDOMAIN VIP
 ━━━━━━━━━━
 
 VIP狀態：
 已開通
 
+剩餘天數：
+${diffDays} 天
+
 到期時間：
-${await vipExpireText(userId)}`
+${expireText}`
     }
   );
 }
 
-// ===== 開通VIP =====
-async function openVip(
-  userId,
-  account,
-  days
+// ===== 開通會員說明 =====
+if (
+  userText === "開通會員" ||
+  userText === "我要開通" ||
+  userText === "開通"
 ) {
 
-  const expireTime =
-    Date.now() +
-    days * 24 * 60 * 60 * 1000;
-
-  await supabase
-    .from("vip_users")
-    .upsert([
-      {
-        user_id: userId,
-        account: account,
-        expire_time: expireTime
-      }
-    ]);
-}
-
-// ===== VIP到期時間 =====
-async function vipExpireText(
-  userId
-) {
-
-  const { data } =
-    await supabase
-      .from("vip_users")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-
-  if (!data) {
-    return "未開通";
-  }
-
-  return new Date(
-    data.expire_time
-  ).toLocaleString(
-    "zh-TW",
+  return client.replyMessage(
+    event.replyToken,
     {
-      timeZone: "Asia/Taipei"
-    }
-  );
-}
+      type: "text",
 
-// ===== 未開通 =====
-function noVipMessage() {
-
-  return `━━━━━━━━━━
+      text:
+`━━━━━━━━━━
 🔐 黑域AI權限尚未開通
 ━━━━━━━━━━
 
@@ -139,9 +113,124 @@ function noVipMessage() {
 申請開通 abc123
 
 📲 聯繫管理員：
-LINE：zu88.8`;
+LINE：zu88.8`
+    }
+  );
 }
 
+// ===== 申請開通 =====
+if (
+  userText.startsWith("申請開通 ")
+) {
+
+  const account =
+    userText.replace(
+      "申請開通 ",
+      ""
+    ).trim();
+
+  pendingAccounts[account] =
+    userId;
+
+  return client.replyMessage(
+    event.replyToken,
+    {
+      type: "text",
+
+      text:
+`━━━━━━━━━━
+📝 已收到開通申請
+━━━━━━━━━━
+
+3A帳號：
+${account}
+
+請等待管理員審核開通。`
+    }
+  );
+}
+
+// ===== 管理員開通 =====
+if (
+  userText.startsWith("開通 ")
+) {
+
+  if (userId !== adminId) {
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+        text: "你沒有管理員權限"
+      }
+    );
+  }
+
+  const parts =
+    userText.split(" ");
+
+  const account = parts[1];
+
+  const days =
+    parseInt(parts[2]);
+
+  if (!account || !days) {
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
+"格式錯誤\n範例：開通 abc123 2"
+      }
+    );
+  }
+
+  const targetUserId =
+    pendingAccounts[account];
+
+  if (!targetUserId) {
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+
+        text:
+`查無此申請帳號：
+${account}`
+      }
+    );
+  }
+
+  await openVip(
+    targetUserId,
+    account,
+    days
+  );
+
+  return client.replyMessage(
+    event.replyToken,
+    {
+      type: "text",
+
+      text:
+`━━━━━━━━━━
+✅ 黑域AI開通成功
+━━━━━━━━━━
+
+3A帳號：
+${account}
+
+開通天數：
+${days}天
+
+到期時間：
+${await vipExpireText(targetUserId)}`
+    }
+  );
+}
 // ===== Quick Reply =====
 function quick539(excludeMode) {
 
