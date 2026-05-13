@@ -23,7 +23,7 @@ const supabase =
   );
 
 const adminId =
-  "你的LINE_USER_ID";
+  "Uaf293ee976e5170d4e8672d2c12b3f76";
 
 const pendingAccounts = {};
 
@@ -240,7 +240,7 @@ async function handleEvent(event) {
 
         text:
 `━━━━━━━━━━
-👑 BLACKDOMAIN VIP
+👑 黑域 VIP
 ━━━━━━━━━━
 
 VIP狀態：
@@ -972,7 +972,7 @@ ${nums[1]} / ${nums[4]}
 
       text:
 `━━━━━━━━━━
-🧠 BLACKDOMAIN AI
+🤖 歡迎使用黑域AI
 ━━━━━━━━━━
 
 請選擇功能：
