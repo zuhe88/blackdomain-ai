@@ -36,8 +36,7 @@ async function checkVip(userId) {
       .select("*")
       .eq("user_id", userId)
       .single();
-
- // ===== VIP查詢 =====
+  
 if (
   userText === "VIP" ||
   userText === "查詢VIP" ||
