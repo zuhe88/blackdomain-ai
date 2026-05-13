@@ -37,11 +37,46 @@ async function checkVip(userId) {
       .eq("user_id", userId)
       .single();
 
-  if (!data) {
-    return false;
+ // ===== VIP查詢 =====
+if (
+  userText === "VIP" ||
+  userText === "查詢VIP" ||
+  userText === "查詢VIP權限" ||
+  userText === "查詢VIP權限時間" ||
+  userText === "VIP時間"
+) {
+
+  const isVip =
+    await checkVip(userId);
+
+  if (!isVip) {
+
+    return client.replyMessage(
+      event.replyToken,
+      {
+        type: "text",
+        text: noVipMessage()
+      }
+    );
   }
 
-  return data.expire_time > Date.now();
+  return client.replyMessage(
+    event.replyToken,
+    {
+      type: "text",
+
+      text:
+`━━━━━━━━━━
+👑 黑域 VIP
+━━━━━━━━━━
+
+VIP狀態：
+已開通
+
+到期時間：
+${await vipExpireText(userId)}`
+    }
+  );
 }
 
 // ===== 開通VIP =====
