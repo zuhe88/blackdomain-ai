@@ -11,29 +11,28 @@ const config = {
 const client = new line.Client(config);
 
 // ===============================
-// 管理員設定
+// 管理員
 // ===============================
-const adminUsers = [
+const ADMIN_USERS = [
   'Uaf293ee976e5170d4e8672d2c12b3f76'
 ];
 
 // ===============================
-// VIP資料
+// 暫存資料
 // ===============================
 const vipUsers = {};
+const userState = {};
 
 // ===============================
-// 工具函式
+// 基本工具
 // ===============================
 function isAdmin(userId) {
-  return adminUsers.includes(userId);
+  return ADMIN_USERS.includes(userId);
 }
 
 function isVip(userId) {
   if (isAdmin(userId)) return true;
-
   if (!vipUsers[userId]) return false;
-
   return Date.now() < vipUsers[userId];
 }
 
@@ -43,139 +42,113 @@ function canUseFeature(userId) {
 
 function addVip(userId, days) {
   const now = Date.now();
-  const currentExpire = vipUsers[userId] || now;
-  const baseTime = currentExpire > now ? currentExpire : now;
-
-  vipUsers[userId] = baseTime + days * 24 * 60 * 60 * 1000;
+  const oldExpire = vipUsers[userId] || now;
+  const base = oldExpire > now ? oldExpire : now;
+  vipUsers[userId] = base + days * 24 * 60 * 60 * 1000;
 }
 
 function removeVip(userId) {
   delete vipUsers[userId];
 }
 
-function getVipRemaining(userId) {
-  if (isAdmin(userId)) {
-    return '管理員權限｜永久使用';
-  }
+function vipTime(userId) {
+  if (isAdmin(userId)) return '管理員權限｜永久使用';
 
-  if (!vipUsers[userId]) {
-    return '未開通';
-  }
+  if (!vipUsers[userId]) return '未開通';
 
-  const remaining = vipUsers[userId] - Date.now();
+  const left = vipUsers[userId] - Date.now();
+  if (left <= 0) return '已到期';
 
-  if (remaining <= 0) {
-    return '已到期';
-  }
+  const days = Math.floor(left / 86400000);
+  const hours = Math.floor((left % 86400000) / 3600000);
+  const mins = Math.floor((left % 3600000) / 60000);
 
-  const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
-  const hours = Math.floor(
-    (remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-  );
-
-  return `${days}天 ${hours}小時`;
+  return `${days}天 ${hours}小時 ${mins}分鐘`;
 }
 
-function randomPick(list) {
-  return list[Math.floor(Math.random() * list.length)];
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function replyText(replyToken, text) {
-  return client.replyMessage(replyToken, {
+function replyText(replyToken, text, quickReply = null) {
+  const msg = {
     type: 'text',
     text
-  });
+  };
+
+  if (quickReply) msg.quickReply = quickReply;
+
+  return client.replyMessage(replyToken, msg);
 }
 
-function vipRequiredMessage(replyToken) {
-  return replyText(
-    replyToken,
+function requireVip(replyToken) {
+  return replyText(replyToken,
 `━━━━━━━━━━
 🔒 黑域AI系統
 ━━━━━━━━━━
 
 此功能需要開通VIP權限。
 
-請聯絡管理員開通使用天數。`
-  );
+請聯絡管理員開通使用天數。`);
+}
+
+// ===============================
+// Quick Reply
+// ===============================
+function qr(items) {
+  return {
+    items: items.map(i => ({
+      type: 'action',
+      action: {
+        type: 'message',
+        label: i,
+        text: i
+      }
+    }))
+  };
 }
 
 // ===============================
 // 主選單
 // ===============================
-function mainMenu(replyToken) {
-  return client.replyMessage(replyToken, {
-    type: 'text',
-    text:
+function sendMenu(replyToken) {
+  return replyText(replyToken,
 `━━━━━━━━━━
-🤖 黑域AI系統
+🤖 BLACKDOMAIN AI
+黑域AI系統
 ━━━━━━━━━━
 
 請選擇功能：
 
-1️⃣ 百家樂AI
-2️⃣ 電子AI
-3️⃣ 539AI
-4️⃣ VIP查詢
+◼ 百家樂AI
+◼ 電子AI
+◼ 539AI
+◼ VIP查詢
 
-你也可以直接輸入：
-百家樂AI
-電子AI
-539AI
-VIP查詢`,
-    quickReply: {
-      items: [
-        {
-          type: 'action',
-          action: {
-            type: 'message',
-            label: '百家樂AI',
-            text: '百家樂AI'
-          }
-        },
-        {
-          type: 'action',
-          action: {
-            type: 'message',
-            label: '電子AI',
-            text: '電子AI'
-          }
-        },
-        {
-          type: 'action',
-          action: {
-            type: 'message',
-            label: '539AI',
-            text: '539AI'
-          }
-        },
-        {
-          type: 'action',
-          action: {
-            type: 'message',
-            label: 'VIP查詢',
-            text: 'VIP查詢'
-          }
-        }
-      ]
-    }
-  });
+管理員指令：
+開通 使用者ID 天數
+取消開通 使用者ID
+查詢 使用者ID
+我的ID`,
+    qr(['百家樂AI', '電子AI', '539AI', 'VIP查詢'])
+  );
 }
 
 // ===============================
 // Webhook
 // ===============================
 app.post('/webhook', line.middleware(config), async (req, res) => {
-  Promise.all(req.body.events.map(handleEvent))
-    .then(() => res.status(200).end())
-    .catch((err) => {
-      console.error(err);
-      res.status(500).end();
-    });
+  try {
+    await Promise.all(req.body.events.map(handleEvent));
+    res.status(200).end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).end();
+  }
 });
 
 // ===============================
-// 事件處理
+// 主事件
 // ===============================
 async function handleEvent(event) {
   if (event.type !== 'message') return null;
@@ -183,143 +156,155 @@ async function handleEvent(event) {
 
   const userId = event.source.userId;
   const replyToken = event.replyToken;
-  const messageText = event.message.text.trim();
+  const text = event.message.text.trim();
 
   console.log('USER_ID:', userId);
-  console.log('MESSAGE:', messageText);
+  console.log('TEXT:', text);
 
   // ===============================
-  // 查自己ID
+  // 查自己的ID
   // ===============================
-  if (messageText === '我的ID') {
+  if (text === '我的ID') {
     return replyText(replyToken, `你的LINE User ID：\n${userId}`);
   }
 
   // ===============================
-  // 主選單
+  // 選單
   // ===============================
-  if (
-    messageText === '選單' ||
-    messageText === '開始' ||
-    messageText === '功能' ||
-    messageText === 'menu'
-  ) {
-    return mainMenu(replyToken);
+  if (['選單', '開始', '功能', 'menu', 'Menu'].includes(text)) {
+    return sendMenu(replyToken);
   }
 
   // ===============================
-  // 管理員指令：開通
-  // 格式：開通 Uxxxxx 7
+  // 管理員：開通
+  // 格式：開通 Uxxxx 7
   // ===============================
-  if (messageText.startsWith('開通 ')) {
+  if (text.startsWith('開通 ')) {
     if (!isAdmin(userId)) {
-      return replyText(replyToken, '你沒有管理員權限');
+      return replyText(replyToken, '你沒有管理員權限。');
     }
 
-    const parts = messageText.split(' ');
+    const parts = text.split(/\s+/);
+    const targetId = parts[1];
+    const days = parseInt(parts[2], 10);
 
-    if (parts.length < 3) {
-      return replyText(
-        replyToken,
-`格式錯誤
+    if (!targetId || isNaN(days)) {
+      return replyText(replyToken,
+`格式錯誤。
 
-請輸入：
+正確格式：
 開通 使用者ID 天數
 
 範例：
-開通 Uxxxxxxxx 7`
-      );
+開通 Uxxxxxxxx 7`);
     }
 
-    const targetUserId = parts[1];
-    const days = parseInt(parts[2], 10);
+    addVip(targetId, days);
 
-    if (!targetUserId || isNaN(days)) {
-      return replyText(replyToken, '開通格式錯誤，天數請輸入數字');
-    }
-
-    addVip(targetUserId, days);
-
-    return replyText(
-      replyToken,
+    return replyText(replyToken,
 `━━━━━━━━━━
 ✅ VIP開通成功
 ━━━━━━━━━━
 
 使用者：
-${targetUserId}
+${targetId}
 
 開通天數：
 ${days}天
 
-剩餘時間：
-${getVipRemaining(targetUserId)}`
-    );
+目前狀態：
+${vipTime(targetId)}`);
   }
 
   // ===============================
-  // 管理員指令：取消開通
-  // 格式：取消開通 Uxxxxx
+  // 管理員：取消開通
+  // 格式：取消開通 Uxxxx
   // ===============================
-  if (messageText.startsWith('取消開通 ')) {
+  if (text.startsWith('取消開通 ')) {
     if (!isAdmin(userId)) {
-      return replyText(replyToken, '你沒有管理員權限');
+      return replyText(replyToken, '你沒有管理員權限。');
     }
 
-    const parts = messageText.split(' ');
-    const targetUserId = parts[1];
+    const parts = text.split(/\s+/);
+    const targetId = parts[1];
 
-    if (!targetUserId) {
-      return replyText(
-        replyToken,
-`格式錯誤
+    if (!targetId) {
+      return replyText(replyToken,
+`格式錯誤。
 
-請輸入：
-取消開通 使用者ID`
-      );
+正確格式：
+取消開通 使用者ID`);
     }
 
-    removeVip(targetUserId);
+    removeVip(targetId);
 
-    return replyText(
-      replyToken,
+    return replyText(replyToken,
 `━━━━━━━━━━
-✅ 已取消VIP
+✅ VIP已取消
 ━━━━━━━━━━
 
 使用者：
-${targetUserId}`
-    );
+${targetId}`);
+  }
+
+  // ===============================
+  // 管理員：查詢別人
+  // 格式：查詢 Uxxxx
+  // ===============================
+  if (text.startsWith('查詢 ')) {
+    if (!isAdmin(userId)) {
+      return replyText(replyToken, '你沒有管理員權限。');
+    }
+
+    const parts = text.split(/\s+/);
+    const targetId = parts[1];
+
+    if (!targetId) {
+      return replyText(replyToken,
+`格式錯誤。
+
+正確格式：
+查詢 使用者ID`);
+    }
+
+    return replyText(replyToken,
+`━━━━━━━━━━
+👑 VIP查詢
+━━━━━━━━━━
+
+使用者：
+${targetId}
+
+狀態：
+${vipTime(targetId)}`);
   }
 
   // ===============================
   // VIP查詢
   // ===============================
-  if (messageText === 'VIP查詢' || messageText === '查詢VIP') {
-    return replyText(
-      replyToken,
+  if (['VIP查詢', '查詢VIP', 'vip查詢', 'VIP'].includes(text)) {
+    return replyText(replyToken,
 `━━━━━━━━━━
 👑 黑域AI VIP
 ━━━━━━━━━━
 
-目前狀態：
-${getVipRemaining(userId)}`
-    );
+你的狀態：
+${vipTime(userId)}`);
   }
 
   // ===============================
   // 百家樂AI
   // ===============================
-  if (messageText === '百家樂AI') {
-    if (!canUseFeature(userId)) {
-      return vipRequiredMessage(replyToken);
-    }
+  if (text === '百家樂AI' || text === '百家樂' || text === '百家') {
+    if (!canUseFeature(userId)) return requireVip(replyToken);
 
-    return client.replyMessage(replyToken, {
-      type: 'text',
-      text:
+    userState[userId] = {
+      mode: 'baccarat_wait_room'
+    };
+
+    return replyText(replyToken,
 `━━━━━━━━━━
-🤖 黑域AI已啟動
+🤖 黑域百家樂AI已啟動
 ━━━━━━━━━━
 
 請提供：
@@ -327,33 +312,41 @@ ${getVipRemaining(userId)}`
 • 百家平台：DG / MT
 • 房間號碼
 
-範例：
-DG 01
-DG RB01
-DG S01
-MT 01
-MT 3A
+支援格式：
 
-系統將開始同步牌路數據。`
-    });
+DG 01
+DG 1
+DG RB01
+DG RB1
+DG S01
+DG S1
+
+MT 01
+MT 1
+MT 3A
+MT 13A
+
+系統將開始同步牌路數據。`);
   }
 
   // ===============================
-  // 百家房號判斷
+  // 百家房號
   // ===============================
   if (
-    /^DG\s?(RB|S)?\d{1,2}$/i.test(messageText) ||
-    /^MT\s?(\d{1,2}|3A|13A)$/i.test(messageText)
+    /^DG\s?((RB|S)?0?[1-7])$/i.test(text) ||
+    /^MT\s?(0?[1-9]|1[0-3]|3A|13A)$/i.test(text)
   ) {
-    if (!canUseFeature(userId)) {
-      return vipRequiredMessage(replyToken);
-    }
+    if (!canUseFeature(userId)) return requireVip(replyToken);
 
-    const result = randomPick(['莊', '閒']);
+    const suggest = pick(['莊', '閒']);
 
-    return client.replyMessage(replyToken, {
-      type: 'text',
-      text:
+    userState[userId] = {
+      mode: 'baccarat_running',
+      room: text.toUpperCase(),
+      lastSuggest: suggest
+    };
+
+    return replyText(replyToken,
 `━━━━━━━━━━
 🤖 黑域AI同步完成
 ━━━━━━━━━━
@@ -362,108 +355,81 @@ MT 3A
 ✓ 牌路數據載入
 ✓ AI模型運算完成
 
-目前建議：${result}
+房間：
+${text.toUpperCase()}
+
+目前建議：${suggest}
 
 請輸入目前開出：
 莊 / 閒 / 和`,
-      quickReply: {
-        items: [
-          {
-            type: 'action',
-            action: {
-              type: 'message',
-              label: '莊',
-              text: '莊'
-            }
-          },
-          {
-            type: 'action',
-            action: {
-              type: 'message',
-              label: '閒',
-              text: '閒'
-            }
-          },
-          {
-            type: 'action',
-            action: {
-              type: 'message',
-              label: '和',
-              text: '和'
-            }
-          }
-        ]
-      }
-    });
+      qr(['莊', '閒', '和', '結束百家'])
+    );
   }
 
   // ===============================
   // 百家結果回填
   // ===============================
-  if (['莊', '閒', '和'].includes(messageText)) {
-    if (!canUseFeature(userId)) {
-      return vipRequiredMessage(replyToken);
+  if (['莊', '閒', '和'].includes(text)) {
+    if (!canUseFeature(userId)) return requireVip(replyToken);
+
+    const state = userState[userId];
+
+    if (!state || state.mode !== 'baccarat_running') {
+      return replyText(replyToken,
+`尚未同步房間。
+
+請先輸入：
+百家樂AI`);
     }
 
-    const nextResult = randomPick(['莊', '閒']);
+    const next = pick(['莊', '閒']);
 
-    return client.replyMessage(replyToken, {
-      type: 'text',
-      text:
+    userState[userId].lastOpen = text;
+    userState[userId].lastSuggest = next;
+
+    return replyText(replyToken,
 `━━━━━━━━━━
-🤖 黑域AI更新完成
+🤖 黑域AI重新運算
 ━━━━━━━━━━
 
-目前開出：${messageText}
+目前開出：${text}
 
-AI重新運算完成。
+✓ 牌路已更新
+✓ 模型重新分析完成
 
-下一手建議：${nextResult}
+下一手建議：${next}
 
 請繼續輸入目前開出：
 莊 / 閒 / 和`,
-      quickReply: {
-        items: [
-          {
-            type: 'action',
-            action: {
-              type: 'message',
-              label: '莊',
-              text: '莊'
-            }
-          },
-          {
-            type: 'action',
-            action: {
-              type: 'message',
-              label: '閒',
-              text: '閒'
-            }
-          },
-          {
-            type: 'action',
-            action: {
-              type: 'message',
-              label: '和',
-              text: '和'
-            }
-          }
-        ]
-      }
-    });
+      qr(['莊', '閒', '和', '結束百家'])
+    );
+  }
+
+  if (text === '結束百家') {
+    delete userState[userId];
+
+    return replyText(replyToken,
+`━━━━━━━━━━
+✅ 百家樂AI已結束
+━━━━━━━━━━
+
+需要再次使用請輸入：
+百家樂AI`,
+      qr(['百家樂AI', '電子AI', '539AI'])
+    );
   }
 
   // ===============================
   // 電子AI
   // ===============================
-  if (messageText === '電子AI' || messageText === '電子') {
-    if (!canUseFeature(userId)) {
-      return vipRequiredMessage(replyToken);
-    }
+  if (text === '電子AI' || text === '電子') {
+    if (!canUseFeature(userId)) return requireVip(replyToken);
 
-    return client.replyMessage(replyToken, {
-      type: 'text',
-      text:
+    userState[userId] = {
+      mode: 'slot_wait_game'
+    };
+
+    return replyText(replyToken,
 `━━━━━━━━━━
 ⚡ 黑域電子AI已啟動
 ━━━━━━━━━━
@@ -472,134 +438,166 @@ AI重新運算完成。
 
 • 戰神賽特1
 • 戰神賽特2`,
-      quickReply: {
-        items: [
-          {
-            type: 'action',
-            action: {
-              type: 'message',
-              label: '戰神賽特1',
-              text: '戰神賽特1'
-            }
-          },
-          {
-            type: 'action',
-            action: {
-              type: 'message',
-              label: '戰神賽特2',
-              text: '戰神賽特2'
-            }
-          }
-        ]
-      }
-    });
+      qr(['戰神賽特1', '戰神賽特2'])
+    );
   }
 
-  // ===============================
-  // 戰神賽特
-  // ===============================
-  if (messageText === '戰神賽特1' || messageText === '戰神賽特2') {
-    if (!canUseFeature(userId)) {
-      return vipRequiredMessage(replyToken);
-    }
+  if (text === '戰神賽特1' || text === '戰神賽特2') {
+    if (!canUseFeature(userId)) return requireVip(replyToken);
 
-    return replyText(
-      replyToken,
+    userState[userId] = {
+      mode: 'slot_wait_room',
+      game: text
+    };
+
+    return replyText(replyToken,
 `━━━━━━━━━━
-⚡ ${messageText}
+⚡ ${text}
 ━━━━━━━━━━
 
 請輸入房間號碼。
 
-範圍：
+支援：
 1 ~ 3500
 
 範例：
-377`
-    );
+377`);
   }
 
   // ===============================
-  // 電子房號分析
+  // 電子房號
   // ===============================
-  if (/^\d{1,4}$/.test(messageText)) {
-    if (!canUseFeature(userId)) {
-      return vipRequiredMessage(replyToken);
+  if (/^\d{1,4}$/.test(text)) {
+    if (!canUseFeature(userId)) return requireVip(replyToken);
+
+    const state = userState[userId];
+
+    if (!state || state.mode !== 'slot_wait_room') {
+      return replyText(replyToken,
+`請先選擇電子遊戲。
+
+請輸入：
+電子AI`);
     }
 
-    const roomNumber = parseInt(messageText, 10);
+    const room = parseInt(text, 10);
 
-    if (roomNumber < 1 || roomNumber > 3500) {
-      return replyText(replyToken, '查無此房間，請輸入 1 ~ 3500 的房號');
+    if (room < 1 || room > 3500) {
+      return replyText(replyToken, '查無此房間，請輸入 1 ~ 3500。');
     }
 
-    const result = randomPick([
+    const result = pick([
       '可進場',
       '數據中等',
-      '數據偏強'
+      '數據偏強',
+      '連動訊號偏強',
+      '波動值提升',
+      '高分區間接近'
     ]);
 
-    return replyText(
-      replyToken,
+    return replyText(replyToken,
 `━━━━━━━━━━
 ⚡ 黑域電子AI分析完成
 ━━━━━━━━━━
 
-房間號碼：${roomNumber}
+遊戲：
+${state.game}
 
-AI數據結果：
+房間號碼：
+${room}
+
+AI分析結果：
 ${result}
 
-提醒：AI僅作為數據參考，請自行控管金額。`
+建議：
+請自行控管金額，AI只提供數據參考。`,
+      qr(['電子AI', '539AI', '百家樂AI'])
     );
   }
 
   // ===============================
   // 539AI
   // ===============================
-  if (messageText === '539AI' || messageText === '539') {
-    if (!canUseFeature(userId)) {
-      return vipRequiredMessage(replyToken);
-    }
+  if (text === '539AI' || text === '539') {
+    if (!canUseFeature(userId)) return requireVip(replyToken);
 
-    const numbers = [];
-
-    while (numbers.length < 5) {
-      const n = Math.floor(Math.random() * 39) + 1;
-      if (!numbers.includes(n)) {
-        numbers.push(n);
-      }
-    }
-
-    numbers.sort((a, b) => a - b);
-
-    return replyText(
-      replyToken,
+    return replyText(replyToken,
 `━━━━━━━━━━
-🎯 黑域539AI
+🎯 黑域539AI已啟動
 ━━━━━━━━━━
 
-AI數據分析完成
+請選擇分析模式：
 
-今日參考號碼：
-
-${numbers.map(n => `🔵 ${n}`).join('\n')}
-
-提醒：此為AI數據參考，非保證結果。`
+• 穩定模式
+• 熱號模式
+• 冷號模式`,
+      qr(['穩定模式', '熱號模式', '冷號模式'])
     );
+  }
+
+  if (['穩定模式', '熱號模式', '冷號模式'].includes(text)) {
+    if (!canUseFeature(userId)) return requireVip(replyToken);
+
+    const nums = [];
+
+    while (nums.length < 5) {
+      const n = Math.floor(Math.random() * 39) + 1;
+      if (!nums.includes(n)) nums.push(n);
+    }
+
+    nums.sort((a, b) => a - b);
+
+    let modeText = '';
+
+    if (text === '穩定模式') modeText = '穩定分布分析';
+    if (text === '熱號模式') modeText = '近期熱號權重分析';
+    if (text === '冷號模式') modeText = '冷門補位數據分析';
+
+    return replyText(replyToken,
+`━━━━━━━━━━
+🎯 黑域539AI分析完成
+━━━━━━━━━━
+
+模式：
+${modeText}
+
+參考號碼：
+
+${nums.map(n => `🔵 ${n}`).join('\n')}
+
+提醒：
+AI僅提供數據參考，非保證結果。`,
+      qr(['穩定模式', '熱號模式', '冷號模式', '選單'])
+    );
+  }
+
+  // ===============================
+  // 查無房間提示
+  // ===============================
+  if (/^(DG|MT)/i.test(text)) {
+    return replyText(replyToken,
+`查無此房間。
+
+請確認格式：
+
+DG 01
+DG RB01
+DG S01
+MT 01
+MT 3A`);
   }
 
   // ===============================
   // 預設回覆
   // ===============================
-  return mainMenu(replyToken);
+  return sendMenu(replyToken);
 }
 
 // ===============================
-// 啟動伺服器
+// 啟動
 // ===============================
 const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
-  console.log(`黑域AI系統已啟動，Port：${port}`);
+  console.log(`BLACKDOMAIN AI 啟動成功 Port：${port}`);
 });
