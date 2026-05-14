@@ -589,7 +589,66 @@ ${nums[1]} / ${nums[4]}
       quickReply: quick539("539冷號"),
     });
   }
+if (userText === "體育AI") {
 
+  try {
+
+    const today = new Date().toISOString().split("T")[0];
+
+    const response = await axios.get(
+      "https://v2.nba.api-sports.io/games",
+      {
+        params: {
+          date: today
+        },
+        headers: {
+          "x-apisports-key": API_KEY
+        }
+      }
+    );
+
+    const games = response.data.response;
+
+    if (!games.length) {
+
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "今日目前沒有NBA賽程",
+      });
+
+    }
+
+    let message = `━━━━━━━━━━
+🏀 今日NBA賽程
+━━━━━━━━━━
+
+`;
+
+    games.forEach((game, index) => {
+
+      message += `${index + 1}. ${game.teams.visitors.name} vs ${game.teams.home.name}\n`;
+
+    });
+
+    message += `
+━━━━━━━━━━
+🤖 黑域體育AI
+━━━━━━━━━━`;
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: message,
+    });
+
+  } catch (error) {
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "體育AI同步失敗",
+    });
+
+  }
+}
   const isValidMT = /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(userText);
   const isValidDG = /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i.test(userText);
   const isWrongRoom = /^mt/i.test(userText) || /^dg/i.test(userText);
@@ -650,7 +709,7 @@ ${nextResult}
 • 百家樂
 • 電子
 • 539
-
+• 體育
 若尚未開通，請輸入：
 申請開通 你的3A帳號`,
   });
@@ -701,5 +760,3 @@ async function getNBAGames() {
 
   }
 }
-
-getNBAGames();
