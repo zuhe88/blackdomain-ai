@@ -1,6 +1,7 @@
 const express = require("express");
 const line = require("@line/bot-sdk");
 const { createClient } = require("@supabase/supabase-js");
+const axios = require("axios");
 
 const app = express();
 
@@ -17,6 +18,8 @@ const supabase = createClient(
 );
 
 const adminId = "Uaf293ee976e5170d4e8672d2c12b3f76";
+const API_KEY = process.env.APISPORTS_KEY;
+
 const pendingAccounts = {};
 const daily539Cache = {};
 
@@ -47,7 +50,6 @@ async function checkVip(userId) {
 
 async function openVip(userId, account, days) {
   const expireTime = Date.now() + days * 24 * 60 * 60 * 1000;
-
   const oldData = await getVipData(userId);
 
   let error;
@@ -121,6 +123,16 @@ function quickSlot() {
   };
 }
 
+function quickSports() {
+  return {
+    items: [
+      { type: "action", action: { type: "message", label: "NBA", text: "NBA" } },
+      { type: "action", action: { type: "message", label: "足球", text: "足球" } },
+      { type: "action", action: { type: "message", label: "棒球", text: "棒球" } },
+    ],
+  };
+}
+
 function quick539(excludeMode) {
   const modes = [
     { label: "539穩定", text: "539穩定" },
@@ -140,6 +152,14 @@ function quick539(excludeMode) {
         },
       })),
   };
+}
+
+function getTodayDate() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function getPredictionDate() {
@@ -216,6 +236,123 @@ function generate539Numbers(mode) {
 
   daily539Cache[cacheKey] = finalNumbers;
   return finalNumbers;
+}
+
+async function getNBAGamesMessage() {
+  const today = getTodayDate();
+
+  const response = await axios.get("https://v2.nba.api-sports.io/games", {
+    params: { date: today },
+    headers: { "x-apisports-key": API_KEY },
+  });
+
+  const games = response.data.response || [];
+
+  if (!games.length) {
+    return `━━━━━━━━━━
+🏀 今日NBA賽程
+━━━━━━━━━━
+
+今日目前沒有NBA賽程。`;
+  }
+
+  let message = `━━━━━━━━━━
+🏀 今日NBA賽程
+━━━━━━━━━━
+
+`;
+
+  games.forEach((game, index) => {
+    message += `${index + 1}. ${game.teams.visitors.name} vs ${game.teams.home.name}\n`;
+  });
+
+  message += `
+━━━━━━━━━━
+🤖 黑域體育分析
+━━━━━━━━━━
+可依照近期狀態、主客場、得分效率與盤口變化進行判斷。
+
+⚠️ 僅供分析參考`;
+
+  return message;
+}
+
+async function getFootballGamesMessage() {
+  const today = getTodayDate();
+
+  const response = await axios.get("https://v3.football.api-sports.io/fixtures", {
+    params: { date: today },
+    headers: { "x-apisports-key": API_KEY },
+  });
+
+  const games = response.data.response || [];
+
+  if (!games.length) {
+    return `━━━━━━━━━━
+⚽ 今日足球賽程
+━━━━━━━━━━
+
+今日目前沒有足球賽程。`;
+  }
+
+  let message = `━━━━━━━━━━
+⚽ 今日足球賽程
+━━━━━━━━━━
+
+`;
+
+  games.slice(0, 10).forEach((game, index) => {
+    message += `${index + 1}. ${game.teams.home.name} vs ${game.teams.away.name}\n`;
+  });
+
+  message += `
+━━━━━━━━━━
+🤖 黑域體育分析
+━━━━━━━━━━
+可依照近期戰績、主客場、進失球、聯賽狀態進行判斷。
+
+⚠️ 僅供分析參考`;
+
+  return message;
+}
+
+async function getBaseballGamesMessage() {
+  const today = getTodayDate();
+
+  const response = await axios.get("https://v1.baseball.api-sports.io/games", {
+    params: { date: today },
+    headers: { "x-apisports-key": API_KEY },
+  });
+
+  const games = response.data.response || [];
+
+  if (!games.length) {
+    return `━━━━━━━━━━
+⚾ 今日棒球賽程
+━━━━━━━━━━
+
+今日目前沒有棒球賽程。`;
+  }
+
+  let message = `━━━━━━━━━━
+⚾ 今日棒球賽程
+━━━━━━━━━━
+
+`;
+
+  games.slice(0, 10).forEach((game, index) => {
+    message += `${index + 1}. ${game.teams.away.name} vs ${game.teams.home.name}\n`;
+  });
+
+  message += `
+━━━━━━━━━━
+🤖 黑域體育分析
+━━━━━━━━━━
+可依照先發投手、近況打線、牛棚狀態與主客場進行判斷。
+
+⚠️ 僅供分析參考`;
+
+  return message;
 }
 
 app.get("/", (req, res) => {
@@ -380,35 +517,112 @@ ${formatTaiwanTime(expireTime)}`,
     }
   }
 
- const isVipCommand =
-  ["百家樂", "電子", "電子AI", "539", "539AI", "539 AI", "539穩定", "539熱號", "539冷號", "戰神賽特1", "戰神賽特2", "莊", "閒", "和", "體育AI"].includes(userText) ||
+  const isVipCommand =
+    [
+      "百家樂",
+      "電子",
+      "電子AI",
+      "539",
+      "539AI",
+      "539 AI",
+      "539穩定",
+      "539熱號",
+      "539冷號",
+      "戰神賽特1",
+      "戰神賽特2",
+      "莊",
+      "閒",
+      "和",
+      "體育",
+      "NBA",
+      "足球",
+      "棒球",
+    ].includes(userText) ||
     /^mt/i.test(userText) ||
     /^dg/i.test(userText);
 
- if (isVipCommand) {
+  if (isVipCommand) {
+    if (userId !== adminId) {
+      const isVip = await checkVip(userId);
 
-  // 管理員直接通行
-  if (userId === adminId) {
-
-  }
-
-  else {
-
-    const isVip =
-      await checkVip(userId);
-
-    if (!isVip) {
-
-      return client.replyMessage(
-        event.replyToken,
-        {
+      if (!isVip) {
+        return client.replyMessage(event.replyToken, {
           type: "text",
           text: noVipMessage(),
-        }
-      );
+        });
+      }
     }
   }
-}
+
+  if (userText === "體育") {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
+🏆 黑域體育已啟動
+━━━━━━━━━━
+
+請選擇球類：
+
+• NBA
+• 足球
+• 棒球`,
+      quickReply: quickSports(),
+    });
+  }
+
+  if (userText === "NBA") {
+    try {
+      const message = await getNBAGamesMessage();
+
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: message,
+      });
+    } catch (error) {
+      console.log(error.response?.data || error.message);
+
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "NBA賽程同步失敗，請稍後再試。",
+      });
+    }
+  }
+
+  if (userText === "足球") {
+    try {
+      const message = await getFootballGamesMessage();
+
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: message,
+      });
+    } catch (error) {
+      console.log(error.response?.data || error.message);
+
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "足球賽程同步失敗，請稍後再試。",
+      });
+    }
+  }
+
+  if (userText === "棒球") {
+    try {
+      const message = await getBaseballGamesMessage();
+
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: message,
+      });
+    } catch (error) {
+      console.log(error.response?.data || error.message);
+
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "棒球賽程同步失敗，請稍後再試。",
+      });
+    }
+  }
 
   if (userText === "百家樂") {
     return client.replyMessage(event.replyToken, {
@@ -589,66 +803,7 @@ ${nums[1]} / ${nums[4]}
       quickReply: quick539("539冷號"),
     });
   }
-if (userText === "體育AI") {
 
-  try {
-
-    const today = new Date().toISOString().split("T")[0];
-
-    const response = await axios.get(
-      "https://v2.nba.api-sports.io/games",
-      {
-        params: {
-          date: today
-        },
-        headers: {
-          "x-apisports-key": API_KEY
-        }
-      }
-    );
-
-    const games = response.data.response;
-
-    if (!games.length) {
-
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "今日目前沒有NBA賽程",
-      });
-
-    }
-
-    let message = `━━━━━━━━━━
-🏀 今日NBA賽程
-━━━━━━━━━━
-
-`;
-
-    games.forEach((game, index) => {
-
-      message += `${index + 1}. ${game.teams.visitors.name} vs ${game.teams.home.name}\n`;
-
-    });
-
-    message += `
-━━━━━━━━━━
-🤖 黑域體育AI
-━━━━━━━━━━`;
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: message,
-    });
-
-  } catch (error) {
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "體育AI同步失敗",
-    });
-
-  }
-}
   const isValidMT = /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(userText);
   const isValidDG = /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i.test(userText);
   const isWrongRoom = /^mt/i.test(userText) || /^dg/i.test(userText);
@@ -721,43 +876,3 @@ const port = process.env.PORT || 8080;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-const axios = require("axios");
-
-const API_KEY = process.env.APISPORTS_KEY;
-
-async function getNBAGames() {
-
-  try {
-
-    const today = new Date().toISOString().split("T")[0];
-
-    const response = await axios.get(
-      "https://v2.nba.api-sports.io/games",
-      {
-        params: {
-          date: today
-        },
-        headers: {
-          "x-apisports-key": API_KEY
-        }
-      }
-    );
-
-    const games = response.data.response;
-
-    console.log("今日NBA賽程：");
-
-    games.forEach((game, index) => {
-
-      console.log(
-        `${index + 1}. ${game.teams.visitors.name} vs ${game.teams.home.name}`
-      );
-
-    });
-
-  } catch (error) {
-
-    console.log(error.response?.data || error.message);
-
-  }
-}
