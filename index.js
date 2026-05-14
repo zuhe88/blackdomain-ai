@@ -380,8 +380,8 @@ ${formatTaiwanTime(expireTime)}`,
     }
   }
 
-  const isVipCommand =
-    ["百家樂", "電子", "電子AI", "539", "539AI", "539 AI", "539穩定", "539熱號", "539冷號", "戰神賽特1", "戰神賽特2", "莊", "閒", "和"].includes(userText) ||
+ const isVipCommand =
+  ["百家樂", "電子", "電子AI", "539", "539AI", "539 AI", "539穩定", "539熱號", "539冷號", "戰神賽特1", "戰神賽特2", "莊", "閒", "和", "體育AI"].includes(userText) ||
     /^mt/i.test(userText) ||
     /^dg/i.test(userText);
 
@@ -710,6 +710,7 @@ ${nextResult}
 • 電子
 • 539
 • 體育
+
 若尚未開通，請輸入：
 申請開通 你的3A帳號`,
   });
