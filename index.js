@@ -80,8 +80,8 @@ function quick539(excludeMode) {
 }
 
 const teamNameMap = {
-  "Cleveland Cavaliers": "克里夫蘭騎士",
-  "Detroit Pistons": "底特律活塞",
+
+  // NBA
   "Los Angeles Lakers": "洛杉磯湖人",
   "Golden State Warriors": "金州勇士",
   "Boston Celtics": "波士頓塞爾提克",
@@ -95,21 +95,45 @@ const teamNameMap = {
   "Chicago Bulls": "芝加哥公牛",
   "Houston Rockets": "休士頓火箭",
   "San Antonio Spurs": "聖安東尼奧馬刺",
-  "Memphis Grizzlies": "曼菲斯灰熊",
   "Minnesota Timberwolves": "明尼蘇達灰狼",
   "Oklahoma City Thunder": "奧克拉荷馬雷霆",
   "LA Clippers": "洛杉磯快艇",
-  "Sacramento Kings": "沙加緬度國王",
-  "Toronto Raptors": "多倫多暴龍",
-  "Philadelphia 76ers": "費城76人",
-  "Atlanta Hawks": "亞特蘭大老鷹",
-  "Orlando Magic": "奧蘭多魔術",
-  "Indiana Pacers": "印第安納溜馬",
-  "Charlotte Hornets": "夏洛特黃蜂",
-  "Washington Wizards": "華盛頓巫師",
-  "Portland Trail Blazers": "波特蘭拓荒者",
-  "Utah Jazz": "猶他爵士",
-  "New Orleans Pelicans": "紐奧良鵜鶘",
+  "Cleveland Cavaliers": "克里夫蘭騎士",
+  "Detroit Pistons": "底特律活塞",
+
+  // MLB
+  "New York Yankees": "紐約洋基",
+  "Boston Red Sox": "波士頓紅襪",
+  "Los Angeles Dodgers": "洛杉磯道奇",
+  "Houston Astros": "休士頓太空人",
+  "Chicago Cubs": "芝加哥小熊",
+  "Atlanta Braves": "亞特蘭大勇士",
+  "New York Mets": "紐約大都會",
+  "San Diego Padres": "聖地牙哥教士",
+  "Philadelphia Phillies": "費城費城人",
+  "Seattle Mariners": "西雅圖水手",
+  "Texas Rangers": "德州遊騎兵",
+  "Toronto Blue Jays": "多倫多藍鳥",
+  "St. Louis Cardinals": "聖路易紅雀",
+  "San Francisco Giants": "舊金山巨人",
+  "Tampa Bay Rays": "坦帕灣光芒",
+
+  // 足球
+  "Manchester City": "曼城",
+  "Manchester United": "曼聯",
+  "Liverpool": "利物浦",
+  "Arsenal": "兵工廠",
+  "Chelsea": "切爾西",
+  "Tottenham": "熱刺",
+  "Barcelona": "巴塞隆納",
+  "Real Madrid": "皇家馬德里",
+  "Atletico Madrid": "馬德里競技",
+  "Bayern Munich": "拜仁慕尼黑",
+  "Paris Saint Germain": "巴黎聖日耳曼",
+  "Inter": "國際米蘭",
+  "AC Milan": "AC米蘭",
+  "Juventus": "尤文圖斯"
+
 };
 
 function translateTeamName(name) {
@@ -465,8 +489,8 @@ async function getFootballGamesMessage() {
 `;
 
   games.slice(0, 5).forEach((game, index) => {
-    const home = game.teams.home.name;
-    const away = game.teams.away.name;
+    const home = translateTeamName(game.teams.home.name);
+    const away = translateTeamName(game.teams.home.name);
     const time = formatGameTime(game.fixture.date);
 
     let h2h = "盤口同步中";
@@ -590,8 +614,8 @@ async function getBaseballGamesMessage() {
 `;
 
   games.slice(0, 5).forEach((game, index) => {
-    const home = game.teams.home.name;
-    const away = game.teams.away.name;
+    const home = translateTeamName(game.teams.home.name);
+    const away = translateTeamName(game.teams.home.name);
     const time = formatGameTime(game.date);
 
     let h2h = "盤口同步中";
