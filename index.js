@@ -661,3 +661,45 @@ const port = process.env.PORT || 8080;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+const axios = require("axios");
+
+const API_KEY = process.env.APISPORTS_KEY;
+
+async function getNBAGames() {
+
+  try {
+
+    const today = new Date().toISOString().split("T")[0];
+
+    const response = await axios.get(
+      "https://v2.nba.api-sports.io/games",
+      {
+        params: {
+          date: today
+        },
+        headers: {
+          "x-apisports-key": API_KEY
+        }
+      }
+    );
+
+    const games = response.data.response;
+
+    console.log("今日NBA賽程：");
+
+    games.forEach((game, index) => {
+
+      console.log(
+        `${index + 1}. ${game.teams.visitors.name} vs ${game.teams.home.name}`
+      );
+
+    });
+
+  } catch (error) {
+
+    console.log(error.response?.data || error.message);
+
+  }
+}
+
+getNBAGames();
