@@ -184,14 +184,11 @@ async function fetch539History() {
   try {
     const res = await axios.get(url, {
       timeout: 10000,
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-      },
+      headers: { "User-Agent": "Mozilla/5.0" },
     });
 
     const $ = cheerio.load(res.data);
     const text = $("body").text().replace(/\s+/g, " ");
-
     const matches = text.match(/\b(?:0?[1-9]|[12][0-9]|3[0-9])\b/g) || [];
     const nums = matches.map((n) => Number(n)).filter((n) => n >= 1 && n <= 39);
 
@@ -343,41 +340,107 @@ ${analysis.reason}
 ⚠️ 僅供娛樂分析參考`;
 }
 
-function analyzeBaccarat(history) {
+function getBaccaratMainPrediction(history) {
   const filtered = history.filter((x) => x !== "和");
+
+  if (filtered.length < 2) {
+    return randomPick(["莊", "閒"]);
+  }
 
   const bankerCount = filtered.filter((x) => x === "莊").length;
   const playerCount = filtered.filter((x) => x === "閒").length;
-
   const last = filtered[filtered.length - 1];
   const last2 = filtered.slice(-2);
 
-  let prediction = "莊";
-  let confidence = "★★★☆☆";
-  let reason = "模型同步中";
-
-  if (last2.length === 2 && last2[0] === "莊" && last2[1] === "閒") {
-    prediction = "莊";
-    reason = "牌路出現跳牌結構，模型偏向續跳。";
-  } else if (last2.length === 2 && last2[0] === "閒" && last2[1] === "莊") {
-    prediction = "閒";
-    reason = "牌路出現跳牌結構，模型偏向續跳。";
-  } else if (bankerCount > playerCount) {
-    prediction = "莊";
-    reason = "近局莊比例偏高，模型偏向莊。";
-  } else if (playerCount > bankerCount) {
-    prediction = "閒";
-    reason = "近局閒比例偏高，模型偏向閒。";
-  } else {
-    prediction = last === "莊" ? "閒" : "莊";
-    reason = "牌路比例平均，模型偏向反轉。";
+  if (last2.length === 2 && last2[0] !== last2[1]) {
+    return last === "莊" ? "閒" : "莊";
   }
 
-  if (Math.abs(bankerCount - playerCount) >= 3) {
-    confidence = "★★★★☆";
+  if (bankerCount > playerCount) return "莊";
+  if (playerCount > bankerCount) return "閒";
+
+  return randomPick(["莊", "閒"]);
+}
+
+function getBaccaratSpecialTip(history) {
+  const filtered = history.filter((x) => x !== "和");
+  const recent = filtered.slice(-5);
+  const bankerStreak = recent.filter((x) => x === "莊").length;
+  const playerStreak = recent.filter((x) => x === "閒").length;
+  const roll = Math.random();
+
+  if (roll < 0.02 && bankerStreak >= 3) {
+    return "⚠️ 高倍率區同步完成\n\n可留意：\n莊龍寶";
   }
 
-  return { prediction, confidence, reason };
+  if (roll < 0.04 && playerStreak >= 3) {
+    return "⚠️ 高倍率區同步完成\n\n可留意：\n閒龍寶";
+  }
+
+  if (roll < 0.08) {
+    return "⚠️ 可留意：\n和局";
+  }
+
+  if (roll < 0.14) {
+    return `⚠️ 可留意：\n${randomPick(["莊對", "閒對"])}`;
+  }
+
+  if (roll < 0.18) {
+    return "⚠️ 特殊波動：\n超6";
+  }
+
+  return "";
+}
+
+function getBaccaratWarning(history) {
+  const filtered = history.filter((x) => x !== "和");
+  const recent = filtered.slice(-5);
+  const heCount = history.slice(-6).filter((x) => x === "和").length;
+
+  if (heCount >= 2) {
+    return "⚠️ 和局波動偏高，建議降低注碼";
+  }
+
+  if (recent.length >= 5 && recent.every((x) => x === recent[0])) {
+    return "⚠️ 偵測長龍波動，注意斷龍風險";
+  }
+
+  if (recent.length >= 5) {
+    const isShake = recent.every((v, i, arr) => i === 0 || v !== arr[i - 1]);
+    if (isShake) {
+      return "⚠️ 偵測震盪牌路，建議小注觀察";
+    }
+  }
+
+  return "";
+}
+
+function formatBaccaratReply(history, prediction) {
+  const warning = getBaccaratWarning(history);
+  const specialTip = getBaccaratSpecialTip(history);
+
+  let extra = "";
+
+  if (warning) {
+    extra += `\n${warning}\n`;
+  }
+
+  if (specialTip) {
+    extra += `\n${specialTip}\n`;
+  }
+
+  return `━━━━━━━━━━
+🤖 黑域AI運算完成
+━━━━━━━━━━
+
+目前建議：
+${prediction}
+${extra}
+目前牌路：
+${history.join(" ")}
+
+請輸入目前開出：
+莊 / 閒 / 和`;
 }
 
 app.get("/", (req, res) => {
@@ -602,6 +665,8 @@ MT 01`,
   if (isValidMT || isValidDG) {
     baccaratHistory[userId] = [];
 
+    const prediction = randomPick(["莊", "閒"]);
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -610,6 +675,9 @@ MT 01`,
 
 ✓ 房間同步成功
 ✓ AI模型運算完成
+
+目前建議：
+${prediction}
 
 請輸入目前開出：
 莊 / 閒 / 和`,
@@ -629,28 +697,11 @@ MT 01`,
 
     if (baccaratHistory[userId].length > 20) baccaratHistory[userId].shift();
 
-    const analysis = analyzeBaccarat(baccaratHistory[userId]);
+    const prediction = getBaccaratMainPrediction(baccaratHistory[userId]);
 
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: `━━━━━━━━━━
-🤖 黑域AI運算完成
-━━━━━━━━━━
-
-目前建議：
-${analysis.prediction}
-
-信心指數：
-${analysis.confidence}
-
-分析依據：
-${analysis.reason}
-
-目前牌路：
-${baccaratHistory[userId].join(" ")}
-
-請輸入目前開出：
-莊 / 閒 / 和`,
+      text: formatBaccaratReply(baccaratHistory[userId], prediction),
       quickReply: quickBaccarat(),
     });
   }
