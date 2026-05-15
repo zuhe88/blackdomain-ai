@@ -17,11 +17,87 @@ const supabase = createClient(
 );
 
 const adminId = "Uaf293ee976e5170d4e8672d2c12b3f76";
+
 const pendingAccounts = {};
 const daily539Cache = {};
 
 function randomPick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function quickBaccarat() {
+  return {
+    items: [
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "莊",
+          text: "莊",
+        },
+      },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "閒",
+          text: "閒",
+        },
+      },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "和",
+          text: "和",
+        },
+      },
+    ],
+  };
+}
+
+function quickSlot() {
+  return {
+    items: [
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "戰神賽特1",
+          text: "戰神賽特1",
+        },
+      },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "戰神賽特2",
+          text: "戰神賽特2",
+        },
+      },
+    ],
+  };
+}
+
+function quick539(excludeMode) {
+  const modes = [
+    { label: "539穩定", text: "539穩定" },
+    { label: "539熱號", text: "539熱號" },
+    { label: "539冷號", text: "539冷號" },
+  ];
+
+  return {
+    items: modes
+      .filter((mode) => mode.text !== excludeMode)
+      .map((mode) => ({
+        type: "action",
+        action: {
+          type: "message",
+          label: mode.label,
+          text: mode.text,
+        },
+      })),
+  };
 }
 
 async function getVipData(userId) {
@@ -41,7 +117,9 @@ async function getVipData(userId) {
 
 async function checkVip(userId) {
   const data = await getVipData(userId);
+
   if (!data) return false;
+
   return Number(data.expire_time) > Date.now();
 }
 
@@ -56,7 +134,7 @@ async function openVip(userId, account, days) {
     const result = await supabase
       .from("vip_users")
       .update({
-        account: account,
+        account,
         expire_time: expireTime,
       })
       .eq("user_id", userId);
@@ -67,7 +145,7 @@ async function openVip(userId, account, days) {
       .from("vip_users")
       .insert({
         user_id: userId,
-        account: account,
+        account,
         expire_time: expireTime,
       });
 
@@ -100,46 +178,6 @@ function noVipMessage() {
 
 📲 聯繫管理員：
 LINE：zu88.8`;
-}
-
-function quickBaccarat() {
-  return {
-    items: [
-      { type: "action", action: { type: "message", label: "莊", text: "莊" } },
-      { type: "action", action: { type: "message", label: "閒", text: "閒" } },
-      { type: "action", action: { type: "message", label: "和", text: "和" } },
-    ],
-  };
-}
-
-function quickSlot() {
-  return {
-    items: [
-      { type: "action", action: { type: "message", label: "戰神賽特1", text: "戰神賽特1" } },
-      { type: "action", action: { type: "message", label: "戰神賽特2", text: "戰神賽特2" } },
-    ],
-  };
-}
-
-function quick539(excludeMode) {
-  const modes = [
-    { label: "539穩定", text: "539穩定" },
-    { label: "539熱號", text: "539熱號" },
-    { label: "539冷號", text: "539冷號" },
-  ];
-
-  return {
-    items: modes
-      .filter((mode) => mode.text !== excludeMode)
-      .map((mode) => ({
-        type: "action",
-        action: {
-          type: "message",
-          label: mode.label,
-          text: mode.text,
-        },
-      })),
-  };
 }
 
 function getPredictionDate() {
@@ -215,6 +253,7 @@ function generate539Numbers(mode) {
     .map((n) => String(n).padStart(2, "0"));
 
   daily539Cache[cacheKey] = finalNumbers;
+
   return finalNumbers;
 }
 
@@ -239,6 +278,7 @@ async function handleEvent(event) {
   const userId = event.source.userId;
   const userText = event.message.text.trim();
   const lowerText = userText.toLowerCase();
+
   const bankerPlayer = randomPick(["莊", "閒"]);
 
   if (userText === "我的ID") {
@@ -266,6 +306,7 @@ async function handleEvent(event) {
     }
 
     const expireTime = Number(data.expire_time);
+
     const diffDays = Math.ceil(
       (expireTime - Date.now()) / (1000 * 60 * 60 * 24)
     );
@@ -381,34 +422,37 @@ ${formatTaiwanTime(expireTime)}`,
   }
 
   const isVipCommand =
-    ["百家樂", "電子", "電子AI", "539", "539AI", "539 AI", "539穩定", "539熱號", "539冷號", "戰神賽特1", "戰神賽特2", "莊", "閒", "和"].includes(userText) ||
+    [
+      "百家樂",
+      "電子",
+      "電子AI",
+      "539",
+      "539AI",
+      "539 AI",
+      "539穩定",
+      "539熱號",
+      "539冷號",
+      "戰神賽特1",
+      "戰神賽特2",
+      "莊",
+      "閒",
+      "和",
+    ].includes(userText) ||
     /^mt/i.test(userText) ||
     /^dg/i.test(userText);
 
- if (isVipCommand) {
+  if (isVipCommand) {
+    if (userId !== adminId) {
+      const isVip = await checkVip(userId);
 
-  // 管理員直接通行
-  if (userId === adminId) {
-
-  }
-
-  else {
-
-    const isVip =
-      await checkVip(userId);
-
-    if (!isVip) {
-
-      return client.replyMessage(
-        event.replyToken,
-        {
+      if (!isVip) {
+        return client.replyMessage(event.replyToken, {
           type: "text",
           text: noVipMessage(),
-        }
-      );
+        });
+      }
     }
   }
-}
 
   if (userText === "百家樂") {
     return client.replyMessage(event.replyToken, {
@@ -423,8 +467,22 @@ ${formatTaiwanTime(expireTime)}`,
 • MT`,
       quickReply: {
         items: [
-          { type: "action", action: { type: "message", label: "DG", text: "DG" } },
-          { type: "action", action: { type: "message", label: "MT", text: "MT" } },
+          {
+            type: "action",
+            action: {
+              type: "message",
+              label: "DG",
+              text: "DG",
+            },
+          },
+          {
+            type: "action",
+            action: {
+              type: "message",
+              label: "MT",
+              text: "MT",
+            },
+          },
         ],
       },
     });
@@ -462,7 +520,12 @@ MT 01`,
 
   if (userText === "戰神賽特1" || userText === "戰神賽特2") {
     const room = Math.floor(Math.random() * 3500) + 1;
-    const suggestion = randomPick(["可進場", "數據中等", "數據偏強"]);
+
+    const suggestion = randomPick([
+      "可進場",
+      "數據中等",
+      "數據偏強",
+    ]);
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -485,7 +548,11 @@ ${suggestion}`,
     });
   }
 
-  if (userText === "539" || userText === "539AI" || userText === "539 AI") {
+  if (
+    userText === "539" ||
+    userText === "539AI" ||
+    userText === "539 AI"
+  ) {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -505,6 +572,7 @@ ${suggestion}`,
 
   if (userText === "539穩定") {
     const nums = generate539Numbers("stable");
+
     const predictionDate = getPredictionDate();
 
     return client.replyMessage(event.replyToken, {
@@ -534,6 +602,7 @@ ${nums[1]} / ${nums[3]}
 
   if (userText === "539熱號") {
     const nums = generate539Numbers("hot");
+
     const predictionDate = getPredictionDate();
 
     return client.replyMessage(event.replyToken, {
@@ -563,6 +632,7 @@ ${nums[0]} / ${nums[2]} / ${nums[4]}
 
   if (userText === "539冷號") {
     const nums = generate539Numbers("cold");
+
     const predictionDate = getPredictionDate();
 
     return client.replyMessage(event.replyToken, {
@@ -590,9 +660,16 @@ ${nums[1]} / ${nums[4]}
     });
   }
 
-  const isValidMT = /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(userText);
-  const isValidDG = /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i.test(userText);
-  const isWrongRoom = /^mt/i.test(userText) || /^dg/i.test(userText);
+  const isValidMT =
+    /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(userText);
+
+  const isValidDG =
+    /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i.test(
+      userText
+    );
+
+  const isWrongRoom =
+    /^mt/i.test(userText) || /^dg/i.test(userText);
 
   if (isValidMT || isValidDG) {
     return client.replyMessage(event.replyToken, {
@@ -621,7 +698,11 @@ ${bankerPlayer}
     });
   }
 
-  if (userText === "莊" || userText === "閒" || userText === "和") {
+  if (
+    userText === "莊" ||
+    userText === "閒" ||
+    userText === "和"
+  ) {
     const nextResult = randomPick(["莊", "閒"]);
 
     return client.replyMessage(event.replyToken, {
@@ -661,4 +742,3 @@ const port = process.env.PORT || 8080;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-
