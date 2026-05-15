@@ -1,3 +1,5 @@
+// BLACKDOMAIN AI - FINAL VERSION
+
 const express = require("express");
 const line = require("@line/bot-sdk");
 const { createClient } = require("@supabase/supabase-js");
@@ -21,9 +23,9 @@ const supabase = createClient(
 const adminId = "Uaf293ee976e5170d4e8672d2c12b3f76";
 
 const pendingAccounts = {};
-const daily539Cache = {};
-const slotSessions = {};
 const baccaratHistory = {};
+const slotSessions = {};
+const daily539Cache = {};
 
 function randomPick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -32,9 +34,18 @@ function randomPick(arr) {
 function quickBaccarat() {
   return {
     items: [
-      { type: "action", action: { type: "message", label: "莊", text: "莊" } },
-      { type: "action", action: { type: "message", label: "閒", text: "閒" } },
-      { type: "action", action: { type: "message", label: "和", text: "和" } },
+      {
+        type: "action",
+        action: { type: "message", label: "莊", text: "莊" },
+      },
+      {
+        type: "action",
+        action: { type: "message", label: "閒", text: "閒" },
+      },
+      {
+        type: "action",
+        action: { type: "message", label: "和", text: "和" },
+      },
     ],
   };
 }
@@ -42,8 +53,22 @@ function quickBaccarat() {
 function quickSlotGame() {
   return {
     items: [
-      { type: "action", action: { type: "message", label: "戰神賽特1", text: "戰神賽特1" } },
-      { type: "action", action: { type: "message", label: "戰神賽特2", text: "戰神賽特2" } },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "戰神賽特1",
+          text: "戰神賽特1",
+        },
+      },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "戰神賽特2",
+          text: "戰神賽特2",
+        },
+      },
     ],
   };
 }
@@ -51,8 +76,22 @@ function quickSlotGame() {
 function quickSlotMode() {
   return {
     items: [
-      { type: "action", action: { type: "message", label: "隨機爆分房", text: "隨機爆分房" } },
-      { type: "action", action: { type: "message", label: "自選房號", text: "自選房號" } },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "隨機爆分房",
+          text: "隨機爆分房",
+        },
+      },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "自選房號",
+          text: "自選房號",
+        },
+      },
     ],
   };
 }
@@ -69,7 +108,11 @@ function quick539(excludeMode) {
       .filter((mode) => mode.text !== excludeMode)
       .map((mode) => ({
         type: "action",
-        action: { type: "message", label: mode.label, text: mode.text },
+        action: {
+          type: "message",
+          label: mode.label,
+          text: mode.text,
+        },
       })),
   };
 }
@@ -86,23 +129,33 @@ async function getVipData(userId) {
 
 async function checkVip(userId) {
   const data = await getVipData(userId);
+
   if (!data) return false;
+
   return Number(data.expire_time) > Date.now();
 }
 
 async function openVip(userId, account, days) {
   const expireTime = Date.now() + days * 24 * 60 * 60 * 1000;
+
   const oldData = await getVipData(userId);
 
   if (oldData) {
     await supabase
       .from("vip_users")
-      .update({ account, expire_time: expireTime })
+      .update({
+        account,
+        expire_time: expireTime,
+      })
       .eq("user_id", userId);
   } else {
     await supabase
       .from("vip_users")
-      .insert({ user_id: userId, account, expire_time: expireTime });
+      .insert({
+        user_id: userId,
+        account,
+        expire_time: expireTime,
+      });
   }
 
   return expireTime;
@@ -130,7 +183,9 @@ LINE：zu88.8`;
 
 function getPredictionDate() {
   const taiwanNow = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" })
+    new Date().toLocaleString("en-US", {
+      timeZone: "Asia/Taipei",
+    })
   );
 
   const hour = taiwanNow.getHours();
@@ -147,7 +202,10 @@ function getPredictionDate() {
     targetDate.setDate(targetDate.getDate() + 1);
   } else if (hour > 20 || (hour === 20 && minute >= 20)) {
     targetDate.setDate(targetDate.getDate() + 1);
-    if (targetDate.getDay() === 0) targetDate.setDate(targetDate.getDate() + 1);
+
+    if (targetDate.getDay() === 0) {
+      targetDate.setDate(targetDate.getDate() + 1);
+    }
   }
 
   const y = targetDate.getFullYear();
@@ -157,48 +215,36 @@ function getPredictionDate() {
   return `${y}/${m}/${d}`;
 }
 
-function fallback539Numbers(mode) {
-  let pool;
-
-  if (mode === "hot") {
-    pool = [3, 5, 8, 11, 13, 16, 19, 22, 27, 31, 33, 36, 38, 39];
-  } else if (mode === "cold") {
-    pool = [1, 4, 6, 9, 12, 15, 18, 21, 24, 26, 29, 32, 34, 37];
-  } else {
-    pool = [2, 5, 7, 10, 13, 17, 20, 23, 25, 28, 30, 33, 35, 38, 39];
-  }
-
-  const numbers = [];
-
-  while (numbers.length < 5) {
-    const n = Math.random() < 0.8 ? randomPick(pool) : Math.floor(Math.random() * 39) + 1;
-    if (!numbers.includes(n)) numbers.push(n);
-  }
-
-  return numbers.sort((a, b) => a - b).map((n) => String(n).padStart(2, "0"));
-}
-
 async function fetch539History() {
   const url = "https://www.pilio.idv.tw/lto539/list539BIG.asp";
 
   try {
     const res = await axios.get(url, {
       timeout: 10000,
-      headers: { "User-Agent": "Mozilla/5.0" },
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+      },
     });
 
     const $ = cheerio.load(res.data);
+
     const text = $("body").text().replace(/\s+/g, " ");
-    const matches = text.match(/\b(?:0?[1-9]|[12][0-9]|3[0-9])\b/g) || [];
-    const nums = matches.map((n) => Number(n)).filter((n) => n >= 1 && n <= 39);
+
+    const matches =
+      text.match(/\b(?:0?[1-9]|[12][0-9]|3[0-9])\b/g) || [];
+
+    const nums = matches
+      .map((n) => Number(n))
+      .filter((n) => n >= 1 && n <= 39);
 
     const history = [];
 
     for (let i = 0; i <= nums.length - 5; i += 5) {
       const group = nums.slice(i, i + 5);
+
       const unique = [...new Set(group)];
 
-      if (unique.length === 5 && group.every((n) => n >= 1 && n <= 39)) {
+      if (unique.length === 5) {
         history.push(group);
       }
 
@@ -207,41 +253,31 @@ async function fetch539History() {
 
     return history;
   } catch (err) {
-    console.log("539 history fetch error:", err.message);
+    console.log(err.message);
     return [];
   }
 }
 
 async function generate539Numbers(mode) {
   const predictionDate = getPredictionDate();
+
   const cacheKey = `${predictionDate}-${mode}`;
 
-  if (daily539Cache[cacheKey]) return daily539Cache[cacheKey];
-
-  const history = await fetch539History();
-
-  if (!history.length) {
-    const fallback = fallback539Numbers(mode);
-    daily539Cache[cacheKey] = {
-      numbers: fallback,
-      source: "備用模型",
-      detail: "歷史資料暫時無法讀取，使用備用區間模型。",
-    };
+  if (daily539Cache[cacheKey]) {
     return daily539Cache[cacheKey];
   }
 
+  const history = await fetch539History();
+
   const freq = {};
-  const lastSeen = {};
 
   for (let i = 1; i <= 39; i++) {
     freq[i] = 0;
-    lastSeen[i] = 999;
   }
 
-  history.forEach((draw, index) => {
+  history.forEach((draw) => {
     draw.forEach((n) => {
-      freq[n] += 1;
-      if (lastSeen[n] === 999) lastSeen[n] = index;
+      freq[n]++;
     });
   });
 
@@ -250,27 +286,18 @@ async function generate539Numbers(mode) {
   if (mode === "hot") {
     ranked = Object.keys(freq)
       .map(Number)
-      .sort((a, b) => freq[b] - freq[a] || lastSeen[a] - lastSeen[b]);
+      .sort((a, b) => freq[b] - freq[a]);
   } else if (mode === "cold") {
     ranked = Object.keys(freq)
       .map(Number)
-      .sort((a, b) => lastSeen[b] - lastSeen[a] || freq[a] - freq[b]);
+      .sort((a, b) => freq[a] - freq[b]);
   } else {
     ranked = Object.keys(freq)
       .map(Number)
-      .sort((a, b) => {
-        const scoreA = freq[a] * 2 + Math.min(lastSeen[a], 20);
-        const scoreB = freq[b] * 2 + Math.min(lastSeen[b], 20);
-        return scoreB - scoreA;
-      });
+      .sort(() => Math.random() - 0.5);
   }
 
-  const selected = [];
-
-  for (const n of ranked) {
-    if (!selected.includes(n)) selected.push(n);
-    if (selected.length >= 5) break;
-  }
+  const selected = ranked.slice(0, 5);
 
   const finalNumbers = selected
     .sort((a, b) => a - b)
@@ -279,7 +306,7 @@ async function generate539Numbers(mode) {
   daily539Cache[cacheKey] = {
     numbers: finalNumbers,
     source: "歷史資料模型",
-    detail: `已讀取近 ${history.length} 期資料，完成熱度、遺漏值與區間波動分析。`,
+    detail: `已讀取近 ${history.length} 期資料`,
   };
 
   return daily539Cache[cacheKey];
@@ -287,31 +314,34 @@ async function generate539Numbers(mode) {
 
 function analyzeSlotRoom(game, roomNumber) {
   const room = Number(roomNumber);
+
   const score = (room * 7) % 100;
 
   let status;
   let suggestion;
-  let confidence;
   let reason;
 
   if (score >= 70) {
     status = "高波動區";
     suggestion = "可進場";
-    confidence = "★★★★☆";
-    reason = "倍率波動偏強，模型同步活躍區。";
+    reason = "倍率區同步完成";
   } else if (score >= 45) {
     status = "數據偏強";
     suggestion = "小注試水";
-    confidence = "★★★☆☆";
-    reason = "波動開始放大，適合小注觀察。";
+    reason = "倍率波動偏強";
   } else {
     status = "回吐區";
     suggestion = "建議觀望";
-    confidence = "★★☆☆☆";
-    reason = "目前模型顯示回吐風險偏高。";
+    reason = "目前回吐波動偏高";
   }
 
-  return { game, room, status, suggestion, confidence, reason };
+  return {
+    game,
+    room,
+    status,
+    suggestion,
+    reason,
+  };
 }
 
 function formatSlotAnalysis(analysis) {
@@ -331,9 +361,6 @@ ${analysis.status}
 AI建議：
 ${analysis.suggestion}
 
-信心指數：
-${analysis.confidence}
-
 分析依據：
 ${analysis.reason}
 
@@ -349,6 +376,7 @@ function getBaccaratMainPrediction(history) {
 
   const bankerCount = filtered.filter((x) => x === "莊").length;
   const playerCount = filtered.filter((x) => x === "閒").length;
+
   const last = filtered[filtered.length - 1];
   const last2 = filtered.slice(-2);
 
@@ -364,29 +392,42 @@ function getBaccaratMainPrediction(history) {
 
 function getBaccaratSpecialTip(history) {
   const filtered = history.filter((x) => x !== "和");
+
   const recent = filtered.slice(-5);
+
   const bankerStreak = recent.filter((x) => x === "莊").length;
+
   const playerStreak = recent.filter((x) => x === "閒").length;
+
   const roll = Math.random();
 
   if (roll < 0.02 && bankerStreak >= 3) {
-    return "⚠️ 高倍率區同步完成\n\n可留意：\n莊龍寶";
+    return `⚠️ 高倍率區同步完成
+
+可留意：
+莊龍寶`;
   }
 
   if (roll < 0.04 && playerStreak >= 3) {
-    return "⚠️ 高倍率區同步完成\n\n可留意：\n閒龍寶";
+    return `⚠️ 高倍率區同步完成
+
+可留意：
+閒龍寶`;
   }
 
-  if (roll < 0.08) {
-    return "⚠️ 可留意：\n和局";
+  if (roll < 0.10) {
+    return `⚠️ 可留意：
+和局`;
   }
 
-  if (roll < 0.14) {
-    return `⚠️ 可留意：\n${randomPick(["莊對", "閒對"])}`;
+  if (roll < 0.16) {
+    return `⚠️ 可留意：
+${randomPick(["莊對", "閒對"])}`;
   }
 
-  if (roll < 0.18) {
-    return "⚠️ 特殊波動：\n超6";
+  if (roll < 0.20) {
+    return `⚠️ 特殊波動：
+超6`;
   }
 
   return "";
@@ -394,50 +435,47 @@ function getBaccaratSpecialTip(history) {
 
 function getBaccaratWarning(history) {
   const filtered = history.filter((x) => x !== "和");
+
   const recent = filtered.slice(-5);
-  const heCount = history.slice(-6).filter((x) => x === "和").length;
+
+  const heCount = history
+    .slice(-6)
+    .filter((x) => x === "和").length;
 
   if (heCount >= 2) {
-    return "⚠️ 和局波動偏高，建議降低注碼";
+    return "⚠️ 和局波動偏高";
   }
 
-  if (recent.length >= 5 && recent.every((x) => x === recent[0])) {
-    return "⚠️ 偵測長龍波動，注意斷龍風險";
+  if (
+    recent.length >= 5 &&
+    recent.every((x) => x === recent[0])
+  ) {
+    return "⚠️ 偵測長龍波動";
   }
 
   if (recent.length >= 5) {
-    const isShake = recent.every((v, i, arr) => i === 0 || v !== arr[i - 1]);
+    const isShake = recent.every(
+      (v, i, arr) =>
+        i === 0 || v !== arr[i - 1]
+    );
+
     if (isShake) {
-      return "⚠️ 偵測震盪牌路，建議小注觀察";
+      return "⚠️ 偵測震盪波動";
     }
   }
 
   return "";
 }
 
-function formatBaccaratReply(history, prediction) {
-  const warning = getBaccaratWarning(history);
-  const specialTip = getBaccaratSpecialTip(history);
-
-  let extra = "";
-
-  if (warning) {
-    extra += `\n${warning}\n`;
-  }
-
-  if (specialTip) {
-    extra += `\n${specialTip}\n`;
-  }
-
+function formatBaccaratReply(prediction, extra = "") {
   return `━━━━━━━━━━
 🤖 黑域AI運算完成
 ━━━━━━━━━━
 
 目前建議：
-${prediction}
-${extra}
-目前牌路：
-${history.join(" ")}
+${prediction}${extra}
+
+━━━━━━━━━━
 
 請輸入目前開出：
 莊 / 閒 / 和`;
@@ -450,137 +488,28 @@ app.get("/", (req, res) => {
 app.post("/webhook", line.middleware(config), async (req, res) => {
   try {
     await Promise.all(req.body.events.map(handleEvent));
+
     res.status(200).end();
   } catch (err) {
     console.log(err);
+
     res.status(500).end();
   }
 });
 
 async function handleEvent(event) {
   if (event.type !== "message") return null;
+
   if (event.message.type !== "text") return null;
 
   const userId = event.source.userId;
+
   const userText = event.message.text.trim();
+
   const lowerText = userText.toLowerCase();
 
-  if (!baccaratHistory[userId]) baccaratHistory[userId] = [];
-
-  if (userText === "我的ID") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: userId,
-    });
-  }
-
-  if (userText === "VIP查詢" || userText === "VIP" || userText === "VIP時間") {
-    const data = await getVipData(userId);
-
-    if (!data || Number(data.expire_time) <= Date.now()) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: noVipMessage(),
-      });
-    }
-
-    const expireTime = Number(data.expire_time);
-    const diffDays = Math.ceil((expireTime - Date.now()) / (1000 * 60 * 60 * 24));
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-👑 黑域VIP
-━━━━━━━━━━
-
-3A帳號：
-${data.account}
-
-剩餘天數：
-${diffDays} 天
-
-到期時間：
-${formatTaiwanTime(expireTime)}`,
-    });
-  }
-
-  if (userText === "開通會員" || userText === "我要開通" || userText === "開通") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: noVipMessage(),
-    });
-  }
-
-  if (userText.startsWith("申請開通 ")) {
-    const account = userText.replace("申請開通 ", "").trim();
-
-    if (!account) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "請輸入3A帳號\n範例：申請開通 abc123",
-      });
-    }
-
-    pendingAccounts[account] = userId;
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-📝 已收到開通申請
-━━━━━━━━━━
-
-3A帳號：
-${account}
-
-請等待管理員審核。`,
-    });
-  }
-
-  if (userText.startsWith("開通 ")) {
-    if (userId !== adminId) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "你沒有管理員權限",
-      });
-    }
-
-    const parts = userText.split(" ");
-    const account = parts[1];
-    const days = parseInt(parts[2], 10);
-
-    if (!account || !days) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "格式錯誤\n範例：開通 abc123 2",
-      });
-    }
-
-    const targetUserId = pendingAccounts[account];
-
-    if (!targetUserId) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此申請帳號",
-      });
-    }
-
-    const expireTime = await openVip(targetUserId, account, days);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-✅ 黑域AI開通成功
-━━━━━━━━━━
-
-3A帳號：
-${account}
-
-開通天數：
-${days}天
-
-到期時間：
-${formatTaiwanTime(expireTime)}`,
-    });
+  if (!baccaratHistory[userId]) {
+    baccaratHistory[userId] = [];
   }
 
   const isVipCommand =
@@ -590,7 +519,6 @@ ${formatTaiwanTime(expireTime)}`,
       "電子AI",
       "539",
       "539AI",
-      "539 AI",
       "539穩定",
       "539熱號",
       "539冷號",
@@ -636,8 +564,22 @@ ${formatTaiwanTime(expireTime)}`,
 • MT`,
       quickReply: {
         items: [
-          { type: "action", action: { type: "message", label: "DG", text: "DG" } },
-          { type: "action", action: { type: "message", label: "MT", text: "MT" } },
+          {
+            type: "action",
+            action: {
+              type: "message",
+              label: "DG",
+              text: "DG",
+            },
+          },
+          {
+            type: "action",
+            action: {
+              type: "message",
+              label: "MT",
+              text: "MT",
+            },
+          },
         ],
       },
     });
@@ -658,9 +600,16 @@ MT 01`,
     });
   }
 
-  const isValidMT = /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(userText);
-  const isValidDG = /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i.test(userText);
-  const isWrongRoom = /^mt/i.test(userText) || /^dg/i.test(userText);
+  const isValidMT =
+    /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(userText);
+
+  const isValidDG =
+    /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i.test(
+      userText
+    );
+
+  const isWrongRoom =
+    /^mt/i.test(userText) || /^dg/i.test(userText);
 
   if (isValidMT || isValidDG) {
     baccaratHistory[userId] = [];
@@ -673,11 +622,10 @@ MT 01`,
 🤖 黑域AI同步完成
 ━━━━━━━━━━
 
-✓ 房間同步成功
-✓ AI模型運算完成
-
 目前建議：
 ${prediction}
+
+━━━━━━━━━━
 
 請輸入目前開出：
 莊 / 閒 / 和`,
@@ -692,16 +640,46 @@ ${prediction}
     });
   }
 
-  if (userText === "莊" || userText === "閒" || userText === "和") {
+  if (
+    userText === "莊" ||
+    userText === "閒" ||
+    userText === "和"
+  ) {
     baccaratHistory[userId].push(userText);
 
-    if (baccaratHistory[userId].length > 20) baccaratHistory[userId].shift();
+    if (baccaratHistory[userId].length > 20) {
+      baccaratHistory[userId].shift();
+    }
 
-    const prediction = getBaccaratMainPrediction(baccaratHistory[userId]);
+    const prediction = getBaccaratMainPrediction(
+      baccaratHistory[userId]
+    );
+
+    const warning = getBaccaratWarning(
+      baccaratHistory[userId]
+    );
+
+    const specialTip = getBaccaratSpecialTip(
+      baccaratHistory[userId]
+    );
+
+    let extra = "";
+
+    if (warning) {
+      extra += `
+
+${warning}`;
+    }
+
+    if (specialTip) {
+      extra += `
+
+${specialTip}`;
+    }
 
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: formatBaccaratReply(baccaratHistory[userId], prediction),
+      text: formatBaccaratReply(prediction, extra),
       quickReply: quickBaccarat(),
     });
   }
@@ -721,8 +699,14 @@ ${prediction}
     });
   }
 
-  if (userText === "戰神賽特1" || userText === "戰神賽特2") {
-    slotSessions[userId] = { game: userText, mode: null };
+  if (
+    userText === "戰神賽特1" ||
+    userText === "戰神賽特2"
+  ) {
+    slotSessions[userId] = {
+      game: userText,
+      mode: null,
+    };
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -741,21 +725,20 @@ ${prediction}
   if (userText === "隨機爆分房") {
     const session = slotSessions[userId];
 
-    if (!session?.game) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "請先選擇遊戲：戰神賽特1 / 戰神賽特2",
-        quickReply: quickSlotGame(),
-      });
-    }
-
     let room;
+
     let analysis;
 
     do {
       room = Math.floor(Math.random() * 3500) + 1;
-      analysis = analyzeSlotRoom(session.game, room);
-    } while (analysis.suggestion === "建議觀望");
+
+      analysis = analyzeSlotRoom(
+        session.game,
+        room
+      );
+    } while (
+      analysis.suggestion === "建議觀望"
+    );
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -765,14 +748,6 @@ ${prediction}
   }
 
   if (userText === "自選房號") {
-    if (!slotSessions[userId]?.game) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "請先選擇遊戲：戰神賽特1 / 戰神賽特2",
-        quickReply: quickSlotGame(),
-      });
-    }
-
     slotSessions[userId].mode = "custom";
 
     return client.replyMessage(event.replyToken, {
@@ -788,26 +763,25 @@ ${prediction}
     });
   }
 
-  if (/^\d{1,4}$/.test(userText) && slotSessions[userId]?.mode === "custom") {
-    const room = Number(userText);
+  if (/^\d{1,4}$/.test(userText)) {
+    if (slotSessions[userId]?.mode === "custom") {
+      const analysis = analyzeSlotRoom(
+        slotSessions[userId].game,
+        userText
+      );
 
-    if (room < 1 || room > 3500) {
       return client.replyMessage(event.replyToken, {
         type: "text",
-        text: "房號範圍錯誤，請輸入 1～3500。",
+        text: formatSlotAnalysis(analysis),
+        quickReply: quickSlotMode(),
       });
     }
-
-    const analysis = analyzeSlotRoom(slotSessions[userId].game, room);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: formatSlotAnalysis(analysis),
-      quickReply: quickSlotMode(),
-    });
   }
 
-  if (userText === "539" || userText === "539AI" || userText === "539 AI") {
+  if (
+    userText === "539" ||
+    userText === "539AI"
+  ) {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -830,10 +804,13 @@ ${prediction}
   };
 
   if (modeMap[userText]) {
-    const result = await generate539Numbers(modeMap[userText]);
+    const result = await generate539Numbers(
+      modeMap[userText]
+    );
+
     const nums = result.numbers;
+
     const predictionDate = getPredictionDate();
-    const confidence = userText === "539熱號" ? "★★★★☆" : "★★★☆☆";
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -850,9 +827,6 @@ ${nums.join("　")}
 
 主推號：
 ${nums[0]} / ${nums[2]}
-
-信心指數：
-${confidence}
 
 資料來源：
 ${result.source}
@@ -875,11 +849,7 @@ ${result.detail}
 
 • 百家樂
 • 電子
-• 539
-
-若尚未開通：
-
-申請開通 你的3A帳號`,
+• 539`,
   });
 }
 
