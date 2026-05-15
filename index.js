@@ -1,5 +1,5 @@
-// BLACKDOMAIN AI - 完整優化版
-// 可直接覆蓋原本 index.js
+// BLACKDOMAIN AI - 完整優化版（含 DG/MT 房號流程）
+// 可直接整份覆蓋 index.js
 
 const express = require("express");
 const line = require("@line/bot-sdk");
@@ -33,9 +33,30 @@ function randomPick(arr) {
 function quickBaccarat() {
   return {
     items: [
-      { type: "action", action: { type: "message", label: "莊", text: "莊" } },
-      { type: "action", action: { type: "message", label: "閒", text: "閒" } },
-      { type: "action", action: { type: "message", label: "和", text: "和" } },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "莊",
+          text: "莊",
+        },
+      },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "閒",
+          text: "閒",
+        },
+      },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "和",
+          text: "和",
+        },
+      },
     ],
   };
 }
@@ -43,8 +64,22 @@ function quickBaccarat() {
 function quickSlotGame() {
   return {
     items: [
-      { type: "action", action: { type: "message", label: "戰神賽特1", text: "戰神賽特1" } },
-      { type: "action", action: { type: "message", label: "戰神賽特2", text: "戰神賽特2" } },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "戰神賽特1",
+          text: "戰神賽特1",
+        },
+      },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "戰神賽特2",
+          text: "戰神賽特2",
+        },
+      },
     ],
   };
 }
@@ -52,8 +87,22 @@ function quickSlotGame() {
 function quickSlotMode() {
   return {
     items: [
-      { type: "action", action: { type: "message", label: "隨機爆分房", text: "隨機爆分房" } },
-      { type: "action", action: { type: "message", label: "自選房號", text: "自選房號" } },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "隨機爆分房",
+          text: "隨機爆分房",
+        },
+      },
+      {
+        type: "action",
+        action: {
+          type: "message",
+          label: "自選房號",
+          text: "自選房號",
+        },
+      },
     ],
   };
 }
@@ -91,7 +140,9 @@ async function getVipData(userId) {
 
 async function checkVip(userId) {
   const data = await getVipData(userId);
+
   if (!data) return false;
+
   return Number(data.expire_time) > Date.now();
 }
 
@@ -353,109 +404,6 @@ async function handleEvent(event) {
     baccaratHistory[userId] = [];
   }
 
-  if (userText === "我的ID") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: userId,
-    });
-  }
-
-  if (
-    userText === "VIP查詢" ||
-    userText === "VIP" ||
-    userText === "VIP時間"
-  ) {
-    const data = await getVipData(userId);
-
-    if (!data || Number(data.expire_time) <= Date.now()) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: noVipMessage(),
-      });
-    }
-
-    const expireTime = Number(data.expire_time);
-
-    const diffDays = Math.ceil(
-      (expireTime - Date.now()) / (1000 * 60 * 60 * 24)
-    );
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-👑 黑域VIP
-━━━━━━━━━━
-
-3A帳號：
-${data.account}
-
-剩餘天數：
-${diffDays} 天
-
-到期時間：
-${formatTaiwanTime(expireTime)}`,
-    });
-  }
-
-  if (userText.startsWith("申請開通 ")) {
-    const account = userText.replace("申請開通 ", "").trim();
-
-    pendingAccounts[account] = userId;
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-📝 已收到開通申請
-━━━━━━━━━━
-
-3A帳號：
-${account}
-
-請等待管理員審核。`,
-    });
-  }
-
-  if (userText.startsWith("開通 ")) {
-    if (userId !== adminId) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "你沒有管理員權限",
-      });
-    }
-
-    const parts = userText.split(" ");
-
-    const account = parts[1];
-    const days = parseInt(parts[2], 10);
-
-    const targetUserId = pendingAccounts[account];
-
-    if (!targetUserId) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此申請帳號",
-      });
-    }
-
-    const expireTime = await openVip(targetUserId, account, days);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-✅ 黑域AI開通成功
-━━━━━━━━━━
-
-3A帳號：
-${account}
-
-開通天數：
-${days}天
-
-到期時間：
-${formatTaiwanTime(expireTime)}`,
-    });
-  }
-
   const isVipCommand =
     [
       "百家樂",
@@ -473,6 +421,8 @@ ${formatTaiwanTime(expireTime)}`,
       "莊",
       "閒",
       "和",
+      "DG",
+      "MT",
     ].includes(userText) ||
     /^mt/i.test(userText) ||
     /^dg/i.test(userText) ||
@@ -532,6 +482,34 @@ ${formatTaiwanTime(expireTime)}`,
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
+🤖 黑域AI已啟動
+━━━━━━━━━━
+
+請輸入房間號碼
+
+範例：
+DG RB01
+MT 01`,
+    });
+  }
+
+  const isValidMT =
+    /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(userText);
+
+  const isValidDG =
+    /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i.test(
+      userText
+    );
+
+  const isWrongRoom =
+    /^mt/i.test(userText) || /^dg/i.test(userText);
+
+  if (isValidMT || isValidDG) {
+    baccaratHistory[userId] = [];
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
 🤖 黑域AI同步完成
 ━━━━━━━━━━
 
@@ -541,6 +519,13 @@ ${formatTaiwanTime(expireTime)}`,
 請輸入目前開出：
 莊 / 閒 / 和`,
       quickReply: quickBaccarat(),
+    });
+  }
+
+  if (isWrongRoom) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "查無此房間",
     });
   }
 
