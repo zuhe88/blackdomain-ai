@@ -702,60 +702,44 @@ async function handleEvent(event) {
     });
   }
 
-  if (userText === "賽程查詢" || (userText === "1" && worldCupSessions[userId])) {
-    worldCupSessions[userId] = { mode: "date", games: [] };
+if (
+  userText === "賽程查詢" ||
+  (userText === "1" &&
+    worldCupSessions[userId]?.mode !== "selectGame")
+) {
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
+  worldCupSessions[userId] = {
+    mode: "date",
+    games: [],
+  };
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
 📅 世足賽程查詢
 ━━━━━━━━━━
 
 請選擇日期：
 
 ━━━━━━━━━━`,
-      quickReply: quickWorldCupDates(),
-    });
-  }
+    quickReply: quickWorldCupDates(),
+  });
+}
 
-  if (worldCupSchedule[userText] && worldCupSessions[userId]?.mode === "date") {
-    const games = worldCupSchedule[userText];
+if (
+  userText === "球隊查詢" ||
+  (userText === "2" &&
+    worldCupSessions[userId]?.mode !== "selectGame")
+) {
 
-    worldCupSessions[userId] = {
-      mode: "selectGame",
-      games,
-    };
+  worldCupSessions[userId] = {
+    mode: "team",
+    games: [],
+  };
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: formatWorldCupGames(userText, games),
-    });
-  }
-
-  if (/^\d+$/.test(userText) && worldCupSessions[userId]?.mode === "selectGame") {
-    const index = Number(userText) - 1;
-    const game = worldCupSessions[userId].games[index];
-
-    if (!game) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此場次",
-      });
-    }
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: analyzeWorldCupGame(game),
-      quickReply: quickWorldCup(),
-    });
-  }
-
-  if (userText === "球隊查詢" || (userText === "2" && worldCupSessions[userId])) {
-    worldCupSessions[userId] = { mode: "team", games: [] };
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
 ⚽ 球隊查詢
 ━━━━━━━━━━
 
@@ -768,21 +752,18 @@ async function handleEvent(event) {
 巴西
 
 ━━━━━━━━━━`,
-    });
-  }
+  });
+}
 
-  if (worldCupSessions[userId]?.mode === "team") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: teamWorldCupProfile(userText),
-      quickReply: quickWorldCup(),
-    });
-  }
+if (
+  userText === "AI精選" ||
+  (userText === "3" &&
+    worldCupSessions[userId]?.mode !== "selectGame")
+) {
 
-  if (userText === "AI精選" || (userText === "3" && worldCupSessions[userId])) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
 ⚽ AI精選
 ━━━━━━━━━━
 
@@ -796,17 +777,22 @@ AI精選功能將於賽前資料完整同步後開放。
 4️⃣ 冠軍預測
 
 ━━━━━━━━━━`,
-      quickReply: quickWorldCup(),
-    });
-  }
+    quickReply: quickWorldCup(),
+  });
+}
 
-  if (userText === "冠軍預測" || (userText === "4" && worldCupSessions[userId])) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: championPrediction(),
-      quickReply: quickWorldCup(),
-    });
-  }
+if (
+  userText === "冠軍預測" ||
+  (userText === "4" &&
+    worldCupSessions[userId]?.mode !== "selectGame")
+) {
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: championPrediction(),
+    quickReply: quickWorldCup(),
+  });
+}
 
   if (userText === "我的ID") {
     return client.replyMessage(event.replyToken, {
