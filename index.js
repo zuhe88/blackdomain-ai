@@ -19,13 +19,28 @@ const supabase = createClient(
 );
 
 const adminId = "Uaf293ee976e5170d4e8672d2c12b3f76";
-const FOOTBALL_API_KEY = process.env.FOOTBALL_API_KEY;
 
 const pendingAccounts = {};
 const baccaratHistory = {};
 const slotSessions = {};
 const worldCupSessions = {};
 const daily539Cache = {};
+
+const worldCupSchedule = {
+  "6/15": [
+    { home: "阿根廷", away: "日本", time: "08:00" },
+    { home: "法國", away: "韓國", time: "11:00" },
+    { home: "巴西", away: "美國", time: "14:00" },
+  ],
+  "6/16": [
+    { home: "英格蘭", away: "墨西哥", time: "08:00" },
+    { home: "西班牙", away: "摩洛哥", time: "11:00" },
+  ],
+  "6/17": [
+    { home: "葡萄牙", away: "荷蘭", time: "08:00" },
+    { home: "德國", away: "塞內加爾", time: "11:00" },
+  ],
+};
 
 function randomPick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -84,6 +99,15 @@ function quickWorldCup() {
       { type: "action", action: { type: "message", label: "AI精選", text: "AI精選" } },
       { type: "action", action: { type: "message", label: "冠軍預測", text: "冠軍預測" } },
     ],
+  };
+}
+
+function quickWorldCupDates() {
+  return {
+    items: Object.keys(worldCupSchedule).slice(0, 13).map((date) => ({
+      type: "action",
+      action: { type: "message", label: date, text: date },
+    })),
   };
 }
 
@@ -170,55 +194,6 @@ function getPredictionDate() {
   return `${y}/${m}/${d}`;
 }
 
-function parseWorldCupDate(text) {
-  const match = text.match(/^(\d{1,2})\/(\d{1,2})$/);
-  if (!match) return null;
-
-  const month = String(match[1]).padStart(2, "0");
-  const day = String(match[2]).padStart(2, "0");
-
-  return `2026-${month}-${day}`;
-}
-
-function formatFootballTime(dateString) {
-  if (!dateString) return "時間未定";
-
-  return new Date(dateString).toLocaleString("zh-TW", {
-    timeZone: "Asia/Taipei",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-function translateTeam(name) {
-  const map = {
-    Argentina: "阿根廷",
-    France: "法國",
-    Brazil: "巴西",
-    England: "英格蘭",
-    Spain: "西班牙",
-    Germany: "德國",
-    Portugal: "葡萄牙",
-    Netherlands: "荷蘭",
-    Japan: "日本",
-    Korea: "韓國",
-    "South Korea": "韓國",
-    Mexico: "墨西哥",
-    USA: "美國",
-    Morocco: "摩洛哥",
-    Croatia: "克羅埃西亞",
-    Belgium: "比利時",
-    Uruguay: "烏拉圭",
-    Italy: "義大利",
-    Senegal: "塞內加爾",
-  };
-
-  return map[name] || name;
-}
-
 function teamEmoji(name) {
   const map = {
     阿根廷: "🇦🇷",
@@ -231,71 +206,25 @@ function teamEmoji(name) {
     荷蘭: "🇳🇱",
     日本: "🇯🇵",
     韓國: "🇰🇷",
-    墨西哥: "🇲🇽",
     美國: "🇺🇸",
+    墨西哥: "🇲🇽",
     摩洛哥: "🇲🇦",
-    克羅埃西亞: "🇭🇷",
-    比利時: "🇧🇪",
-    烏拉圭: "🇺🇾",
-    義大利: "🇮🇹",
     塞內加爾: "🇸🇳",
   };
 
   return map[name] || "⚽";
 }
 
-async function fetchWorldCupFixtures(params = {}) {
-  if (!FOOTBALL_API_KEY) return [];
-
-  try {
-    const res = await axios.get("https://v3.football.api-sports.io/fixtures", {
-      params: {
-        league: 1,
-        season: 2026,
-        ...params,
-      },
-      headers: {
-        "x-apisports-key": FOOTBALL_API_KEY,
-      },
-      timeout: 10000,
-    });
-
-    return res.data.response || [];
-  } catch (err) {
-    console.log("WorldCup API error:", err.response?.data || err.message);
-    return [];
-  }
-}
-
-function formatWorldCupFixtureList(games, title) {
-  if (!games.length) {
-    return `━━━━━━━━━━
-⚽ ${title}
-━━━━━━━━━━
-
-目前查無賽程資料。
-
-可能原因：
-1. 賽程尚未完全同步
-2. API資料尚未開放
-3. 日期沒有賽事
-
-━━━━━━━━━━`;
-  }
-
+function formatWorldCupGames(date, games) {
   let msg = `━━━━━━━━━━
-⚽ ${title}
+⚽ ${date} 世足賽程
 ━━━━━━━━━━
 
 `;
 
-  games.slice(0, 10).forEach((game, index) => {
-    const home = translateTeam(game.teams.home.name);
-    const away = translateTeam(game.teams.away.name);
-    const time = formatFootballTime(game.fixture.date);
-
-    msg += `${index + 1}️⃣ ${teamEmoji(home)} ${home} vs ${teamEmoji(away)} ${away}
-🕒 ${time}
+  games.forEach((game, index) => {
+    msg += `${index + 1}️⃣ ${teamEmoji(game.home)} ${game.home} vs ${teamEmoji(game.away)} ${game.away}
+🕒 ${game.time}
 
 `;
   });
@@ -311,38 +240,31 @@ function formatWorldCupFixtureList(games, title) {
   return msg;
 }
 
-function analyzeFootballGame(game) {
-  const home = translateTeam(game.teams.home.name);
-  const away = translateTeam(game.teams.away.name);
-
+function analyzeWorldCupGame(game) {
   const powerTeams = ["阿根廷", "法國", "巴西", "英格蘭", "西班牙", "德國", "葡萄牙", "荷蘭"];
-  const homePower = powerTeams.includes(home);
-  const awayPower = powerTeams.includes(away);
+
+  const homePower = powerTeams.includes(game.home);
+  const awayPower = powerTeams.includes(game.away);
 
   let pick;
   let watch;
-  let risk;
   let note;
 
   if (homePower && !awayPower) {
-    pick = `${home} 不敗`;
-    watch = "大1.5";
-    risk = "中低波動";
-    note = `${home}整體戰力與大賽經驗較完整，模型偏向穩定方向。`;
+    pick = `${game.home} 不敗`;
+    watch = randomPick(["大1.5", "小3.5"]);
+    note = `${game.home}整體戰力與大賽經驗較完整。`;
   } else if (awayPower && !homePower) {
-    pick = `${away} 不敗`;
-    watch = "大1.5";
-    risk = "中低波動";
-    note = `${away}整體壓制力較高，但仍需注意小組賽節奏保守。`;
+    pick = `${game.away} 不敗`;
+    watch = randomPick(["大1.5", "小3.5"]);
+    note = `${game.away}整體壓制力較高，但仍需注意小組賽節奏。`;
   } else if (homePower && awayPower) {
     pick = "強強對話，建議保守";
     watch = "小3.5";
-    risk = "中高波動";
     note = "雙方強度接近，模型不建議過度追單。";
   } else {
-    pick = randomPick([`${home} 不敗`, `${away} 不敗`, "建議觀望"]);
-    watch = randomPick(["小3.5", "大1.5", "雙方進球"]);
-    risk = "中波動";
+    pick = randomPick([`${game.home} 不敗`, `${game.away} 不敗`, "建議觀望"]);
+    watch = randomPick(["大1.5", "小3.5", "雙方進球"]);
     note = "雙方差距不明顯，建議以低風險玩法觀察。";
   }
 
@@ -350,16 +272,14 @@ function analyzeFootballGame(game) {
 ⚽ 世足AI分析完成
 ━━━━━━━━━━
 
-${teamEmoji(home)} ${home} vs ${teamEmoji(away)} ${away}
+${teamEmoji(game.home)} ${game.home} vs ${teamEmoji(game.away)} ${game.away}
+🕒 ${game.time}
 
 AI偏向：
 ${pick}
 
 可留意：
 ${watch}
-
-風險：
-${risk}
 
 ⚠️ AI觀察：
 
@@ -388,9 +308,6 @@ function championPrediction() {
 本屆世足強隊差距接近
 淘汰賽波動可能偏高
 
-目前建議：
-以頂級熱門與黑馬隊伍分層觀察
-
 ━━━━━━━━━━`;
 }
 
@@ -399,36 +316,36 @@ function teamWorldCupProfile(teamName) {
     阿根廷: {
       emoji: "🇦🇷",
       rank: "#1",
-      status: "頂級奪冠熱門",
       stars: "★★★★★",
+      status: "頂級奪冠熱門",
       note: "中前場壓制力偏高，小組晉級機率極高，整體攻防穩定性優秀。",
     },
     法國: {
       emoji: "🇫🇷",
       rank: "#2",
-      status: "頂級奪冠熱門",
       stars: "★★★★★",
+      status: "頂級奪冠熱門",
       note: "前場進攻火力極強，轉換速度優秀，淘汰賽經驗完整。",
     },
     巴西: {
       emoji: "🇧🇷",
       rank: "#5",
-      status: "高奪冠熱門",
       stars: "★★★★☆",
+      status: "高奪冠熱門",
       note: "個人能力突出，進攻創造力強，但需觀察防線穩定度。",
     },
     英格蘭: {
       emoji: "🏴",
       rank: "#4",
-      status: "高奪冠熱門",
       stars: "★★★★☆",
+      status: "高奪冠熱門",
       note: "陣容厚度完整，中前場火力穩定，淘汰賽抗壓是關鍵。",
     },
     日本: {
       emoji: "🇯🇵",
       rank: "#15",
-      status: "黑馬觀察名單",
       stars: "★★★☆☆",
+      status: "黑馬觀察名單",
       note: "團隊節奏穩定，反擊效率高，但小組出線壓力較高。",
     },
   };
@@ -452,12 +369,30 @@ function teamWorldCupProfile(teamName) {
 ━━━━━━━━━━`;
   }
 
+  const scheduleLines = Object.entries(worldCupSchedule)
+    .flatMap(([date, games]) =>
+      games
+        .filter((g) => g.home === teamName || g.away === teamName)
+        .map((g) => {
+          const opponent = g.home === teamName ? g.away : g.home;
+          return `📅 ${date} 🕒 ${g.time}
+vs ${teamEmoji(opponent)} ${opponent}`;
+        })
+    )
+    .join("\n\n");
+
   return `━━━━━━━━━━
 ${profile.emoji} ${teamName}
 ━━━━━━━━━━
 
 🌍 世界排名：
 ${profile.rank}
+
+⚽ 小組賽程：
+
+${scheduleLines || "賽程資料陸續補齊中"}
+
+━━━━━━━━━━
 
 🏆 AI奪冠指數：
 ${profile.stars}
@@ -709,6 +644,7 @@ async function handleEvent(event) {
       "電子AI",
       "539",
       "539AI",
+      "539 AI",
       "539穩定",
       "539熱號",
       "539冷號",
@@ -730,7 +666,7 @@ async function handleEvent(event) {
     /^mt/i.test(userText) ||
     /^dg/i.test(userText) ||
     /^\d{1,4}$/.test(userText) ||
-    /^\d{1,2}\/\d{1,2}$/.test(userText);
+    worldCupSchedule[userText];
 
   if (isVipCommand) {
     if (userId !== adminId) {
@@ -775,14 +711,42 @@ async function handleEvent(event) {
 📅 世足賽程查詢
 ━━━━━━━━━━
 
-請輸入日期：
-
-例如：
-6/15
-6/20
-7/01
+請選擇日期：
 
 ━━━━━━━━━━`,
+      quickReply: quickWorldCupDates(),
+    });
+  }
+
+  if (worldCupSchedule[userText] && worldCupSessions[userId]?.mode === "date") {
+    const games = worldCupSchedule[userText];
+
+    worldCupSessions[userId] = {
+      mode: "selectGame",
+      games,
+    };
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: formatWorldCupGames(userText, games),
+    });
+  }
+
+  if (/^\d+$/.test(userText) && worldCupSessions[userId]?.mode === "selectGame") {
+    const index = Number(userText) - 1;
+    const game = worldCupSessions[userId].games[index];
+
+    if (!game) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "查無此場次",
+      });
+    }
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: analyzeWorldCupGame(game),
+      quickReply: quickWorldCup(),
     });
   }
 
@@ -804,6 +768,14 @@ async function handleEvent(event) {
 巴西
 
 ━━━━━━━━━━`,
+    });
+  }
+
+  if (worldCupSessions[userId]?.mode === "team") {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: teamWorldCupProfile(userText),
+      quickReply: quickWorldCup(),
     });
   }
 
@@ -832,47 +804,6 @@ AI精選功能將於賽前資料完整同步後開放。
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: championPrediction(),
-      quickReply: quickWorldCup(),
-    });
-  }
-
-  if (/^\d{1,2}\/\d{1,2}$/.test(userText) && worldCupSessions[userId]?.mode === "date") {
-    const date = parseWorldCupDate(userText);
-    const games = await fetchWorldCupFixtures({ date });
-
-    worldCupSessions[userId] = {
-      mode: "selectGame",
-      games,
-    };
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: formatWorldCupFixtureList(games, `${date} 世足賽程`),
-    });
-  }
-
-  if (/^\d{1,2}$/.test(userText) && worldCupSessions[userId]?.mode === "selectGame") {
-    const index = Number(userText) - 1;
-    const game = worldCupSessions[userId].games[index];
-
-    if (!game) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此場次，請重新選擇。",
-      });
-    }
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: analyzeFootballGame(game),
-      quickReply: quickWorldCup(),
-    });
-  }
-
-  if (worldCupSessions[userId]?.mode === "team") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: teamWorldCupProfile(userText),
       quickReply: quickWorldCup(),
     });
   }
