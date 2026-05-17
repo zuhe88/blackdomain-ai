@@ -3,6 +3,7 @@ const line = require("@line/bot-sdk");
 const { createClient } = require("@supabase/supabase-js");
 const axios = require("axios");
 const cheerio = require("cheerio");
+const worldCupSchedule = require("./worldcupSchedule");
 
 const app = express();
 
@@ -25,22 +26,6 @@ const baccaratHistory = {};
 const slotSessions = {};
 const worldCupSessions = {};
 const daily539Cache = {};
-
-const worldCupSchedule = {
-  "6/15": [
-    { home: "阿根廷", away: "日本", time: "08:00" },
-    { home: "法國", away: "韓國", time: "11:00" },
-    { home: "巴西", away: "美國", time: "14:00" },
-  ],
-  "6/16": [
-    { home: "英格蘭", away: "墨西哥", time: "08:00" },
-    { home: "西班牙", away: "摩洛哥", time: "11:00" },
-  ],
-  "6/17": [
-    { home: "葡萄牙", away: "荷蘭", time: "08:00" },
-    { home: "德國", away: "塞內加爾", time: "11:00" },
-  ],
-};
 
 function randomPick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -86,7 +71,11 @@ function quick539(excludeMode) {
       .filter((mode) => mode.text !== excludeMode)
       .map((mode) => ({
         type: "action",
-        action: { type: "message", label: mode.label, text: mode.text },
+        action: {
+          type: "message",
+          label: mode.label,
+          text: mode.text,
+        },
       })),
   };
 }
@@ -102,13 +91,47 @@ function quickWorldCup() {
   };
 }
 
-function quickWorldCupDates() {
-  return {
-    items: Object.keys(worldCupSchedule).slice(0, 13).map((date) => ({
+function getWorldCupDates() {
+  return Object.keys(worldCupSchedule);
+}
+
+function quickWorldCupDates(page = 0) {
+  const dates = getWorldCupDates();
+  const start = page * 11;
+  const pageDates = dates.slice(start, start + 11);
+
+  const items = pageDates.map((date) => ({
+    type: "action",
+    action: {
+      type: "message",
+      label: date,
+      text: date,
+    },
+  }));
+
+  if (page > 0) {
+    items.push({
       type: "action",
-      action: { type: "message", label: date, text: date },
-    })),
-  };
+      action: {
+        type: "message",
+        label: "上一頁",
+        text: "上一頁",
+      },
+    });
+  }
+
+  if (start + 11 < dates.length) {
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "下一頁",
+        text: "下一頁",
+      },
+    });
+  }
+
+  return { items };
 }
 
 async function getVipData(userId) {
@@ -123,7 +146,9 @@ async function getVipData(userId) {
 
 async function checkVip(userId) {
   const data = await getVipData(userId);
+
   if (!data) return false;
+
   return Number(data.expire_time) > Date.now();
 }
 
@@ -134,12 +159,19 @@ async function openVip(userId, account, days) {
   if (oldData) {
     await supabase
       .from("vip_users")
-      .update({ account, expire_time: expireTime })
+      .update({
+        account,
+        expire_time: expireTime,
+      })
       .eq("user_id", userId);
   } else {
     await supabase
       .from("vip_users")
-      .insert({ user_id: userId, account, expire_time: expireTime });
+      .insert({
+        user_id: userId,
+        account,
+        expire_time: expireTime,
+      });
   }
 
   return expireTime;
@@ -167,7 +199,9 @@ LINE：zu88.8`;
 
 function getPredictionDate() {
   const taiwanNow = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" })
+    new Date().toLocaleString("en-US", {
+      timeZone: "Asia/Taipei",
+    })
   );
 
   const hour = taiwanNow.getHours();
@@ -184,7 +218,9 @@ function getPredictionDate() {
     targetDate.setDate(targetDate.getDate() + 1);
   } else if (hour > 20 || (hour === 20 && minute >= 20)) {
     targetDate.setDate(targetDate.getDate() + 1);
-    if (targetDate.getDay() === 0) targetDate.setDate(targetDate.getDate() + 1);
+    if (targetDate.getDay() === 0) {
+      targetDate.setDate(targetDate.getDate() + 1);
+    }
   }
 
   const y = targetDate.getFullYear();
@@ -210,6 +246,23 @@ function teamEmoji(name) {
     墨西哥: "🇲🇽",
     摩洛哥: "🇲🇦",
     塞內加爾: "🇸🇳",
+    南非: "🇿🇦",
+    捷克: "🇨🇿",
+    加拿大: "🇨🇦",
+    瑞士: "🇨🇭",
+    澳洲: "🇦🇺",
+    土耳其: "🇹🇷",
+    烏拉圭: "🇺🇾",
+    比利時: "🇧🇪",
+    伊朗: "🇮🇷",
+    紐西蘭: "🇳🇿",
+    奧地利: "🇦🇹",
+    約旦: "🇯🇴",
+    克羅埃西亞: "🇭🇷",
+    迦納: "🇬🇭",
+    巴拿馬: "🇵🇦",
+    哥倫比亞: "🇨🇴",
+    蘇格蘭: "🏴",
   };
 
   return map[name] || "⚽";
@@ -218,13 +271,18 @@ function teamEmoji(name) {
 function formatWorldCupGames(date, games) {
   let msg = `━━━━━━━━━━
 ⚽ ${date} 世足賽程
+🕒 台灣時間
 ━━━━━━━━━━
 
 `;
 
   games.forEach((game, index) => {
-    msg += `${index + 1}️⃣ ${teamEmoji(game.home)} ${game.home} vs ${teamEmoji(game.away)} ${game.away}
-🕒 ${game.time}
+    const groupText = game.group ? `｜${game.group}組` : "";
+
+    msg += `${index + 1}️⃣ ${game.stage}${groupText}
+${teamEmoji(game.home)} ${game.home} vs ${teamEmoji(game.away)} ${game.away}
+🕒 ${game.time}（台灣時間）
+📍 ${game.venue}
 
 `;
   });
@@ -241,7 +299,18 @@ function formatWorldCupGames(date, games) {
 }
 
 function analyzeWorldCupGame(game) {
-  const powerTeams = ["阿根廷", "法國", "巴西", "英格蘭", "西班牙", "德國", "葡萄牙", "荷蘭"];
+  const powerTeams = [
+    "阿根廷",
+    "法國",
+    "巴西",
+    "英格蘭",
+    "西班牙",
+    "德國",
+    "葡萄牙",
+    "荷蘭",
+    "比利時",
+    "烏拉圭",
+  ];
 
   const homePower = powerTeams.includes(game.home);
   const awayPower = powerTeams.includes(game.away);
@@ -263,7 +332,11 @@ function analyzeWorldCupGame(game) {
     watch = "小3.5";
     note = "雙方強度接近，模型不建議過度追單。";
   } else {
-    pick = randomPick([`${game.home} 不敗`, `${game.away} 不敗`, "建議觀望"]);
+    pick = randomPick([
+      `${game.home} 不敗`,
+      `${game.away} 不敗`,
+      "建議觀望",
+    ]);
     watch = randomPick(["大1.5", "小3.5", "雙方進球"]);
     note = "雙方差距不明顯，建議以低風險玩法觀察。";
   }
@@ -273,7 +346,8 @@ function analyzeWorldCupGame(game) {
 ━━━━━━━━━━
 
 ${teamEmoji(game.home)} ${game.home} vs ${teamEmoji(game.away)} ${game.away}
-🕒 ${game.time}
+🕒 ${game.time}（台灣時間）
+📍 ${game.venue}
 
 AI偏向：
 ${pick}
@@ -352,7 +426,31 @@ function teamWorldCupProfile(teamName) {
 
   const profile = profiles[teamName];
 
+  const scheduleLines = Object.entries(worldCupSchedule)
+    .flatMap(([date, games]) =>
+      games
+        .filter((g) => g.home === teamName || g.away === teamName)
+        .map((g) => {
+          const opponent = g.home === teamName ? g.away : g.home;
+          return `📅 ${date} 🕒 ${g.time}（台灣時間）
+vs ${teamEmoji(opponent)} ${opponent}`;
+        })
+    )
+    .join("\n\n");
+
   if (!profile) {
+    if (scheduleLines) {
+      return `━━━━━━━━━━
+${teamEmoji(teamName)} ${teamName}
+━━━━━━━━━━
+
+⚽ 賽程：
+
+${scheduleLines}
+
+━━━━━━━━━━`;
+    }
+
     return `━━━━━━━━━━
 ⚽ 球隊查詢
 ━━━━━━━━━━
@@ -368,18 +466,6 @@ function teamWorldCupProfile(teamName) {
 
 ━━━━━━━━━━`;
   }
-
-  const scheduleLines = Object.entries(worldCupSchedule)
-    .flatMap(([date, games]) =>
-      games
-        .filter((g) => g.home === teamName || g.away === teamName)
-        .map((g) => {
-          const opponent = g.home === teamName ? g.away : g.home;
-          return `📅 ${date} 🕒 ${g.time}
-vs ${teamEmoji(opponent)} ${opponent}`;
-        })
-    )
-    .join("\n\n");
 
   return `━━━━━━━━━━
 ${profile.emoji} ${teamName}
@@ -415,13 +501,20 @@ async function fetch539History() {
   try {
     const res = await axios.get(url, {
       timeout: 10000,
-      headers: { "User-Agent": "Mozilla/5.0" },
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+      },
     });
 
     const $ = cheerio.load(res.data);
     const text = $("body").text().replace(/\s+/g, " ");
-    const matches = text.match(/\b(?:0?[1-9]|[12][0-9]|3[0-9])\b/g) || [];
-    const nums = matches.map((n) => Number(n)).filter((n) => n >= 1 && n <= 39);
+
+    const matches =
+      text.match(/\b(?:0?[1-9]|[12][0-9]|3[0-9])\b/g) || [];
+
+    const nums = matches
+      .map((n) => Number(n))
+      .filter((n) => n >= 1 && n <= 39);
 
     const history = [];
 
@@ -449,7 +542,9 @@ async function generate539Numbers(mode) {
   const history = await fetch539History();
   const freq = {};
 
-  for (let i = 1; i <= 39; i++) freq[i] = 0;
+  for (let i = 1; i <= 39; i++) {
+    freq[i] = 0;
+  }
 
   history.forEach((draw) => {
     draw.forEach((n) => {
@@ -460,11 +555,17 @@ async function generate539Numbers(mode) {
   let ranked;
 
   if (mode === "hot") {
-    ranked = Object.keys(freq).map(Number).sort((a, b) => freq[b] - freq[a]);
+    ranked = Object.keys(freq)
+      .map(Number)
+      .sort((a, b) => freq[b] - freq[a]);
   } else if (mode === "cold") {
-    ranked = Object.keys(freq).map(Number).sort((a, b) => freq[a] - freq[b]);
+    ranked = Object.keys(freq)
+      .map(Number)
+      .sort((a, b) => freq[a] - freq[b]);
   } else {
-    ranked = Object.keys(freq).map(Number).sort(() => Math.random() - 0.5);
+    ranked = Object.keys(freq)
+      .map(Number)
+      .sort(() => Math.random() - 0.5);
   }
 
   const selected = ranked.slice(0, 5);
@@ -506,7 +607,13 @@ function analyzeSlotRoom(game, roomNumber) {
     reason = "目前回吐波動偏高";
   }
 
-  return { game, room, status, suggestion, reason };
+  return {
+    game,
+    room,
+    status,
+    suggestion,
+    reason,
+  };
 }
 
 function formatSlotAnalysis(analysis) {
@@ -539,6 +646,7 @@ function getBaccaratMainPrediction(history) {
 
   const bankerCount = filtered.filter((x) => x === "莊").length;
   const playerCount = filtered.filter((x) => x === "閒").length;
+
   const last = filtered[filtered.length - 1];
   const last2 = filtered.slice(-2);
 
@@ -555,8 +663,10 @@ function getBaccaratMainPrediction(history) {
 function getBaccaratSpecialTip(history) {
   const filtered = history.filter((x) => x !== "和");
   const recent = filtered.slice(-5);
+
   const bankerStreak = recent.filter((x) => x === "莊").length;
   const playerStreak = recent.filter((x) => x === "閒").length;
+
   const roll = Math.random();
 
   if (roll < 0.02 && bankerStreak >= 3) {
@@ -573,9 +683,20 @@ function getBaccaratSpecialTip(history) {
 閒龍寶`;
   }
 
-  if (roll < 0.10) return `⚠️ 可留意：\n和局`;
-  if (roll < 0.16) return `⚠️ 可留意：\n${randomPick(["莊對", "閒對"])}`;
-  if (roll < 0.20) return `⚠️ 特殊波動：\n超6`;
+  if (roll < 0.10) {
+    return `⚠️ 可留意：
+和局`;
+  }
+
+  if (roll < 0.16) {
+    return `⚠️ 可留意：
+${randomPick(["莊對", "閒對"])}`;
+  }
+
+  if (roll < 0.20) {
+    return `⚠️ 特殊波動：
+超6`;
+  }
 
   return "";
 }
@@ -592,7 +713,10 @@ function getBaccaratWarning(history) {
   }
 
   if (recent.length >= 5) {
-    const isShake = recent.every((v, i, arr) => i === 0 || v !== arr[i - 1]);
+    const isShake = recent.every(
+      (v, i, arr) => i === 0 || v !== arr[i - 1]
+    );
+
     if (isShake) return "⚠️ 偵測震盪波動";
   }
 
@@ -635,7 +759,9 @@ async function handleEvent(event) {
   const userText = event.message.text.trim();
   const lowerText = userText.toLowerCase();
 
-  if (!baccaratHistory[userId]) baccaratHistory[userId] = [];
+  if (!baccaratHistory[userId]) {
+    baccaratHistory[userId] = [];
+  }
 
   const isVipCommand =
     [
@@ -662,11 +788,13 @@ async function handleEvent(event) {
       "球隊查詢",
       "AI精選",
       "冠軍預測",
+      "下一頁",
+      "上一頁",
     ].includes(userText) ||
     /^mt/i.test(userText) ||
     /^dg/i.test(userText) ||
     /^\d{1,4}$/.test(userText) ||
-    worldCupSchedule[userText];
+    Boolean(worldCupSchedule[userText]);
 
   if (isVipCommand) {
     if (userId !== adminId) {
@@ -682,7 +810,11 @@ async function handleEvent(event) {
   }
 
   if (userText === "世足") {
-    worldCupSessions[userId] = { mode: null, games: [] };
+    worldCupSessions[userId] = {
+      mode: null,
+      games: [],
+      datePage: 0,
+    };
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -702,44 +834,98 @@ async function handleEvent(event) {
     });
   }
 
-if (
-  userText === "賽程查詢" ||
-  (userText === "1" &&
-    worldCupSessions[userId]?.mode !== "selectGame")
-) {
+  if (
+    userText === "賽程查詢" ||
+    (userText === "1" && worldCupSessions[userId]?.mode !== "selectGame")
+  ) {
+    worldCupSessions[userId] = {
+      mode: "date",
+      games: [],
+      datePage: 0,
+    };
 
-  worldCupSessions[userId] = {
-    mode: "date",
-    games: [],
-  };
-
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: `━━━━━━━━━━
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
 📅 世足賽程查詢
+🕒 全部為台灣時間
 ━━━━━━━━━━
 
 請選擇日期：
 
 ━━━━━━━━━━`,
-    quickReply: quickWorldCupDates(),
-  });
-}
+      quickReply: quickWorldCupDates(0),
+    });
+  }
 
-if (
-  userText === "球隊查詢" ||
-  (userText === "2" &&
-    worldCupSessions[userId]?.mode !== "selectGame")
-) {
+  if (
+    (userText === "下一頁" || userText === "上一頁") &&
+    worldCupSessions[userId]?.mode === "date"
+  ) {
+    const current = worldCupSessions[userId].datePage || 0;
+    const next = userText === "下一頁" ? current + 1 : Math.max(0, current - 1);
 
-  worldCupSessions[userId] = {
-    mode: "team",
-    games: [],
-  };
+    worldCupSessions[userId].datePage = next;
 
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: `━━━━━━━━━━
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
+📅 世足賽程查詢
+🕒 全部為台灣時間
+━━━━━━━━━━
+
+請選擇日期：
+
+━━━━━━━━━━`,
+      quickReply: quickWorldCupDates(next),
+    });
+  }
+
+  if (worldCupSchedule[userText] && worldCupSessions[userId]?.mode === "date") {
+    const games = worldCupSchedule[userText];
+
+    worldCupSessions[userId] = {
+      mode: "selectGame",
+      games,
+      datePage: worldCupSessions[userId].datePage || 0,
+    };
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: formatWorldCupGames(userText, games),
+    });
+  }
+
+  if (/^\d+$/.test(userText) && worldCupSessions[userId]?.mode === "selectGame") {
+    const index = Number(userText) - 1;
+    const game = worldCupSessions[userId].games[index];
+
+    if (!game) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "查無此場次",
+      });
+    }
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: analyzeWorldCupGame(game),
+      quickReply: quickWorldCup(),
+    });
+  }
+
+  if (
+    userText === "球隊查詢" ||
+    (userText === "2" && worldCupSessions[userId]?.mode !== "selectGame")
+  ) {
+    worldCupSessions[userId] = {
+      mode: "team",
+      games: [],
+    };
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
 ⚽ 球隊查詢
 ━━━━━━━━━━
 
@@ -752,18 +938,24 @@ if (
 巴西
 
 ━━━━━━━━━━`,
-  });
-}
+    });
+  }
 
-if (
-  userText === "AI精選" ||
-  (userText === "3" &&
-    worldCupSessions[userId]?.mode !== "selectGame")
-) {
+  if (worldCupSessions[userId]?.mode === "team") {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: teamWorldCupProfile(userText),
+      quickReply: quickWorldCup(),
+    });
+  }
 
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: `━━━━━━━━━━
+  if (
+    userText === "AI精選" ||
+    (userText === "3" && worldCupSessions[userId]?.mode !== "selectGame")
+  ) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
 ⚽ AI精選
 ━━━━━━━━━━
 
@@ -777,22 +969,20 @@ AI精選功能將於賽前資料完整同步後開放。
 4️⃣ 冠軍預測
 
 ━━━━━━━━━━`,
-    quickReply: quickWorldCup(),
-  });
-}
+      quickReply: quickWorldCup(),
+    });
+  }
 
-if (
-  userText === "冠軍預測" ||
-  (userText === "4" &&
-    worldCupSessions[userId]?.mode !== "selectGame")
-) {
-
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: championPrediction(),
-    quickReply: quickWorldCup(),
-  });
-}
+  if (
+    userText === "冠軍預測" ||
+    (userText === "4" && worldCupSessions[userId]?.mode !== "selectGame")
+  ) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: championPrediction(),
+      quickReply: quickWorldCup(),
+    });
+  }
 
   if (userText === "我的ID") {
     return client.replyMessage(event.replyToken, {
@@ -812,7 +1002,9 @@ if (
     }
 
     const expireTime = Number(data.expire_time);
-    const diffDays = Math.ceil((expireTime - Date.now()) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil(
+      (expireTime - Date.now()) / (1000 * 60 * 60 * 24)
+    );
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -982,7 +1174,9 @@ ${prediction}
   if (userText === "莊" || userText === "閒" || userText === "和") {
     baccaratHistory[userId].push(userText);
 
-    if (baccaratHistory[userId].length > 20) baccaratHistory[userId].shift();
+    if (baccaratHistory[userId].length > 20) {
+      baccaratHistory[userId].shift();
+    }
 
     const prediction = getBaccaratMainPrediction(baccaratHistory[userId]);
     const warning = getBaccaratWarning(baccaratHistory[userId]);
@@ -1016,7 +1210,10 @@ ${prediction}
   }
 
   if (userText === "戰神賽特1" || userText === "戰神賽特2") {
-    slotSessions[userId] = { game: userText, mode: null };
+    slotSessions[userId] = {
+      game: userText,
+      mode: null,
+    };
 
     return client.replyMessage(event.replyToken, {
       type: "text",
