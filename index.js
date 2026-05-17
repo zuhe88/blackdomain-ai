@@ -133,7 +133,18 @@ function quickWorldCupDates(page = 0) {
 
   return { items };
 }
-
+function quickWorldCupGameNumbers(games) {
+  return {
+    items: games.map((game, index) => ({
+      type: "action",
+      action: {
+        type: "message",
+        label: `${index + 1}`,
+        text: `${index + 1}`,
+      },
+    })),
+  };
+}
 async function getVipData(userId) {
   const { data } = await supabase
     .from("vip_users")
@@ -890,10 +901,11 @@ async function handleEvent(event) {
       datePage: worldCupSessions[userId].datePage || 0,
     };
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: formatWorldCupGames(userText, games),
-    });
+   return client.replyMessage(event.replyToken, {
+  type: "text",
+  text: formatWorldCupGames(userText, games),
+  quickReply: quickWorldCupGameNumbers(games),
+});
   }
 
   if (/^\d+$/.test(userText) && worldCupSessions[userId]?.mode === "selectGame") {
