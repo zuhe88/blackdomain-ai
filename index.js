@@ -13,15 +13,10 @@ const config = {
 };
 
 const client = new line.Client(config);
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 const adminId = "Uaf293ee976e5170d4e8672d2c12b3f76";
 
-const pendingAccounts = {};
 const baccaratHistory = {};
 const slotSessions = {};
 const worldCupSessions = {};
@@ -102,17 +97,11 @@ function quickWorldCupDates(page = 0) {
   }));
 
   if (page > 0) {
-    items.push({
-      type: "action",
-      action: { type: "message", label: "上一頁", text: "上一頁" },
-    });
+    items.push({ type: "action", action: { type: "message", label: "上一頁", text: "上一頁" } });
   }
 
   if (start + 11 < dates.length) {
-    items.push({
-      type: "action",
-      action: { type: "message", label: "下一頁", text: "下一頁" },
-    });
+    items.push({ type: "action", action: { type: "message", label: "下一頁", text: "下一頁" } });
   }
 
   return { items };
@@ -186,10 +175,7 @@ LINE：zu88.8`;
 }
 
 function getPredictionDate() {
-  const taiwanNow = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" })
-  );
-
+  const taiwanNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
   const hour = taiwanNow.getHours();
   const minute = taiwanNow.getMinutes();
   const day = taiwanNow.getDay();
@@ -479,6 +465,49 @@ async function fetch539History() {
   }
 }
 
+function hasTooManyConsecutive(nums) {
+  const sorted = [...nums].sort((a, b) => a - b);
+  let count = 0;
+
+  for (let i = 0; i < sorted.length - 1; i++) {
+    if (sorted[i + 1] - sorted[i] === 1) count++;
+  }
+
+  return count >= 2;
+}
+
+function isTooConcentrated(nums) {
+  const zones = {
+    low: nums.filter((n) => n >= 1 && n <= 13).length,
+    mid: nums.filter((n) => n >= 14 && n <= 26).length,
+    high: nums.filter((n) => n >= 27 && n <= 39).length,
+  };
+
+  return zones.low >= 4 || zones.mid >= 4 || zones.high >= 4;
+}
+
+function pickReasonable539(ranked) {
+  for (let i = 0; i < ranked.length - 4; i++) {
+    const candidate = ranked.slice(i, i + 8);
+    const selected = [];
+
+    for (const n of candidate) {
+      if (!selected.includes(n)) selected.push(n);
+      if (selected.length === 5) break;
+    }
+
+    if (
+      selected.length === 5 &&
+      !hasTooManyConsecutive(selected) &&
+      !isTooConcentrated(selected)
+    ) {
+      return selected;
+    }
+  }
+
+  return ranked.slice(0, 5);
+}
+
 async function generate539Numbers(mode) {
   const predictionDate = getPredictionDate();
   const cacheKey = `${predictionDate}-${mode}`;
@@ -506,7 +535,7 @@ async function generate539Numbers(mode) {
     ranked = Object.keys(freq).map(Number).sort(() => Math.random() - 0.5);
   }
 
-  const selected = ranked.slice(0, 5);
+  const selected = pickReasonable539(ranked);
 
   const finalNumbers = selected
     .sort((a, b) => a - b)
@@ -516,7 +545,7 @@ async function generate539Numbers(mode) {
     numbers: finalNumbers,
     source: history.length ? "歷史資料模型" : "備用模型",
     detail: history.length
-      ? `已讀取近 ${history.length} 期資料`
+      ? `已讀取近 ${history.length} 期資料，並完成連號、區間集中度過濾。`
       : "歷史資料暫時無法讀取，使用備用模型。",
   };
 
@@ -652,6 +681,11 @@ ${prediction}${extra}
 莊 / 閒 / 和`;
 }
 
+function clearSessions(userId, keep) {
+  if (keep !== "worldcup") worldCupSessions[userId] = null;
+  if (keep !== "slot") slotSessions[userId] = null;
+}
+
 app.get("/", (req, res) => {
   res.send("BLACKDOMAIN AI Running");
 });
@@ -686,10 +720,6 @@ async function handleEvent(event) {
     "VIP",
     "VIP時間",
   ];
-
-  if (mainCommands.includes(userText)) {
-    worldCupSessions[userId] = null;
-  }
 
   if (!baccaratHistory[userId]) {
     baccaratHistory[userId] = [];
@@ -741,6 +771,8 @@ async function handleEvent(event) {
   }
 
   if (userText === "世足") {
+    clearSessions(userId, "worldcup");
+
     worldCupSessions[userId] = {
       mode: null,
       games: [],
@@ -927,6 +959,8 @@ AI精選功能將於賽前資料完整同步後開放。
   }
 
   if (userText === "VIP查詢" || userText === "VIP" || userText === "VIP時間") {
+    clearSessions(userId);
+
     const data = await getVipData(userId);
 
     if (!data || Number(data.expire_time) <= Date.now()) {
@@ -957,6 +991,8 @@ ${formatTaiwanTime(expireTime)}`,
   }
 
   if (userText === "開通會員" || userText === "我要開通" || userText === "開通") {
+    clearSessions(userId);
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: noVipMessage(),
@@ -964,6 +1000,8 @@ ${formatTaiwanTime(expireTime)}`,
   }
 
   if (userText.startsWith("申請開通 ")) {
+    clearSessions(userId);
+
     const account = userText.replace("申請開通 ", "").trim();
 
     if (!account) {
@@ -973,7 +1011,10 @@ ${formatTaiwanTime(expireTime)}`,
       });
     }
 
-    pendingAccounts[account] = userId;
+    await supabase.from("vip_requests").insert({
+      user_id: userId,
+      account,
+    });
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -989,6 +1030,8 @@ ${account}
   }
 
   if (userText.startsWith("開通 ")) {
+    clearSessions(userId);
+
     if (userId !== adminId) {
       return client.replyMessage(event.replyToken, {
         type: "text",
@@ -1007,7 +1050,15 @@ ${account}
       });
     }
 
-    const targetUserId = pendingAccounts[account];
+    const { data: requestData } = await supabase
+      .from("vip_requests")
+      .select("*")
+      .eq("account", account)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const targetUserId = requestData?.user_id;
 
     if (!targetUserId) {
       return client.replyMessage(event.replyToken, {
@@ -1036,6 +1087,8 @@ ${formatTaiwanTime(expireTime)}`,
   }
 
   if (userText === "百家樂") {
+    clearSessions(userId);
+
     baccaratHistory[userId] = [];
 
     return client.replyMessage(event.replyToken, {
@@ -1058,6 +1111,8 @@ ${formatTaiwanTime(expireTime)}`,
   }
 
   if (lowerText === "dg" || lowerText === "mt") {
+    clearSessions(userId);
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1077,6 +1132,8 @@ MT 01`,
   const isWrongRoom = /^mt/i.test(userText) || /^dg/i.test(userText);
 
   if (isValidMT || isValidDG) {
+    clearSessions(userId);
+
     baccaratHistory[userId] = [];
     const prediction = randomPick(["莊", "閒"]);
 
@@ -1105,6 +1162,8 @@ ${prediction}
   }
 
   if (userText === "莊" || userText === "閒" || userText === "和") {
+    clearSessions(userId);
+
     baccaratHistory[userId].push(userText);
 
     if (baccaratHistory[userId].length > 20) baccaratHistory[userId].shift();
@@ -1126,6 +1185,8 @@ ${prediction}
   }
 
   if (userText === "電子" || userText === "電子AI") {
+    clearSessions(userId, "slot");
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1141,6 +1202,8 @@ ${prediction}
   }
 
   if (userText === "戰神賽特1" || userText === "戰神賽特2") {
+    clearSessions(userId, "slot");
+
     slotSessions[userId] = {
       game: userText,
       mode: null,
@@ -1161,6 +1224,8 @@ ${prediction}
   }
 
   if (userText === "隨機爆分房") {
+    clearSessions(userId, "slot");
+
     const session = slotSessions[userId];
 
     if (!session?.game) {
@@ -1187,6 +1252,8 @@ ${prediction}
   }
 
   if (userText === "自選房號") {
+    clearSessions(userId, "slot");
+
     if (!slotSessions[userId]?.game) {
       return client.replyMessage(event.replyToken, {
         type: "text",
@@ -1211,6 +1278,8 @@ ${prediction}
   }
 
   if (/^\d{1,4}$/.test(userText) && slotSessions[userId]?.mode === "custom") {
+    clearSessions(userId, "slot");
+
     const room = Number(userText);
 
     if (room < 1 || room > 3500) {
@@ -1230,6 +1299,8 @@ ${prediction}
   }
 
   if (userText === "539" || userText === "539AI" || userText === "539 AI") {
+    clearSessions(userId);
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1252,6 +1323,8 @@ ${prediction}
   };
 
   if (modeMap[userText]) {
+    clearSessions(userId);
+
     const result = await generate539Numbers(modeMap[userText]);
     const nums = result.numbers;
     const predictionDate = getPredictionDate();
