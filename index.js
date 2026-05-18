@@ -22,10 +22,45 @@ const slotSessions = {};
 const worldCupSessions = {};
 const daily539Cache = {};
 
+
 function randomPick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+function formatRoomName(room) {
+
+  const text = room
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  if (text.startsWith("MT")) {
+
+    const value = text.replace("MT", "");
+
+    if (value === "3A" || value === "13A") {
+      return `MT ${value}`;
+    }
+
+    return `MT ${value.padStart(2, "0")}`;
+  }
+
+  if (text.startsWith("DG")) {
+
+    let value = text.replace("DG", "");
+
+    if (value.startsWith("RB")) {
+      return `DG RB${value.replace("RB", "").padStart(2, "0")}`;
+    }
+
+    if (value.startsWith("S")) {
+      return `DG S${value.replace("S", "").padStart(2, "0")}`;
+    }
+
+    return `DG ${value.padStart(2, "0")}`;
+  }
+
+  return room.toUpperCase();
+}
 function quickBaccarat() {
   return {
     items: [
@@ -1159,17 +1194,37 @@ MT 01`,
   const isValidDG = /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i.test(userText);
   const isWrongRoom = /^mt/i.test(userText) || /^dg/i.test(userText);
 
-  if (isValidMT || isValidDG) {
-    clearSessions(userId);
+ if (isValidMT || isValidDG) {
+  clearSessions(userId);
 
-    baccaratHistory[userId] = [];
-    const prediction = randomPick(["莊", "閒"]);
+  baccaratHistory[userId] = [];
+  const prediction = randomPick(["莊", "閒"]);
+const roomText = formatRoomName(userText);
 
-    return client.replyMessage(event.replyToken, {
+  return client.replyMessage(event.replyToken, [
+    {
       type: "text",
       text: `━━━━━━━━━━
-🤖 黑域AI同步完成
+🤖 黑域AI數據同步成功
 ━━━━━━━━━━
+
+同步房間：
+${roomText}
+
+✓ 房間同步完成
+✓ 牌路資料載入
+✓ 模型運算啟動
+
+系統正在進行首局建議...`,
+    },
+    {
+      type: "text",
+      text: `━━━━━━━━━━
+🤖 黑域AI運算完成
+━━━━━━━━━━
+
+房間：
+${roomText}
 
 目前建議：
 ${prediction}
@@ -1179,8 +1234,9 @@ ${prediction}
 請輸入目前開出：
 莊 / 閒 / 和`,
       quickReply: quickBaccarat(),
-    });
-  }
+    },
+  ]);
+}
 
   if (isWrongRoom) {
     return client.replyMessage(event.replyToken, {
