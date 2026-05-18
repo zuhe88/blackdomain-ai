@@ -265,6 +265,34 @@ ${teamEmoji(game.home)} ${game.home} vs ${teamEmoji(game.away)} ${game.away}
 }
 
 function analyzeWorldCupGame(game) {
+
+  if (
+    game.home.includes("勝方") ||
+    game.away.includes("勝方")
+  ) {
+    return `━━━━━━━━━━
+⚽ 世足AI分析完成
+━━━━━━━━━━
+
+${game.home} vs ${game.away}
+
+🕒 ${game.time}（台灣時間）
+📍 ${game.venue}
+
+目前狀態：
+對戰隊伍尚未確定
+
+AI分析：
+待小組賽／淘汰賽結果出爐後同步更新
+
+⚠️ AI觀察：
+
+此場屬於未定對戰
+暫不提供勝負方向建議
+
+━━━━━━━━━━`;
+  }
+
   const predictions = [
     `${game.home} 不敗`,
     `${game.away} 不敗`,
