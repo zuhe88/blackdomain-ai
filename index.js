@@ -769,6 +769,22 @@ async function handleEvent(event) {
   const userId = event.source.userId;
   const userText = event.message.text.trim();
   const lowerText = userText.toLowerCase();
+  const mainCommands = [
+  "百家樂",
+  "電子",
+  "電子AI",
+  "539",
+  "539AI",
+  "539 AI",
+  "世足",
+  "VIP查詢",
+  "VIP",
+  "VIP時間",
+];
+
+if (mainCommands.includes(userText)) {
+  worldCupSessions[userId] = null;
+}
 
   if (!baccaratHistory[userId]) {
     baccaratHistory[userId] = [];
@@ -953,14 +969,19 @@ async function handleEvent(event) {
     });
   }
 
-  if (worldCupSessions[userId]?.mode === "team") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: teamWorldCupProfile(userText),
-      quickReply: quickWorldCup(),
-    });
-  }
+if (
+  worldCupSessions[userId]?.mode === "team" &&
+  !mainCommands.includes(userText)
+) {
 
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: teamWorldCupProfile(userText),
+    quickReply: quickWorldCup(),
+  });
+
+}
+}
   if (
     userText === "AI精選" ||
     (userText === "3" && worldCupSessions[userId]?.mode !== "selectGame")
