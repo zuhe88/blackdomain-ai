@@ -319,9 +319,22 @@ async function handleEvent(event) {
   }
 
   if (text === "百家樂") {
-    clearSessions(uid); S.flow[uid] = "awaitPlatform";
-    return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━\n⚡ 黑域AI已啟動\n━━━━━━━━━━\n\n請選擇平台：\n\n• DG\n• MT`, quickReply: q([["DG"], ["MT"])});
+    clearSessions(uid);
+    S.flow[uid] = "awaitPlatform";
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
+⚡ 黑域AI已啟動
+━━━━━━━━━━
+
+請選擇平台：
+
+• DG
+• MT`,
+      quickReply: q([["DG"], ["MT"]]),
+    });
   }
+
   if ((lower === "dg" || lower === "mt") && S.flow[uid] === "awaitPlatform") {
     S.flow[uid] = "awaitRoom";
     return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━\n🤖 黑域AI已啟動\n━━━━━━━━━━\n\n請輸入房間號碼\n\n範例：\nDG RB01\nMT 01` });
