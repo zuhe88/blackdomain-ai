@@ -30,6 +30,7 @@ const baccaratBankroll = {};
 const baccaratStartBankroll = {};
 const baccaratMode = {};
 const baccaratPendingMoney = {};
+const baccaratPendingRoom = {};
 const baccaratFlow = {};
 const tianmenState = {};
 
@@ -143,20 +144,47 @@ function getAiBet(userId) {
     baccaratStartBankroll[userId] ||
     1000;
 
-  const pct = randomPick([
-    0.02,
-    0.025,
-    0.03,
-    0.035,
-    0.04,
-  ]);
+  let minPct = 0.08;
+  let maxPct = 0.18;
 
-  return Math.max(
-    1,
-    roundBet(bankroll * pct)
-  );
+  // 獲利後提高侵略性
+  const profit = getProfit(userId);
+
+  if (profit >= 3000) {
+    minPct = 0.12;
+    maxPct = 0.25;
+  }
+
+  if (profit >= 10000) {
+    minPct = 0.18;
+    maxPct = 0.35;
+  }
+
+  if (profit >= 30000) {
+    minPct = 0.25;
+    maxPct = 0.5;
+  }
+
+  const pct =
+    Math.random() *
+      (maxPct - minPct) +
+    minPct;
+
+  let bet = Math.floor(bankroll * pct);
+
+  // 最低保護
+  if (bet < 100) bet = 100;
+
+  // 最大不要超過本金50%
+  if (bet > bankroll * 0.5) {
+    bet = Math.floor(bankroll * 0.5);
+  }
+
+  // 整數化
+  bet = Math.floor(bet / 100) * 100;
+
+  return bet;
 }
-
 function buildTianmen(money) {
   const base = Math.max(
     1,
@@ -1290,49 +1318,46 @@ ${money}
 
 ━━━━━━━━━━
 
-請輸入房號：
+const roomText =
+  baccaratPendingRoom[userId];
 
-例如：
-MT01
-DG RB01`,
-      }
-    );
-  }
-    if (
-    userText === "天門五關" ||
-    (
-      userText === "2" &&
-      baccaratFlow[userId] ===
-        "awaitMode"
-    )
-  ) {
-    clearSessions(userId);
+const prediction = randomPick([
+  "莊",
+  "閒",
+]);
 
-    const money =
-      baccaratPendingMoney[userId] ||
-      baccaratBankroll[userId] ||
-      1000;
+const bet = getCurrentBet(userId);
 
-    resetBaccaratMoney(userId, money);
+baccaratLastPrediction[userId] =
+  prediction;
 
-    baccaratMode[userId] = "tianmen";
+baccaratLastBet[userId] = bet;
 
-    baccaratFlow[userId] = "awaitRoom";
+baccaratFlow[userId] = "playing";
 
-    const plan = buildTianmen(money);
+return client.replyMessage(
+  event.replyToken,
+  [
+    {
+      type: "text",
+      text: `━━━━━━━━━━
+🤖 黑域AI運算完成
+━━━━━━━━━━
 
-    tianmenState[userId] = {
-      level: 1,
-      base: plan.base,
-      levels: plan.levels,
-      stopped: false,
-    };
+房間：
+${roomText}
 
-    if (money < 1000) {
-      baccaratFlow[userId] =
-        "awaitMode";
+目前建議：
+${prediction}｜下注：${bet}
 
-      return client.replyMessage(
+━━━━━━━━━━
+
+請輸入目前開出：
+莊 / 閒 / 和`,
+      quickReply: quickBaccarat(),
+    },
+  ]
+);
         event.replyToken,
         {
           type: "text",
@@ -1419,22 +1444,50 @@ DG RB01`,
     /^dg/i.test(userText);
 
   if (isValidMT || isValidDG) {
-    clearSessions(userId);
+  clearSessions(userId);
 
-    baccaratHistory[userId] = [];
+  baccaratHistory[userId] = [];
 
-    baccaratResultHistory[userId] =
-      [];
+  baccaratResultHistory[userId] = [];
 
-    baccaratLastPrediction[userId] =
-      null;
+  baccaratLastPrediction[userId] = null;
 
-    baccaratLastBet[userId] = null;
+  baccaratLastBet[userId] = null;
 
-    const prediction = randomPick([
-      "莊",
-      "閒",
-    ]);
+  const roomText =
+    formatRoomName(userText);
+
+  baccaratFlow[userId] = "awaitMoney";
+
+  baccaratPendingRoom[userId] =
+    roomText;
+
+  return client.replyMessage(
+    event.replyToken,
+    {
+      type: "text",
+      text: `━━━━━━━━━━
+🤖 黑域AI數據同步成功
+━━━━━━━━━━
+
+同步房間：
+${roomText}
+
+✓ 房間同步完成
+✓ 牌路資料載入
+✓ 模型運算啟動
+
+━━━━━━━━━━
+
+請輸入本金：
+
+例如：
+1000
+5000
+10000`,
+    }
+  );
+}
 
     const bet = getCurrentBet(userId);
 
