@@ -362,6 +362,7 @@ async function handleEvent(event) {
   text: startAnalyze(uid),
   quickReply: quickBaccarat()
 });
+}
   if (text === "自由配注" || (text === "3" && S.flow[uid] === "awaitMode")) {
     S.mode[uid] = "free"; S.flow[uid] = "playing"; return client.replyMessage(event.replyToken, { type: "text", text: startAnalyze(uid), quickReply: quickBaccarat() });
   }
