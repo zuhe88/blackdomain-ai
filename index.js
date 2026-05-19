@@ -25,6 +25,7 @@ const baccaratBankroll = {};
 const baccaratStartBankroll = {};
 const baccaratMode = {};
 const baccaratPendingMoney = {};
+const baccaratFlow = {};
 const tianmenState = {};
 const slotSessions = {};
 const worldCupSessions = {};
@@ -631,7 +632,10 @@ function applyBaccaratResult(userId, opened) {
 }
 
 function formatBaccaratReply(userId, prediction, bet, extra = "") {
-  const record = baccaratResultHistory[userId]?.join(" ") || "";
+  const records = baccaratResultHistory[userId] || [];
+  const winCount = records.filter((x) => x === "✅").length;
+  const loseCount = records.filter((x) => x === "❌").length;
+  const tieCount = records.filter((x) => x === "和").length;
   const bankroll = baccaratBankroll[userId];
   const profit = getProfit(userId);
   const mode = baccaratMode[userId];
@@ -639,14 +643,29 @@ function formatBaccaratReply(userId, prediction, bet, extra = "") {
   let moneyText = "";
 
   if (mode && bankroll !== undefined) {
-    moneyText += `\n\n━━━━━━━━━━\n\n`;
+    moneyText += `
 
-    if (record) moneyText += `紀錄：\n${record}\n\n`;
+━━━━━━━━━━
 
-    moneyText += `目前本金：\n${bankroll}\n\n目前獲利：\n${profit >= 0 ? "+" : ""}${profit}`;
+`;
+
+    moneyText += `過：${winCount} 把
+倒：${loseCount} 把
+和：${tieCount} 把
+
+`;
+
+    moneyText += `目前本金：
+${bankroll}
+
+目前獲利：
+${profit >= 0 ? "+" : ""}${profit}`;
 
     if (mode === "tianmen" && tianmenState[userId]) {
-      moneyText += `\n\n目前階段：\n天門${tianmenState[userId].level}`;
+      moneyText += `
+
+目前階段：
+天門${tianmenState[userId].level}`;
     }
   }
 
