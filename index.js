@@ -357,8 +357,11 @@ async function handleEvent(event) {
   if (text === "天門五關" || (text === "2" && S.flow[uid] === "awaitMode")) {
     const money = S.pendingMoney[uid] || 1000, plan = makeTianmen(money); resetMoney(uid, money); S.mode[uid] = "tianmen"; S.flow[uid] = "playing"; S.tianmen[uid] = { level: 1, ...plan };
     if (money < 1000) return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━\n⛩️ 黑域AI天門配置\n━━━━━━━━━━\n\n目前本金：\n${money}\n\n⚠️ 不建議使用天門模式\n\n建議本金至少：\n1000以上\n\n目前較適合：\nAI配注模式\n\n━━━━━━━━━━`, quickReply: quickMoney() });
-    return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━\n⛩️ 黑域AI天門配置\n━━━━━━━━━━\n\n總本金：\n${money}\n\n天門一：${plan.levels[0]}\n天門二：${plan.levels[1]}\n天門三：${plan.levels[2]}\n天門四：${plan.levels[3]}\n天門五：${plan.levels[4]}\n\n總配置：\n${plan.total}\n\n━━━━━━━━━━\n\n${startAnalyze(uid)}`, quickReply: quickBaccarat() });
-  }
+    return client.replyMessage(event.replyToken, {
+  type: "text",
+  text: startAnalyze(uid),
+  quickReply: quickBaccarat()
+});
   if (text === "自由配注" || (text === "3" && S.flow[uid] === "awaitMode")) {
     S.mode[uid] = "free"; S.flow[uid] = "playing"; return client.replyMessage(event.replyToken, { type: "text", text: startAnalyze(uid), quickReply: quickBaccarat() });
   }
