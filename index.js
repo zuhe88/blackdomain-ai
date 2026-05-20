@@ -395,4 +395,8 @@ async function handleEvent(event) {
   return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━\n🤖 歡迎使用黑域AI\n━━━━━━━━━━\n\n請選擇功能：\n\n• 百家樂\n• 電子\n• 539\n• 世足` });
 }
 
-app.listen(process.env.PORT || 8080, () => console.log("Server running"));
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`黑域AI啟動成功，Port: ${PORT}`);
+});
