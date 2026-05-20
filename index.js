@@ -1,3 +1,5 @@
+const WebSocket = require("ws");
+global.WebSocket = WebSocket;
 const express = require("express");
 const line = require("@line/bot-sdk");
 const { createClient } = require("@supabase/supabase-js");
