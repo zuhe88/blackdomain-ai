@@ -98,16 +98,47 @@ function resetMoney(uid, money) {
 function profit(uid) { return (S.bankroll[uid] || 0) - (S.startBankroll[uid] || 0); }
 function round100(n) { return Math.max(100, Math.floor(n / 100) * 100); }
 function aiBet(uid) {
-  const b = S.bankroll[uid] || S.startBankroll[uid] || 1000;
-  const p = profit(uid);
-  let min = 0.08, max = 0.18;
-  if (p >= 3000) [min, max] = [0.12, 0.25];
-  if (p >= 10000) [min, max] = [0.18, 0.35];
-  if (p >= 30000) [min, max] = [0.25, 0.5];
-  return round100(Math.min(b * 0.5, b * (Math.random() * (max - min) + min)));
+ const b =
+  S.bankroll[uid] ||
+  S.startBankroll[uid] ||
+  1000;
+
+const p = profit(uid);
+
+let min = 0.08;
+let max = 0.18;
+
+if (p >= 3000) {
+  min = 0.1;
+  max = 0.2;
+}
+
+if (p >= 10000) {
+  min = 0.12;
+  max = 0.25;
+}
+
+if (p >= 50000) {
+  min = 0.15;
+  max = 0.3;
+}
+
+const bet = Math.min(
+  b * 0.3,
+  b * (
+    Math.random() *
+    (max - min) +
+    min
+  )
+);
+
+return Math.floor(bet / 100) * 100;
 }
 function makeTianmen(money) {
-  const base = Math.max(1, Math.floor(money / 57));
+  const base = Math.max(
+  100,
+  Math.floor(money / 60 / 100) * 100
+);
   const levels = [1, 3, 7, 15, 31].map((x) => base * x);
   return { base, levels, total: levels.reduce((a, b) => a + b, 0) };
 }
