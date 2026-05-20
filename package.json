@@ -3,14 +3,21 @@
   "version": "1.0.0",
   "description": "BLACKDOMAIN AI LINE BOT",
   "main": "index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "@line/bot-sdk": "^9.7.0",
-    "@supabase/supabase-js": "^2.45.4",
-    "express": "^4.19.2",
-    "axios": "^1.6.0",
-    "cheerio": "1.0.0-rc.12"
+    "@supabase/supabase-js": "^2.49.8",
+    "axios": "^1.8.4",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "moment-timezone": "^0.6.0"
   }
 }
