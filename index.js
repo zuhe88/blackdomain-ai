@@ -11,7 +11,11 @@ const client = new line.Client({
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.LINE_CHANNEL_SECRET,
 });
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY, {
+  realtime: {
+    enabled: false
+  }
+});
 const adminId = "Uaf293ee976e5170d4e8672d2c12b3f76";
 
 const S = {
