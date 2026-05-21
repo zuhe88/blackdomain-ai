@@ -9,6 +9,21 @@ const worldCupSchedule = require("./worldcupSchedule");
 
 const app = express();
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const client = new line.Client({
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.LINE_CHANNEL_SECRET,
@@ -1067,7 +1082,29 @@ AI配注模式
 
   if (mode539) {
     const nums = gen539(mode539);
-    const date = twDate().slash;
+    const date = tw539Date();
+    function tw539Date() {
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+
+  // 台灣時間 20:30 後，預測日期改成隔天
+  if (
+    now.getHours() > 20 ||
+    (now.getHours() === 20 && now.getMinutes() >= 30)
+  ) {
+    now.setDate(now.getDate() + 1);
+  }
+
+  // 星期日不開獎，改成星期一
+  if (now.getDay() === 0) {
+    now.setDate(now.getDate() + 1);
+  }
+
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+
+  return `${y}/${m}/${d}`;
+}
 
     return client.replyMessage(event.replyToken, {
       type: "text",
