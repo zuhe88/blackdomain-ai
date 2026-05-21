@@ -1327,7 +1327,6 @@ const g = pick(games);
 • 539
 • 體育`,
   });
-}
 
 app.listen(process.env.PORT || 8080, () => {
   console.log("Server running");
