@@ -1132,8 +1132,19 @@ ${msg || "目前查無賽程"}
     });
   }
 
-  if (text === "AI精選" && S.mlb[uid]?.games?.length) {
-    const g = pick(S.mlb[uid].games);
+if (
+  text === "AI精選" &&
+  S.mlb[uid]
+) {
+    let games = S.mlb[uid].games;
+
+if (!games?.length) {
+  const data = await fetchMlbGames(0);
+  games = data.games;
+  S.mlb[uid].games = games;
+}
+
+const g = pick(games);
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -1243,7 +1254,10 @@ ${msg || "目前查無賽程"}
     });
   }
 
-  if (text === "AI精選" || text === "3") {
+  if (
+  (text === "AI精選" || text === "3") &&
+  S.wc[uid]
+){
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
