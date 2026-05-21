@@ -32,6 +32,7 @@ const S = {
   slot: {},
   wc: {},
   mlb: {},
+  sport: {},
   cache539: {},
 };
 
@@ -46,6 +47,10 @@ function q(items) {
       action: { type: "message", label, text },
     })),
   };
+}
+
+function quickMain() {
+  return q([["百家樂"], ["電子"], ["539"], ["體育"], ["VIP查詢"]]);
 }
 
 function quickBaccarat() {
@@ -84,6 +89,7 @@ function clearSessions(uid, keep = "") {
   if (keep !== "slot") S.slot[uid] = null;
   if (keep !== "wc") S.wc[uid] = null;
   if (keep !== "mlb") S.mlb[uid] = null;
+  if (keep !== "sport") S.sport[uid] = null;
 }
 
 function twDate(offset = 0) {
@@ -126,11 +132,13 @@ async function isVip(uid) {
 async function openVip(uid, account, days) {
   const expire_time = Date.now() + days * 86400000;
   const old = await getVip(uid);
+
   if (old) {
     await supabase.from("vip_users").update({ account, expire_time }).eq("user_id", uid);
   } else {
     await supabase.from("vip_users").insert({ user_id: uid, account, expire_time });
   }
+
   return expire_time;
 }
 
@@ -176,10 +184,12 @@ function aiBet(uid) {
     min = 0.1;
     max = 0.2;
   }
+
   if (p >= 10000) {
     min = 0.12;
     max = 0.25;
   }
+
   if (p >= 50000) {
     min = 0.15;
     max = 0.3;
@@ -197,9 +207,11 @@ function makeTianmen(money) {
 
 function currentBet(uid) {
   if (S.mode[uid] === "free") return 0;
+
   if (S.mode[uid] === "tianmen" && S.tianmen[uid]) {
     return S.tianmen[uid].levels[(S.tianmen[uid].level || 1) - 1];
   }
+
   return aiBet(uid);
 }
 
@@ -374,7 +386,7 @@ function gen539(mode) {
 }
 
 function wcDates(page = 0) {
-  const dates = Object.keys(worldCupSchedule);
+  const dates = Object.keys(worldCupSchedule || {});
   const start = page * 11;
   const items = dates.slice(start, start + 11).map((d) => [d]);
 
@@ -554,7 +566,7 @@ function mlbAnalyze(g) {
 
 ${g.away} vs ${g.home}
 
-開賽時間：
+開賽時間（台灣）：
 ${g.time}
 
 AI偏向：
@@ -583,18 +595,22 @@ app.get("/", (req, res) => {
   res.send("BLACKDOMAIN AI Running");
 });
 
-app.post("/webhook", line.middleware({
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.LINE_CHANNEL_SECRET,
-}), async (req, res) => {
-  try {
-    await Promise.all(req.body.events.map(handleEvent));
-    res.status(200).end();
-  } catch (e) {
-    console.log(e);
-    res.status(500).end();
+app.post(
+  "/webhook",
+  line.middleware({
+    channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    channelSecret: process.env.LINE_CHANNEL_SECRET,
+  }),
+  async (req, res) => {
+    try {
+      await Promise.all(req.body.events.map(handleEvent));
+      res.status(200).end();
+    } catch (e) {
+      console.log(e);
+      res.status(500).end();
+    }
   }
-});
+);
 
 async function handleEvent(event) {
   if (event.type !== "message" || event.message.type !== "text") return null;
@@ -1065,7 +1081,8 @@ ${nums[0]} / ${nums[2]}
   }
 
   if (text === "體育") {
-    clearSessions(uid);
+    clearSessions(uid, "sport");
+    S.sport[uid] = "sports";
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -1085,6 +1102,8 @@ ${nums[0]} / ${nums[2]}
 
   if (text === "MLB") {
     clearSessions(uid, "mlb");
+    S.sport[uid] = "mlb";
+    S.mlb[uid] = { mode: "menu", games: [] };
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -1102,29 +1121,29 @@ ${nums[0]} / ${nums[2]}
     });
   }
 
- if (text === "近日賽程") {
-  let data;
+  if (text === "近日賽程" && S.sport[uid] === "mlb") {
+    let data;
 
-  try {
-    data = await fetchMlbGames(0);
-    if (!data.games.length) data = await fetchMlbGames(1);
-  } catch (err) {
-    console.log(err.message);
+    try {
+      data = await fetchMlbGames(0);
+      if (!data.games.length) data = await fetchMlbGames(1);
+    } catch (err) {
+      console.log(err.message);
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "MLB賽程資料暫時無法同步，請稍後再試。",
+      });
+    }
+
+    S.mlb[uid] = { mode: "mlbSelect", games: data.games };
+
+    const msg = data.games
+      .map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`)
+      .join("\n\n");
+
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: "MLB賽程資料暫時無法同步，請稍後再試。",
-    });
-  }
-
-  S.mlb[uid] = { mode: "mlbSelect", games: data.games };
-
-  const msg = data.games
-    .map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`)
-    .join("\n\n");
-
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: `━━━━━━━━━━
+      text: `━━━━━━━━━━
 ⚾ MLB近日賽程（台灣時間）
 ━━━━━━━━━━
 
@@ -1132,49 +1151,41 @@ ${msg || "目前查無賽程"}
 
 ━━━━━━━━━━
 請選擇場次查看AI分析`,
-    quickReply: q(data.games.map((_, i) => [`${i + 1}`])),
-  });
-}
-
-if (
-  text === "AI精選" &&
-  S.mlb[uid]
-) {
-  let games = S.mlb[uid].games;
-
-  if (!games?.length) {
-    const data = await fetchMlbGames(0);
-    games = data.games;
-    S.mlb[uid].games = games;
-  }
-
-  if (!games?.length) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "目前查無MLB賽程，請稍後再試。",
-
-      quickReply: quickMLB(),
+      quickReply: q(data.games.map((_, i) => [`${i + 1}`])),
     });
   }
 
-  const g = pick(games);
+  if (text === "AI精選" && S.sport[uid] === "mlb") {
+    let games = S.mlb[uid]?.games || [];
 
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: mlbAnalyze(g),
-    quickReply: quickMLB(),
-  });
-}
+    if (!games.length) {
+      try {
+        const data = await fetchMlbGames(0);
+        games = data.games;
+        if (!games.length) {
+          const nextData = await fetchMlbGames(1);
+          games = nextData.games;
+        }
+        S.mlb[uid] = { mode: "mlbSelect", games };
+      } catch (err) {
+        console.log(err.message);
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text: "MLB賽程資料暫時無法同步，請稍後再試。",
+          quickReply: quickMLB(),
+        });
+      }
+    }
 
-    let games = S.mlb[uid].games;
+    if (!games.length) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "目前查無MLB賽程，請稍後再試。",
+        quickReply: quickMLB(),
+      });
+    }
 
-if (!games?.length) {
-  const data = await fetchMlbGames(0);
-  games = data.games;
-  S.mlb[uid].games = games;
-}
-
-const g = pick(games);
+    const g = pick(games);
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -1183,10 +1194,15 @@ const g = pick(games);
     });
   }
 
-  if (/^\d+$/.test(text) && S.mlb[uid]?.mode === "mlbSelect") {
+  if (/^\d+$/.test(text) && S.sport[uid] === "mlb" && S.mlb[uid]?.mode === "mlbSelect") {
     const g = S.mlb[uid].games[Number(text) - 1];
 
-    if (!g) return client.replyMessage(event.replyToken, { type: "text", text: "查無此場次" });
+    if (!g) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "查無此場次",
+      });
+    }
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -1197,6 +1213,7 @@ const g = pick(games);
 
   if (text === "世足") {
     clearSessions(uid, "wc");
+    S.sport[uid] = "wc";
     S.wc[uid] = { mode: null, page: 0, games: [] };
 
     return client.replyMessage(event.replyToken, {
@@ -1217,7 +1234,7 @@ const g = pick(games);
     });
   }
 
-  if (text === "賽程查詢" || (text === "1" && S.wc[uid]?.mode !== "selectGame")) {
+  if ((text === "賽程查詢" || text === "1") && S.sport[uid] === "wc") {
     S.wc[uid] = { mode: "date", page: 0, games: [] };
 
     return client.replyMessage(event.replyToken, {
@@ -1232,7 +1249,7 @@ const g = pick(games);
     });
   }
 
-  if (["下一頁", "上一頁"].includes(text) && S.wc[uid]?.mode === "date") {
+  if (["下一頁", "上一頁"].includes(text) && S.sport[uid] === "wc" && S.wc[uid]?.mode === "date") {
     S.wc[uid].page = text === "下一頁" ? S.wc[uid].page + 1 : Math.max(0, S.wc[uid].page - 1);
 
     return client.replyMessage(event.replyToken, {
@@ -1247,7 +1264,7 @@ const g = pick(games);
     });
   }
 
-  if (worldCupSchedule[text] && S.wc[uid]?.mode === "date") {
+  if (worldCupSchedule[text] && S.sport[uid] === "wc" && S.wc[uid]?.mode === "date") {
     S.wc[uid] = {
       mode: "selectGame",
       games: worldCupSchedule[text],
@@ -1261,7 +1278,7 @@ const g = pick(games);
     });
   }
 
-  if (/^\d+$/.test(text) && S.wc[uid]?.mode === "selectGame") {
+  if (/^\d+$/.test(text) && S.sport[uid] === "wc" && S.wc[uid]?.mode === "selectGame") {
     const g = S.wc[uid].games[Number(text) - 1];
 
     if (!g) return client.replyMessage(event.replyToken, { type: "text", text: "查無此場次" });
@@ -1273,7 +1290,7 @@ const g = pick(games);
     });
   }
 
-  if (text === "球隊查詢" || text === "2") {
+  if ((text === "球隊查詢" || text === "2") && S.sport[uid] === "wc") {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1284,10 +1301,7 @@ const g = pick(games);
     });
   }
 
-  if (
-  (text === "AI精選" || text === "3") &&
-  S.wc[uid]
-){
+  if ((text === "AI精選" || text === "3") && S.sport[uid] === "wc") {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1300,7 +1314,7 @@ const g = pick(games);
     });
   }
 
-  if (text === "冠軍預測" || text === "4") {
+  if ((text === "冠軍預測" || text === "4") && S.sport[uid] === "wc") {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1328,7 +1342,9 @@ const g = pick(games);
 • 電子
 • 539
 • 體育`,
+    quickReply: quickMain(),
   });
+}
 
 app.listen(process.env.PORT || 8080, () => {
   console.log("Server running");
