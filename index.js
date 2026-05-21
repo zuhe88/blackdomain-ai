@@ -1056,14 +1056,14 @@ AI配注模式
 
 請選擇模式：
 
-• 539穩定
+• 本期推薦
 • 539熱號
 • 539冷號`,
       quickReply: quick539(),
     });
   }
 
-  const mode539 = { "539穩定": "stable", "539熱號": "hot", "539冷號": "cold" }[text];
+ const mode539 = { "本期推薦": "stable", "539熱號": "hot", "539冷號": "cold" }[text];
 
   if (mode539) {
     const nums = gen539(mode539);
