@@ -1164,6 +1164,26 @@ if (
     quickReply: quickMLB(),
   });
 }
+
+if (
+  /^\d+$/.test(text) &&
+  S.mlb[uid]?.mode === "mlbSelect"
+) {
+  const g = S.mlb[uid].games[Number(text) - 1];
+
+  if (!g) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "查無此場次",
+    });
+  }
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: mlbAnalyze(g),
+    quickReply: quickMLB(),
+  });
+}
     let games = S.mlb[uid].games;
 
 if (!games?.length) {
