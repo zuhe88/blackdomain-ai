@@ -57,7 +57,7 @@ function quickBaccarat() { return q([["莊"], ["閒"], ["和"]]); }
 function quickMoney() { return q([["AI配注"], ["天門五關"], ["自由配注"]]); }
 function quickSlotGame() { return q([["戰神賽特1"], ["戰神賽特2"]]); }
 function quickSlotMode() { return q([["隨機爆分房"], ["自選房號"]]); }
-function quick539(exclude) { return q([["539穩定"], ["539熱號"], ["539冷號"]].filter(([x]) => x !== exclude)); }
+function quick539(exclude) { return q([["本期推薦"], ["539熱號"], ["539冷號"]].filter(([x]) => x !== exclude)); }
 function quickSports() { return q([["世足"], ["MLB"], ["NBA"]]); }
 function quickWorldCup() { return q([["賽程查詢"], ["球隊查詢"], ["AI精選"], ["冠軍預測"]]); }
 function quickMLB() { return q([["近日賽程"], ["AI精選"]]); }
