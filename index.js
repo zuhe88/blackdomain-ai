@@ -77,7 +77,7 @@ function quickWorldCup() {
 }
 
 function quickMLB() {
-  return q([["今日賽程"], ["AI精選"]]);
+  return q([["近日賽程"], ["AI精選"]]);
 }
 
 function clearSessions(uid, keep = "") {
@@ -1094,7 +1094,7 @@ ${nums[0]} / ${nums[2]}
 
 請選擇功能：
 
-• 今日賽程
+• 近日賽程
 • AI精選
 
 ━━━━━━━━━━`,
@@ -1102,7 +1102,7 @@ ${nums[0]} / ${nums[2]}
     });
   }
 
-  if (text === "今日賽程") {
+  if (text === "近日賽程") {
     let data;
     try {
       data = await fetchMlbGames(0);
@@ -1121,7 +1121,7 @@ ${nums[0]} / ${nums[2]}
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
-⚾ MLB賽程
+⚾ MLB近日賽程
 ━━━━━━━━━━
 
 ${msg || "目前查無賽程"}
@@ -1136,6 +1136,30 @@ if (
   text === "AI精選" &&
   S.mlb[uid]
 ) {
+  let games = S.mlb[uid].games;
+
+  if (!games?.length) {
+    const data = await fetchMlbGames(0);
+    games = data.games;
+    S.mlb[uid].games = games;
+  }
+
+  if (!games?.length) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "目前查無MLB賽程，請稍後再試。",
+      quickReply: quickMLB(),
+    });
+  }
+
+  const g = pick(games);
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: mlbAnalyze(g),
+    quickReply: quickMLB(),
+  });
+}
     let games = S.mlb[uid].games;
 
 if (!games?.length) {
