@@ -1187,14 +1187,12 @@ if (text === "近日賽程") {
 
   try {
     const today = await fetchMlbGames(0);
-    const tomorrow = await fetchMlbGames(1);
-    const afterTomorrow = await fetchMlbGames(2);
+const tomorrow = await fetchMlbGames(1);
 
-    games = [
-      ...(today.games || []),
-      ...(tomorrow.games || []),
-      ...(afterTomorrow.games || []),
-    ];
+games = [
+  ...(today.games || []),
+  ...(tomorrow.games || []),
+];
   } catch (err) {
     console.log("MLB API ERROR:", err.message);
 
