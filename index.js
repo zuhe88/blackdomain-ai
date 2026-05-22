@@ -505,8 +505,17 @@ function teamZh(name) {
 }
 
 async function fetchMlbGames(offset = 0) {
-  const date = twDate(offset);
-  const url = `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${date.espn}`;
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+  now.setDate(now.getDate() + offset);
+
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+
+  const date = `${y}${m}${d}`;
+
+  const url = `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${date}`;
+
   const { data } = await axios.get(url, { timeout: 10000 });
 
   const games = (data.events || []).map((e) => {
@@ -518,13 +527,14 @@ async function fetchMlbGames(offset = 0) {
       id: e.id,
       home: teamZh(home),
       away: teamZh(away),
-      time: new Date(e.date).toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour12: false }),
-      rawHome: home,
-      rawAway: away,
+      time: new Date(e.date).toLocaleString("zh-TW", {
+        timeZone: "Asia/Taipei",
+        hour12: false,
+      }),
     };
   });
 
-  return { date: date.slash, games };
+  return { games };
 }
 
 function mlbAnalyze(g) {
