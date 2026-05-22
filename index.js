@@ -1196,13 +1196,14 @@ if (text === "近日賽程") {
   let games = [];
 
   try {
-    const today = await fetchMlbGames(0);
-const tomorrow = await fetchMlbGames(1);
+   for (let i = 0; i < 7; i++) {
+  const data = await fetchMlbGames(i);
 
-games = [
-  ...(today.games || []),
-  ...(tomorrow.games || []),
-];
+  if (data.games?.length) {
+    games = data.games;
+    break;
+  }
+}
   } catch (err) {
     console.log("MLB API ERROR:", err.message);
 
