@@ -505,34 +505,37 @@ function teamZh(name) {
 }
 
 async function fetchMlbGames(offset = 0) {
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+  const now = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
+  );
+
   now.setDate(now.getDate() + offset);
 
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
 
-  const date = `${y}${m}${d}`;
+  const date = `${y}-${m}-${d}`;
 
-  const url = `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${date}`;console.log("MLB URL:", url);
+  const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}`;
 
-  const { data } = await axios.get(url, { timeout: 10000 });console.log("MLB EVENTS:", data.events?.length);
+  console.log("MLB URL:", url);
 
-  const games = (data.events || []).map((e) => {
-    const competitors = e.competitions?.[0]?.competitors || [];
-    const home = competitors.find((x) => x.homeAway === "home")?.team?.displayName || "Home";
-    const away = competitors.find((x) => x.homeAway === "away")?.team?.displayName || "Away";
+  const { data } = await axios.get(url, { timeout: 10000 });
 
+  const games = (data.dates?.[0]?.games || []).map((g) => {
     return {
-      id: e.id,
-      home: teamZh(home),
-      away: teamZh(away),
-      time: new Date(e.date).toLocaleString("zh-TW", {
+      id: g.gamePk,
+      away: teamZh(g.teams.away.team.name),
+      home: teamZh(g.teams.home.team.name),
+      time: new Date(g.gameDate).toLocaleString("zh-TW", {
         timeZone: "Asia/Taipei",
         hour12: false,
       }),
     };
   });
+
+  console.log("MLB GAMES:", games.length);
 
   return { games };
 }
