@@ -514,9 +514,9 @@ async function fetchMlbGames(offset = 0) {
 
   const date = `${y}${m}${d}`;
 
-  const url = `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${date}`;
+  const url = `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${date}`;console.log("MLB URL:", url);
 
-  const { data } = await axios.get(url, { timeout: 10000 });
+  const { data } = await axios.get(url, { timeout: 10000 });console.log("MLB EVENTS:", data.events?.length);
 
   const games = (data.events || []).map((e) => {
     const competitors = e.competitions?.[0]?.competitors || [];
