@@ -8,22 +8,6 @@ const axios = require("axios");
 const worldCupSchedule = require("./worldcupSchedule");
 
 const app = express();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 const client = new line.Client({
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.LINE_CHANNEL_SECRET,
@@ -1196,7 +1180,8 @@ ${nums[0]} / ${nums[2]}
     });
   }
 
-  if (text === "近日賽程" && S.sport[uid] === "mlb") {
+if (text === "近日賽程") {
+  S.sport[uid] = "mlb";
     let data;
 
     try {
