@@ -1182,36 +1182,59 @@ ${nums[0]} / ${nums[2]}
 
 if (text === "近日賽程") {
   S.sport[uid] = "mlb";
-    let data;
 
-    try {
-      data = await fetchMlbGames(0);
-      if (!data.games.length) data = await fetchMlbGames(1);
-    } catch (err) {
-      console.log(err.message);
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "MLB賽程資料暫時無法同步，請稍後再試。",
-      });
-    }
+  let games = [];
 
-    S.mlb[uid] = { mode: "mlbSelect", games: data.games };
+  try {
+    const today = await fetchMlbGames(0);
+    const tomorrow = await fetchMlbGames(1);
+    const afterTomorrow = await fetchMlbGames(2);
 
-    const msg = data.games.map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`).join("\n\n");
+    games = [
+      ...(today.games || []),
+      ...(tomorrow.games || []),
+      ...(afterTomorrow.games || []),
+    ];
+  } catch (err) {
+    console.log("MLB API ERROR:", err.message);
 
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: `━━━━━━━━━━
+      text: "MLB賽程資料暫時無法同步，請稍後再試。",
+      quickReply: quickMLB(),
+    });
+  }
+
+  if (!games.length) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "目前查無MLB近日賽程。",
+      quickReply: quickMLB(),
+    });
+  }
+
+  S.mlb[uid] = {
+    mode: "mlbSelect",
+    games,
+  };
+
+  const msg = games
+    .map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`)
+    .join("\n\n");
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
 ⚾ MLB近日賽程（台灣時間）
 ━━━━━━━━━━
 
-${msg || "目前查無賽程"}
+${msg}
 
 ━━━━━━━━━━
 請選擇場次查看AI分析`,
-      quickReply: q(data.games.map((_, i) => [`${i + 1}`])),
-    });
-  }
+    quickReply: q(games.map((_, i) => [`${i + 1}`])),
+  });
+}
 
   if (text === "AI精選" && S.sport[uid] === "mlb") {
     let games = S.mlb[uid]?.games || [];
