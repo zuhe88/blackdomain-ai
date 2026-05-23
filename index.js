@@ -26,6 +26,7 @@ const S = {
   mode: {},
   pendingMoney: {},
   pendingRoom: {},
+  betLimit: {},
   flow: {},
   tianmen: {},
   slot: {},
@@ -76,6 +77,23 @@ function twDate(offset = 0) {
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
   return { slash: `${y}/${m}/${d}`, espn: `${y}${m}${d}` };
+}
+
+function tw539Date() {
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+
+  if (now.getHours() > 20 || (now.getHours() === 20 && now.getMinutes() >= 30)) {
+    now.setDate(now.getDate() + 1);
+  }
+
+  if (now.getDay() === 0) {
+    now.setDate(now.getDate() + 1);
+  }
+
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}/${m}/${d}`;
 }
 
 function twTime(ts) {
@@ -151,18 +169,55 @@ function profit(uid) {
   return (S.bankroll[uid] || 0) - (S.startBankroll[uid] || 0);
 }
 
+function betUnit(bankroll) {
+  if (bankroll >= 500000) return 10000;
+  if (bankroll >= 10000) return 1000;
+  return 100;
+}
+
+function roundBet(amount, bankroll) {
+  const unit = betUnit(bankroll);
+  return Math.max(unit, Math.floor(amount / unit) * unit);
+}
+
 function aiBet(uid) {
   const b = S.bankroll[uid] || S.startBankroll[uid] || 1000;
+  const limit = S.betLimit[uid] || b;
   const p = profit(uid);
-  let min = 0.08;
-  let max = 0.18;
 
-  if (p >= 3000) { min = 0.1; max = 0.2; }
-  if (p >= 10000) { min = 0.12; max = 0.25; }
-  if (p >= 50000) { min = 0.15; max = 0.3; }
+  let minRate = 0.08;
+  let maxRate = 0.18;
 
-  const bet = Math.min(b * 0.3, b * (Math.random() * (max - min) + min));
-  return Math.max(100, Math.floor(bet / 100) * 100);
+  if (b >= 10000) {
+    minRate = 0.12;
+    maxRate = 0.35;
+  }
+
+  if (b >= 100000) {
+    minRate = 0.08;
+    maxRate = 0.28;
+  }
+
+  if (p > 0) {
+    maxRate += 0.03;
+  }
+
+  const style = Math.random();
+  let rate;
+
+  if (style < 0.25) {
+    rate = minRate;
+  } else if (style < 0.75) {
+    rate = minRate + Math.random() * (maxRate - minRate);
+  } else {
+    rate = maxRate;
+  }
+
+  let bet = b * rate;
+  bet = Math.min(bet, limit);
+  bet = roundBet(bet, b);
+
+  return Math.max(betUnit(b), bet);
 }
 
 function makeTianmen(money) {
@@ -505,38 +560,30 @@ function teamZh(name) {
 }
 
 async function fetchMlbGames(offset = 0) {
-  const now = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
-  );
-
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
   now.setDate(now.getDate() + offset);
 
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
-
   const date = `${y}-${m}-${d}`;
 
   const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}`;
-
   console.log("MLB URL:", url);
 
   const { data } = await axios.get(url, { timeout: 10000 });
 
-  const games = (data.dates?.[0]?.games || []).map((g) => {
-    return {
-      id: g.gamePk,
-      away: teamZh(g.teams.away.team.name),
-      home: teamZh(g.teams.home.team.name),
-      time: new Date(g.gameDate).toLocaleString("zh-TW", {
-        timeZone: "Asia/Taipei",
-        hour12: false,
-      }),
-    };
-  });
+  const games = (data.dates?.[0]?.games || []).map((g) => ({
+    id: g.gamePk,
+    away: teamZh(g.teams.away.team.name),
+    home: teamZh(g.teams.home.team.name),
+    time: new Date(g.gameDate).toLocaleString("zh-TW", {
+      timeZone: "Asia/Taipei",
+      hour12: false,
+    }),
+  }));
 
   console.log("MLB GAMES:", games.length);
-
   return { games };
 }
 
@@ -665,7 +712,7 @@ async function handleEvent(event) {
   ].includes(text) ||
     /^mt/i.test(text) ||
     /^dg/i.test(text) ||
-    (/^\d{1,6}$/.test(text) && ["awaitMoney", "selectGame", "custom", "mlbSelect", "nbaSelect"].includes(
+    (/^\d{1,6}$/.test(text) && ["awaitMoney", "awaitBetLimit", "selectGame", "custom", "mlbSelect", "nbaSelect"].includes(
       S.flow[uid] || S.wc[uid]?.mode || S.slot[uid]?.mode || S.mlb[uid]?.mode || S.nba[uid]?.mode
     ));
 
@@ -855,7 +902,7 @@ ${S.pendingRoom[uid]}
 
     resetMoney(uid, money);
     S.pendingMoney[uid] = money;
-    S.flow[uid] = "awaitMode";
+    S.flow[uid] = "awaitBetLimit";
 
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -865,6 +912,58 @@ ${S.pendingRoom[uid]}
 
 目前本金：
 ${money}
+
+請輸入單柱上限：
+
+例如：
+1000
+3000
+5000
+
+━━━━━━━━━━`,
+    });
+  }
+
+  if (/^\d+$/.test(text) && S.flow[uid] === "awaitBetLimit") {
+    const limit = Number(text);
+    const money = S.pendingMoney[uid];
+
+    if (!money) {
+      S.flow[uid] = "awaitMoney";
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "請先輸入本金。",
+      });
+    }
+
+    if (limit < betUnit(money)) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: `單柱上限太低，至少需 ${betUnit(money)} 以上。`,
+      });
+    }
+
+    if (limit > money) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "單柱上限不能超過本金，請重新輸入。",
+      });
+    }
+
+    S.betLimit[uid] = limit;
+    S.flow[uid] = "awaitMode";
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
+💰 黑域AI資金配置完成
+━━━━━━━━━━
+
+目前本金：
+${money}
+
+單柱上限：
+${limit}
 
 請選擇模式：
 
@@ -1080,29 +1179,6 @@ AI配注模式
   if (mode539) {
     const nums = gen539(mode539);
     const date = tw539Date();
-    function tw539Date() {
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
-
-  // 台灣時間 20:30 後，預測日期改成隔天
-  if (
-    now.getHours() > 20 ||
-    (now.getHours() === 20 && now.getMinutes() >= 30)
-  ) {
-    now.setDate(now.getDate() + 1);
-  }
-
-  // 星期日不開獎，改成星期一
-  if (now.getDay() === 0) {
-    now.setDate(now.getDate() + 1);
-  }
-
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-
-  return `${y}/${m}/${d}`;
-}
-
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1193,50 +1269,52 @@ ${nums[0]} / ${nums[2]}
     });
   }
 
-if (text === "近日賽程") {
-  S.sport[uid] = "mlb";
+  if (text === "近日賽程") {
+    S.sport[uid] = "mlb";
 
-  let games = [];
+    let games = [];
 
-  try {
-   for (let i = 0; i < 7; i++) {
-  const data = await fetchMlbGames(i);
+    try {
+      for (let i = -1; i < 7; i++) {
+        const data = await fetchMlbGames(i);
 
-  if (data.games?.length) {
-    games = data.games;
-    break;
-  }
-}
-  } catch (err) {
-    console.log("MLB API ERROR:", err.message);
+        if (data.games?.length) {
+          games = data.games;
+          break;
+        }
+      }
+    } catch (err) {
+      console.log("MLB API ERROR:", err.message);
+
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "MLB賽程資料暫時無法同步，請稍後再試。",
+        quickReply: quickMLB(),
+      });
+    }
+
+    if (!games.length) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "目前查無MLB近日賽程。",
+        quickReply: quickMLB(),
+      });
+    }
+
+    const showGames = games.slice(0, 10);
+
+    S.mlb[uid] = {
+      mode: "mlbSelect",
+      games: showGames,
+    };
+
+    const msg = showGames
+      .map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`)
+      .join("\n\n");
 
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: "MLB賽程資料暫時無法同步，請稍後再試。",
-      quickReply: quickMLB(),
-    });
-  }
-
-  if (!games.length) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "目前查無MLB近日賽程。",
-      quickReply: quickMLB(),
-    });
-  }
-
-  S.mlb[uid] = {
-    mode: "mlbSelect",
-    games,
-  };
-
-  const msg = games
-    .map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`)
-    .join("\n\n");
-
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: `━━━━━━━━━━
+      text: `━━━━━━━━━━
 ⚾ MLB近日賽程（台灣時間）
 ━━━━━━━━━━
 
@@ -1244,9 +1322,10 @@ ${msg}
 
 ━━━━━━━━━━
 請選擇場次查看AI分析`,
-    quickReply: q(games.map((_, i) => [`${i + 1}`])),
-  });
-}
+      quickReply: q(showGames.map((_, i) => [`${i + 1}`])),
+    });
+  }
+
 
   if (text === "AI精選" && S.sport[uid] === "mlb") {
     let games = S.mlb[uid]?.games || [];
