@@ -916,9 +916,9 @@ ${money}
 請輸入單柱上限：
 
 例如：
-10,000
-250,000
-1,000,000
+1000
+3000
+5000
 
 ━━━━━━━━━━`,
     });
@@ -1039,17 +1039,34 @@ AI配注模式
     });
   }
 
-  if (["莊", "閒", "和"].includes(text)) {
-    applyResult(uid, text
-    if (
-  S.mode[uid] !== "free" &&
-  S.bankroll[uid] <= 0
-) {
-  S.bankroll[uid] = 0;
+  if (text === "重新設定本金") {
+    resetMoney(uid, 0);
+    S.flow[uid] = "awaitMoney";
 
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: `━━━━━━━━━━
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
+💰 黑域AI資金重置
+━━━━━━━━━━
+
+請重新輸入本金：
+
+例如：
+1000
+5000
+10000`,
+    });
+  }
+
+  if (["莊", "閒", "和"].includes(text)) {
+    applyResult(uid, text);
+
+    if (S.mode[uid] !== "free" && (S.bankroll[uid] || 0) <= 0) {
+      S.bankroll[uid] = 0;
+
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: `━━━━━━━━━━
 ⚠️ 黑域AI已停止分析
 ━━━━━━━━━━
 
@@ -1063,28 +1080,9 @@ AI配注模式
 請重新設定本金後再啟動
 
 ━━━━━━━━━━`,
-    quickReply: q([
-      ["重新設定本金"]
-    ])
-  });
-}       
-    if (text === "重新設定本金") {
-  S.flow[uid] = "awaitMoney";
-
-  return client.replyMessage(event.replyToken,{
-    type:"text",
-    text:`━━━━━━━━━━
-💰 黑域AI資金重置
-━━━━━━━━━━
-
-請重新輸入本金：
-
-例如：
-1000
-5000
-10000`
-  });
-}
+        quickReply: q([["重新設定本金"]]),
+      });
+    }
 
     S.baccarat[uid].push(text);
     if (S.baccarat[uid].length > 20) S.baccarat[uid].shift();
