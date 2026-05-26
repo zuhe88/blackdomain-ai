@@ -1553,16 +1553,90 @@ ${msg || "目前查無賽程"}
     });
   }
 
-  if ((text === "球隊查詢" || text === "2") && S.sport[uid] === "wc") {
+ if ((text === "球隊查詢" || text === "2") && S.sport[uid] === "wc") {
+  S.wc[uid] = {
+    mode: "teamSearch",
+    page: 0,
+    games: [],
+  };
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
+⚽ 球隊查詢
+━━━━━━━━━━
+
+請輸入球隊名稱。
+
+例如：
+巴西
+阿根廷
+法國
+英格蘭`,
+  });
+}
+
+if (
+  S.sport[uid] === "wc" &&
+  S.wc[uid]?.mode === "teamSearch"
+) {
+  const team = text.trim();
+  const results = [];
+
+  Object.entries(worldCupSchedule || {}).forEach(([date, games]) => {
+    games.forEach((g) => {
+      const home = g.home || "";
+      const away = g.away || "";
+
+      if (
+        home.includes(team) ||
+        away.includes(team)
+      ) {
+        results.push({
+          date,
+          ...g,
+        });
+      }
+    });
+  });
+
+  if (!results.length) {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
 ⚽ 球隊查詢
 ━━━━━━━━━━
 
-請輸入球隊名稱。`,
+查無「${team}」相關賽程。
+
+請確認隊名是否正確。`,
+      quickReply: quickWorldCup(),
     });
   }
+
+  const msg = results
+    .slice(0, 10)
+    .map(
+      (g, i) => `${i + 1}️⃣ ${g.date}
+${g.home} vs ${g.away}
+🕒 ${g.time}（台灣時間）
+📍 ${g.venue}`
+    )
+    .join("\n\n");
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
+⚽ ${team} 賽程查詢
+━━━━━━━━━━
+
+${msg}
+
+━━━━━━━━━━
+共找到 ${results.length} 場相關賽程`,
+    quickReply: quickWorldCup(),
+  });
+}
 
   if ((text === "AI精選" || text === "3") && S.sport[uid] === "wc") {
     return client.replyMessage(event.replyToken, {
