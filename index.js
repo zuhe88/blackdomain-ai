@@ -780,6 +780,48 @@ ${msg || "目前查無賽程"}
 ━━━━━━━━━━
 
 請選擇日期：`, quickReply: wcDates(S.wc[uid].page) }); }
+  if (S.sport[uid] === "wc" && S.wc[uid]?.mode === "teamSearch") {
+    const team = text.trim();
+    const results = wcTeamSearch(team);
+
+    if (!results.length) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: `━━━━━━━━━━
+⚽ 球隊查詢
+━━━━━━━━━━
+
+查無「${team}」相關賽程。
+
+請確認隊名是否正確。`,
+        quickReply: quickWorldCup(),
+      });
+    }
+
+    const msg = results
+      .slice(0, 10)
+      .map((g, i) => `${i + 1}️⃣ ${g.date}
+${g.home} vs ${g.away}
+🕒 ${g.time}（台灣時間）
+📍 ${g.venue}`)
+      .join("
+
+");
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
+⚽ ${team} 賽程查詢
+━━━━━━━━━━
+
+${msg}
+
+━━━━━━━━━━
+共找到 ${results.length} 場相關賽程`,
+      quickReply: quickWorldCup(),
+    });
+  }
+
   if (/^世足日期:/.test(text)) { const date = text.replace("世足日期:", ""); const games = worldCupSchedule[date]; if (!games) return client.replyMessage(event.replyToken, { type: "text", text: "查無此日期賽程。", quickReply: wcDates(S.wc[uid]?.page || 0) }); S.sport[uid] = "wc"; S.wc[uid] = { mode: "selectGame", page: S.wc[uid]?.page || 0, games }; return client.replyMessage(event.replyToken, { type: "text", text: wcGames(date, games), quickReply: q(games.map((_, i) => [`${i + 1}`, `世足場次:${i + 1}`])) }); }
   if (/^世足場次:\d+$/.test(text)) { const n = Number(text.split(":")[1]); const g = S.wc[uid]?.games?.[n - 1]; if (!g) return client.replyMessage(event.replyToken, { type: "text", text: "查無此場次", quickReply: quickWorldCup() }); return client.replyMessage(event.replyToken, { type: "text", text: wcAnalyze(g), quickReply: quickWorldCup() }); }
   if (text === "世足球隊查詢") { S.sport[uid] = "wc"; S.wc[uid] = { mode: "teamSearch", page: 0, games: [] }; return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━
