@@ -29,7 +29,7 @@ function q(items) {
 function quickMain() { return q([["百家樂"], ["電子"], ["539"], ["體育"], ["VIP查詢"]]); }
 function quickBaccarat() { return q([["莊"], ["閒"], ["和"]]); }
 function quickMoney() { return q([["AI配注"], ["天門五關"], ["自由配注"]]); }
-function quickSlotGame() { return q([["戰神賽特1"], ["戰神賽特2"]]); }
+function quickSlotGame() { return q([["戰神賽特1"], ["戰神賽特2"], ["古神巴風特"]]); }
 function quickSlotMode() { return q([["隨機爆分房"], ["自選房號"]]); }
 function quick539(exclude) { return q([["本期推薦"], ["539熱號"], ["539冷號"]].filter(([x]) => x !== exclude)); }
 function quickSports() { return q([["世足"], ["MLB"], ["NBA"]]); }
@@ -643,8 +643,9 @@ AI配注模式
 請選擇遊戲：
 
 🎰 戰神賽特1
-🎰 戰神賽特2`, quickReply: quickSlotGame() }); }
-  if (["戰神賽特1", "戰神賽特2"].includes(text)) { S.slot[uid] = { game: text, mode: null }; return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━
+🎰 戰神賽特2
+🎰 古神巴風特`, quickReply: quickSlotGame() }); }
+  if (["戰神賽特1", "戰神賽特2", "古神巴風特"].includes(text)) { S.slot[uid] = { game: text, mode: null }; return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━
 ⚡ ${text}
 ━━━━━━━━━━
 
@@ -652,7 +653,10 @@ AI配注模式
 
 1️⃣ 隨機爆分房
 2️⃣ 自選房號分析`, quickReply: quickSlotMode() }); }
-  if (text === "隨機爆分房") { const s = S.slot[uid]; if (!s?.game) return client.replyMessage(event.replyToken, { type: "text", text: "請先選擇遊戲：戰神賽特1 / 戰神賽特2", quickReply: quickSlotGame() }); let analysis; do { analysis = slotAnalysis(s.game, Math.floor(Math.random() * 3500) + 1); } while (analysis.suggestion === "建議觀望"); return client.replyMessage(event.replyToken, { type: "text", text: slotText(analysis), quickReply: quickSlotMode() }); }
+  if (text === "隨機爆分房") { const s = S.slot[uid]; if (!s?.game) return client.replyMessage(event.replyToken, { type: "text", text: "請先選擇遊戲：戰神賽特1 / 戰神賽特2", quickReply: quickSlotGame() }); let analysis; do {
+      const maxRoom = s.game === "古神巴風特" ? 1500 : 3500;
+      analysis = slotAnalysis(s.game, Math.floor(Math.random() * maxRoom) + 1);
+    } while (analysis.suggestion === "建議觀望"); return client.replyMessage(event.replyToken, { type: "text", text: slotText(analysis), quickReply: quickSlotMode() }); }
   if (text === "自選房號") { if (!S.slot[uid]?.game) return client.replyMessage(event.replyToken, { type: "text", text: "請先選擇遊戲：戰神賽特1 / 戰神賽特2", quickReply: quickSlotGame() }); S.slot[uid].mode = "custom"; return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━
 ⚡ 自選房號分析
 ━━━━━━━━━━
@@ -661,7 +665,23 @@ AI配注模式
 
 範例：
 377` }); }
-  if (/^\d{1,4}$/.test(text) && S.slot[uid]?.mode === "custom") { const n = Number(text); if (n < 1 || n > 3500) return client.replyMessage(event.replyToken, { type: "text", text: "房號範圍錯誤，請輸入 1～3500。" }); return client.replyMessage(event.replyToken, { type: "text", text: slotText(slotAnalysis(S.slot[uid].game, n)), quickReply: quickSlotMode() }); }
+  if (/^[0-9]{1,4}$/.test(text) && S.slot[uid]?.mode === "custom") {
+    const n = Number(text);
+    const maxRoom = S.slot[uid].game === "古神巴風特" ? 1500 : 3500;
+
+    if (n < 1 || n > maxRoom) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "房號範圍錯誤，請輸入 1～" + maxRoom + "。",
+      });
+    }
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: slotText(slotAnalysis(S.slot[uid].game, n)),
+      quickReply: quickSlotMode(),
+    });
+  }
 
   if (["539", "539AI", "539 AI"].includes(text)) return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━
 📊 黑域539AI已啟動
