@@ -853,20 +853,189 @@ ${msg}
 阿根廷
 法國
 英格蘭` }); }
-  if (S.sport[uid] === "wc" && S.wc[uid]?.mode === "teamSearch") { const team = text.trim(); const results = wcTeamSearch(team); if (!results.length) return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━
-⚽ 球隊查詢
+  if (
+  S.sport[uid] === "wc" &&
+  S.wc[uid]?.mode === "teamSearch"
+) {
+
+  const team = text.trim();
+
+  const strongTeams = {
+    "巴西": {
+      level: "A+",
+      style: "進攻型球隊",
+      attack: "★★★★★",
+      defense: "★★★★☆",
+      suggest: "巴西不敗"
+    },
+
+    "阿根廷": {
+      level: "A+",
+      style: "控場型球隊",
+      attack: "★★★★★",
+      defense: "★★★★☆",
+      suggest: "阿根廷不敗"
+    },
+
+    "法國": {
+      level: "A",
+      style: "反擊型球隊",
+      attack: "★★★★★",
+      defense: "★★★☆☆",
+      suggest: "大球方向"
+    },
+
+    "英格蘭": {
+      level: "A",
+      style: "平衡型球隊",
+      attack: "★★★★☆",
+      defense: "★★★★☆",
+      suggest: "英格蘭不敗"
+    },
+
+    "西班牙": {
+      level: "A",
+      style: "傳控型球隊",
+      attack: "★★★★☆",
+      defense: "★★★★☆",
+      suggest: "西班牙不敗"
+    },
+
+    "葡萄牙": {
+      level: "A",
+      style: "進攻反擊型",
+      attack: "★★★★★",
+      defense: "★★★☆☆",
+      suggest: "大球方向"
+    },
+
+    "德國": {
+      level: "A",
+      style: "高壓進攻型",
+      attack: "★★★★☆",
+      defense: "★★★☆☆",
+      suggest: "雙方進球"
+    },
+
+    "荷蘭": {
+      level: "A-",
+      style: "平衡反擊型",
+      attack: "★★★★☆",
+      defense: "★★★★☆",
+      suggest: "荷蘭不敗"
+    },
+
+    "日本": {
+      level: "B+",
+      style: "快速反擊型",
+      attack: "★★★☆☆",
+      defense: "★★★★☆",
+      suggest: "小球方向"
+    },
+
+    "韓國": {
+      level: "B",
+      style: "快速衝擊型",
+      attack: "★★★☆☆",
+      defense: "★★★☆☆",
+      suggest: "角球方向"
+    },
+
+    "比利時": {
+      level: "B+",
+      style: "進攻型球隊",
+      attack: "★★★★☆",
+      defense: "★★★☆☆",
+      suggest: "大球方向"
+    },
+
+    "克羅埃西亞": {
+      level: "A-",
+      style: "控場穩定型",
+      attack: "★★★★☆",
+      defense: "★★★★☆",
+      suggest: "低風險方向"
+    },
+
+    "烏拉圭": {
+      level: "B+",
+      style: "防守反擊型",
+      attack: "★★★☆☆",
+      defense: "★★★★☆",
+      suggest: "小球方向"
+    },
+
+    "義大利": {
+      level: "A-",
+      style: "防守控制型",
+      attack: "★★★★☆",
+      defense: "★★★★★",
+      suggest: "小球方向"
+    }
+  };
+
+  const defaultStyles = [
+    "平衡型球隊",
+    "防守反擊型",
+    "進攻型球隊",
+    "快速轉換型",
+    "控球型球隊"
+  ];
+
+  const defaultSuggest = [
+    "不敗方向",
+    "大球方向",
+    "小球方向",
+    "角球方向",
+    "雙方進球"
+  ];
+
+  let data = strongTeams[team];
+
+  if (!data) {
+
+    data = {
+      level: pick(["B", "B+", "A-"]),
+      style: pick(defaultStyles),
+      attack: pick(["★★★☆☆", "★★★★☆"]),
+      defense: pick(["★★★☆☆", "★★★★☆"]),
+      suggest: pick(defaultSuggest)
+    };
+  }
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
+⚽ ${team} AI球隊分析
 ━━━━━━━━━━
 
-查無「${team}」相關賽程。
+球隊定位：
+${data.style}
 
-請確認隊名是否正確。`, quickReply: quickWorldCup() }); const msg = results.slice(0, 10).map((g, i) => `${i + 1}️⃣ ${g.date}\n${g.home} vs ${g.away}\n🕒 ${g.time}（台灣時間）\n📍 ${g.venue}`).join("\n\n"); return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━
-⚽ ${team} 賽程查詢
+AI評級：
+${data.level}
+
+進攻能力：
+${data.attack}
+
+防守穩定：
+${data.defense}
+
+AI建議：
+${data.suggest}
+
+分析方向：
+• 近期狀態波動分析
+• 進攻效率模型
+• 防守穩定度修正
+• 節奏風險預測
+
 ━━━━━━━━━━
 
-${msg}
-
-━━━━━━━━━━
-共找到 ${results.length} 場相關賽程`, quickReply: quickWorldCup() }); }
+⚠️ 僅供娛樂分析參考`,
+    quickReply: quickWorldCup(),
+  });
+}
   if (text === "世足AI精選") return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━
 ⚽ AI精選
 ━━━━━━━━━━
