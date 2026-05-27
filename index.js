@@ -802,210 +802,55 @@ ${msg || "目前查無賽程"}
 請選擇日期：`, quickReply: wcDates(S.wc[uid].page) }); }
   if (S.sport[uid] === "wc" && S.wc[uid]?.mode === "teamSearch") {
     const team = text.trim();
-    const results = wcTeamSearch(team);
 
-    if (!results.length) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: `━━━━━━━━━━
-⚽ 球隊查詢
-━━━━━━━━━━
+    const strongTeams = {
+      "巴西": { level: "A+", style: "進攻型球隊", attack: "★★★★★", defense: "★★★★☆", suggest: "巴西不敗 / 大球方向可留意" },
+      "阿根廷": { level: "A+", style: "控場型球隊", attack: "★★★★★", defense: "★★★★☆", suggest: "阿根廷不敗 / 低風險方向" },
+      "法國": { level: "A", style: "反擊型球隊", attack: "★★★★★", defense: "★★★☆☆", suggest: "大球方向 / 雙方進球可留意" },
+      "英格蘭": { level: "A", style: "平衡型球隊", attack: "★★★★☆", defense: "★★★★☆", suggest: "英格蘭不敗 / 小球方向可留意" },
+      "西班牙": { level: "A", style: "傳控型球隊", attack: "★★★★☆", defense: "★★★★☆", suggest: "西班牙不敗 / 控球優勢方向" },
+      "葡萄牙": { level: "A", style: "進攻反擊型", attack: "★★★★★", defense: "★★★☆☆", suggest: "大球方向 / 個人能力突破" },
+      "德國": { level: "A", style: "高壓進攻型", attack: "★★★★☆", defense: "★★★☆☆", suggest: "雙方進球 / 進球數方向" },
+      "荷蘭": { level: "A-", style: "平衡反擊型", attack: "★★★★☆", defense: "★★★★☆", suggest: "荷蘭不敗 / 低風險方向" },
+      "日本": { level: "B+", style: "快速反擊型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向 / 防守反擊可留意" },
+      "韓國": { level: "B", style: "快速衝擊型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "角球方向 / 下半場波動" },
+      "比利時": { level: "B+", style: "進攻型球隊", attack: "★★★★☆", defense: "★★★☆☆", suggest: "大球方向" },
+      "克羅埃西亞": { level: "A-", style: "控場穩定型", attack: "★★★★☆", defense: "★★★★☆", suggest: "低風險方向 / 不敗可留意" },
+      "烏拉圭": { level: "B+", style: "防守反擊型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向 / 防守盤可留意" },
+      "義大利": { level: "A-", style: "防守控制型", attack: "★★★★☆", defense: "★★★★★", suggest: "小球方向 / 防守優勢" },
+      "美國": { level: "B+", style: "體能衝擊型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "角球方向 / 速度戰可留意" },
+      "墨西哥": { level: "B", style: "高跑動壓迫型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "小球方向 / 上半場觀望" },
+      "瑞士": { level: "B+", style: "防守穩定型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向 / 不敗方向" },
+      "丹麥": { level: "B+", style: "紀律防守型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向" },
+      "塞爾維亞": { level: "B", style: "高點進攻型", attack: "★★★★☆", defense: "★★★☆☆", suggest: "雙方進球 / 大球方向" },
+      "摩洛哥": { level: "B+", style: "防守反擊型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向 / 防守盤" },
+      "波蘭": { level: "B", style: "中路支點型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "保守觀望 / 小球方向" },
+      "哥倫比亞": { level: "B+", style: "速度反擊型", attack: "★★★★☆", defense: "★★★☆☆", suggest: "大球方向 / 反擊機會" },
+      "智利": { level: "B", style: "壓迫型球隊", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "角球方向" },
+      "厄瓜多": { level: "B", style: "體能反擊型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "下半場波動" },
+      "喀麥隆": { level: "B-", style: "身體對抗型", attack: "★★★☆☆", defense: "★★☆☆☆", suggest: "大球風險盤" },
+      "塞內加爾": { level: "B+", style: "速度反擊型", attack: "★★★★☆", defense: "★★★☆☆", suggest: "不敗方向 / 反擊可留意" },
+      "澳洲": { level: "B-", style: "防守硬朗型", attack: "★★☆☆☆", defense: "★★★☆☆", suggest: "小球方向" },
+      "加拿大": { level: "B", style: "速度衝擊型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "角球方向 / 大球可留意" },
+      "沙烏地阿拉伯": { level: "B-", style: "快速反擊型", attack: "★★☆☆☆", defense: "★★★☆☆", suggest: "受讓方向 / 小球" },
+      "伊朗": { level: "B-", style: "防守反擊型", attack: "★★☆☆☆", defense: "★★★☆☆", suggest: "小球方向" },
+      "卡達": { level: "C+", style: "保守控球型", attack: "★★☆☆☆", defense: "★★☆☆☆", suggest: "觀望 / 小球" }
+    };
 
-查無「${team}」相關賽程。
+    const defaultStyles = ["平衡型球隊", "防守反擊型", "進攻型球隊", "快速轉換型", "控球型球隊"];
+    const defaultSuggest = ["不敗方向", "大球方向", "小球方向", "角球方向", "雙方進球"];
 
-請確認隊名是否正確。`,
-        quickReply: quickWorldCup(),
-      });
-    }
-
-    const msg = results
-      .slice(0, 10)
-      .map((g, i) => `${i + 1}️⃣ ${g.date}
-${g.home} vs ${g.away}
-🕒 ${g.time}（台灣時間）
-📍 ${g.venue}`)
-.join("\n\n");
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-⚽ ${team} 賽程查詢
-━━━━━━━━━━
-
-${msg}
-
-━━━━━━━━━━
-共找到 ${results.length} 場相關賽程`,
-      quickReply: quickWorldCup(),
-    });
-  }
-
-  if (/^世足日期:/.test(text)) { const date = text.replace("世足日期:", ""); const games = worldCupSchedule[date]; if (!games) return client.replyMessage(event.replyToken, { type: "text", text: "查無此日期賽程。", quickReply: wcDates(S.wc[uid]?.page || 0) }); S.sport[uid] = "wc"; S.wc[uid] = { mode: "selectGame", page: S.wc[uid]?.page || 0, games }; return client.replyMessage(event.replyToken, { type: "text", text: wcGames(date, games), quickReply: q(games.map((_, i) => [`${i + 1}`, `世足場次:${i + 1}`])) }); }
-  if (/^世足場次:\d+$/.test(text)) { const n = Number(text.split(":")[1]); const g = S.wc[uid]?.games?.[n - 1]; if (!g) return client.replyMessage(event.replyToken, { type: "text", text: "查無此場次", quickReply: quickWorldCup() }); return client.replyMessage(event.replyToken, { type: "text", text: wcAnalyze(g), quickReply: quickWorldCup() }); }
-  if (text === "世足球隊查詢") { S.sport[uid] = "wc"; S.wc[uid] = { mode: "teamSearch", page: 0, games: [] }; return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━
-⚽ 球隊查詢
-━━━━━━━━━━
-
-請輸入球隊名稱。
-
-例如：
-巴西
-阿根廷
-法國
-英格蘭` }); }
-  if (
-  S.sport[uid] === "wc" &&
-  S.wc[uid]?.mode === "teamSearch"
-) {
-
-  const team = text.trim();
-
-  const strongTeams = {
-    "巴西": {
-      level: "A+",
-      style: "進攻型球隊",
-      attack: "★★★★★",
-      defense: "★★★★☆",
-      suggest: "巴西不敗"
-    },
-
-    "阿根廷": {
-      level: "A+",
-      style: "控場型球隊",
-      attack: "★★★★★",
-      defense: "★★★★☆",
-      suggest: "阿根廷不敗"
-    },
-
-    "法國": {
-      level: "A",
-      style: "反擊型球隊",
-      attack: "★★★★★",
-      defense: "★★★☆☆",
-      suggest: "大球方向"
-    },
-
-    "英格蘭": {
-      level: "A",
-      style: "平衡型球隊",
-      attack: "★★★★☆",
-      defense: "★★★★☆",
-      suggest: "英格蘭不敗"
-    },
-
-    "西班牙": {
-      level: "A",
-      style: "傳控型球隊",
-      attack: "★★★★☆",
-      defense: "★★★★☆",
-      suggest: "西班牙不敗"
-    },
-
-    "葡萄牙": {
-      level: "A",
-      style: "進攻反擊型",
-      attack: "★★★★★",
-      defense: "★★★☆☆",
-      suggest: "大球方向"
-    },
-
-    "德國": {
-      level: "A",
-      style: "高壓進攻型",
-      attack: "★★★★☆",
-      defense: "★★★☆☆",
-      suggest: "雙方進球"
-    },
-
-    "荷蘭": {
-      level: "A-",
-      style: "平衡反擊型",
-      attack: "★★★★☆",
-      defense: "★★★★☆",
-      suggest: "荷蘭不敗"
-    },
-
-    "日本": {
-      level: "B+",
-      style: "快速反擊型",
-      attack: "★★★☆☆",
-      defense: "★★★★☆",
-      suggest: "小球方向"
-    },
-
-    "韓國": {
-      level: "B",
-      style: "快速衝擊型",
-      attack: "★★★☆☆",
-      defense: "★★★☆☆",
-      suggest: "角球方向"
-    },
-
-    "比利時": {
-      level: "B+",
-      style: "進攻型球隊",
-      attack: "★★★★☆",
-      defense: "★★★☆☆",
-      suggest: "大球方向"
-    },
-
-    "克羅埃西亞": {
-      level: "A-",
-      style: "控場穩定型",
-      attack: "★★★★☆",
-      defense: "★★★★☆",
-      suggest: "低風險方向"
-    },
-
-    "烏拉圭": {
-      level: "B+",
-      style: "防守反擊型",
-      attack: "★★★☆☆",
-      defense: "★★★★☆",
-      suggest: "小球方向"
-    },
-
-    "義大利": {
-      level: "A-",
-      style: "防守控制型",
-      attack: "★★★★☆",
-      defense: "★★★★★",
-      suggest: "小球方向"
-    }
-  };
-
-  const defaultStyles = [
-    "平衡型球隊",
-    "防守反擊型",
-    "進攻型球隊",
-    "快速轉換型",
-    "控球型球隊"
-  ];
-
-  const defaultSuggest = [
-    "不敗方向",
-    "大球方向",
-    "小球方向",
-    "角球方向",
-    "雙方進球"
-  ];
-
-  let data = strongTeams[team];
-
-  if (!data) {
-
-    data = {
+    const data = strongTeams[team] || {
       level: pick(["B", "B+", "A-"]),
       style: pick(defaultStyles),
       attack: pick(["★★★☆☆", "★★★★☆"]),
       defense: pick(["★★★☆☆", "★★★★☆"]),
-      suggest: pick(defaultSuggest)
+      suggest: pick(defaultSuggest),
     };
-  }
 
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: `━━━━━━━━━━
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
 ⚽ ${team} AI球隊分析
 ━━━━━━━━━━
 
@@ -1033,9 +878,101 @@ ${data.suggest}
 ━━━━━━━━━━
 
 ⚠️ 僅供娛樂分析參考`,
-    quickReply: quickWorldCup(),
-  });
-}
+      quickReply: quickWorldCup(),
+    });
+  }
+  if (text === "世足球隊查詢") { S.sport[uid] = "wc"; S.wc[uid] = { mode: "teamSearch", page: 0, games: [] }; return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━
+⚽ 球隊查詢
+━━━━━━━━━━
+
+請輸入球隊名稱。
+
+例如：
+巴西
+阿根廷
+法國
+英格蘭` }); }
+  if (S.sport[uid] === "wc" && S.wc[uid]?.mode === "teamSearch") {
+    const team = text.trim();
+
+    const strongTeams = {
+      "巴西": { level: "A+", style: "進攻型球隊", attack: "★★★★★", defense: "★★★★☆", suggest: "巴西不敗 / 大球方向可留意" },
+      "阿根廷": { level: "A+", style: "控場型球隊", attack: "★★★★★", defense: "★★★★☆", suggest: "阿根廷不敗 / 低風險方向" },
+      "法國": { level: "A", style: "反擊型球隊", attack: "★★★★★", defense: "★★★☆☆", suggest: "大球方向 / 雙方進球可留意" },
+      "英格蘭": { level: "A", style: "平衡型球隊", attack: "★★★★☆", defense: "★★★★☆", suggest: "英格蘭不敗 / 小球方向可留意" },
+      "西班牙": { level: "A", style: "傳控型球隊", attack: "★★★★☆", defense: "★★★★☆", suggest: "西班牙不敗 / 控球優勢方向" },
+      "葡萄牙": { level: "A", style: "進攻反擊型", attack: "★★★★★", defense: "★★★☆☆", suggest: "大球方向 / 個人能力突破" },
+      "德國": { level: "A", style: "高壓進攻型", attack: "★★★★☆", defense: "★★★☆☆", suggest: "雙方進球 / 進球數方向" },
+      "荷蘭": { level: "A-", style: "平衡反擊型", attack: "★★★★☆", defense: "★★★★☆", suggest: "荷蘭不敗 / 低風險方向" },
+      "日本": { level: "B+", style: "快速反擊型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向 / 防守反擊可留意" },
+      "韓國": { level: "B", style: "快速衝擊型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "角球方向 / 下半場波動" },
+      "比利時": { level: "B+", style: "進攻型球隊", attack: "★★★★☆", defense: "★★★☆☆", suggest: "大球方向" },
+      "克羅埃西亞": { level: "A-", style: "控場穩定型", attack: "★★★★☆", defense: "★★★★☆", suggest: "低風險方向 / 不敗可留意" },
+      "烏拉圭": { level: "B+", style: "防守反擊型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向 / 防守盤可留意" },
+      "義大利": { level: "A-", style: "防守控制型", attack: "★★★★☆", defense: "★★★★★", suggest: "小球方向 / 防守優勢" },
+      "美國": { level: "B+", style: "體能衝擊型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "角球方向 / 速度戰可留意" },
+      "墨西哥": { level: "B", style: "高跑動壓迫型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "小球方向 / 上半場觀望" },
+      "瑞士": { level: "B+", style: "防守穩定型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向 / 不敗方向" },
+      "丹麥": { level: "B+", style: "紀律防守型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向" },
+      "塞爾維亞": { level: "B", style: "高點進攻型", attack: "★★★★☆", defense: "★★★☆☆", suggest: "雙方進球 / 大球方向" },
+      "摩洛哥": { level: "B+", style: "防守反擊型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向 / 防守盤" },
+      "波蘭": { level: "B", style: "中路支點型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "保守觀望 / 小球方向" },
+      "哥倫比亞": { level: "B+", style: "速度反擊型", attack: "★★★★☆", defense: "★★★☆☆", suggest: "大球方向 / 反擊機會" },
+      "智利": { level: "B", style: "壓迫型球隊", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "角球方向" },
+      "厄瓜多": { level: "B", style: "體能反擊型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "下半場波動" },
+      "喀麥隆": { level: "B-", style: "身體對抗型", attack: "★★★☆☆", defense: "★★☆☆☆", suggest: "大球風險盤" },
+      "塞內加爾": { level: "B+", style: "速度反擊型", attack: "★★★★☆", defense: "★★★☆☆", suggest: "不敗方向 / 反擊可留意" },
+      "澳洲": { level: "B-", style: "防守硬朗型", attack: "★★☆☆☆", defense: "★★★☆☆", suggest: "小球方向" },
+      "加拿大": { level: "B", style: "速度衝擊型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "角球方向 / 大球可留意" },
+      "沙烏地阿拉伯": { level: "B-", style: "快速反擊型", attack: "★★☆☆☆", defense: "★★★☆☆", suggest: "受讓方向 / 小球" },
+      "伊朗": { level: "B-", style: "防守反擊型", attack: "★★☆☆☆", defense: "★★★☆☆", suggest: "小球方向" },
+      "卡達": { level: "C+", style: "保守控球型", attack: "★★☆☆☆", defense: "★★☆☆☆", suggest: "觀望 / 小球" }
+    };
+
+    const defaultStyles = ["平衡型球隊", "防守反擊型", "進攻型球隊", "快速轉換型", "控球型球隊"];
+    const defaultSuggest = ["不敗方向", "大球方向", "小球方向", "角球方向", "雙方進球"];
+
+    const data = strongTeams[team] || {
+      level: pick(["B", "B+", "A-"]),
+      style: pick(defaultStyles),
+      attack: pick(["★★★☆☆", "★★★★☆"]),
+      defense: pick(["★★★☆☆", "★★★★☆"]),
+      suggest: pick(defaultSuggest),
+    };
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
+⚽ ${team} AI球隊分析
+━━━━━━━━━━
+
+球隊定位：
+${data.style}
+
+AI評級：
+${data.level}
+
+進攻能力：
+${data.attack}
+
+防守穩定：
+${data.defense}
+
+AI建議：
+${data.suggest}
+
+分析方向：
+• 近期狀態波動分析
+• 進攻效率模型
+• 防守穩定度修正
+• 節奏風險預測
+
+━━━━━━━━━━
+
+⚠️ 僅供娛樂分析參考`,
+      quickReply: quickWorldCup(),
+    });
+  }
   if (text === "世足AI精選") return client.replyMessage(event.replyToken, { type: "text", text: `━━━━━━━━━━
 ⚽ AI精選
 ━━━━━━━━━━
