@@ -824,9 +824,7 @@ ${msg || "目前查無賽程"}
 ${g.home} vs ${g.away}
 🕒 ${g.time}（台灣時間）
 📍 ${g.venue}`)
-      .join("
-
-");
+.join("\n\n");
 
     return client.replyMessage(event.replyToken, {
       type: "text",
