@@ -70,6 +70,7 @@ function quickSlotMode() {
   return q([["隨機爆分房"], ["自選房號"]]);
 }
 
+
 function quick539(exclude) {
   return q([["本期推薦"], ["539熱號"], ["539冷號"]].filter(([x]) => x !== exclude));
 }
@@ -362,7 +363,21 @@ function startAnalyze(uid) {
 }
 
 function slotMaxRoom(game) {
-  return game === "古神巴風特" ? 1500 : 3500;
+
+  if (game === "古神巴風特") {
+    return 1500;
+  }
+
+  if (game === "戰神賽特1") {
+
+    return 2500;
+  }
+
+  if (game === "戰神賽特2") {
+    return 3500;
+  }
+
+  return 3500;
 }
 
 function slotAnalysis(game, room) {
@@ -902,7 +917,7 @@ async function handleEvent(event) {
     return client.replyMessage(event.replyToken, { type: "text", text: nbaAnalyze(g), quickReply: quickNBA() });
   }
 
-  if (/^\d{1,4}$/.test(text) && S.slot[uid]?.mode === "custom") {
+ if (/^\d{1,6}$/.test(text) && S.slot[uid]?.mode === "custom") {
     const n = Number(text);
     const maxRoom = slotMaxRoom(S.slot[uid].game);
     if (n < 1 || n > maxRoom) {
@@ -1514,8 +1529,7 @@ ${msg}
           break;
         }
       }
-      S.mlb[uid] = { mode: "selectGame", games };
-    }
+
     if (!games.length) return client.replyMessage(event.replyToken, { type: "text", text: "目前查無MLB賽程，請稍後再試。", quickReply: quickMLB() });
     return client.replyMessage(event.replyToken, { type: "text", text: mlbAnalyze(pick(games)), quickReply: quickMLB() });
   }
