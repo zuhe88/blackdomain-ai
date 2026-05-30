@@ -1486,27 +1486,44 @@ ${nums[0]} / ${nums[2]}
   }
 
   if (text === "MLB近日賽程") {
-    S.sport[uid] = "mlb";
-    let games = [];
-    try {
-      for (let i = -1; i < 7; i++) {
-        const data = await fetchMlbGames(i);
-        if (data.games?.length) {
-          games = data.games;
-          break;
-        }
+  S.sport[uid] = "mlb";
+  let games = [];
+
+  try {
+    for (let i = -1; i < 7; i++) {
+      const data = await fetchMlbGames(i);
+      if (data.games?.length) {
+        games = data.games;
+        break;
       }
-    } catch (err) {
-      console.log("MLB API ERROR:", err.message);
-      return client.replyMessage(event.replyToken, { type: "text", text: "MLB賽程資料暫時無法同步，請稍後再試。", quickReply: quickMLB() });
     }
-    if (!games.length) return client.replyMessage(event.replyToken, { type: "text", text: "目前查無MLB近日賽程。", quickReply: quickMLB() });
-    const showGames = games.slice(0, 10);
-    S.mlb[uid] = { mode: "selectGame", games: showGames };
-    const msg = showGames.map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`).join("\n\n");
+  } catch (err) {
+    console.log("MLB API ERROR:", err.message);
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: `━━━━━━━━━━
+      text: "MLB賽程資料暫時無法同步，請稍後再試。",
+      quickReply: quickMLB(),
+    });
+  }
+
+  if (!games.length) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "目前查無MLB近日賽程。",
+      quickReply: quickMLB(),
+    });
+  }
+
+  const showGames = games.slice(0, 10);
+  S.mlb[uid] = { mode: "selectGame", games: showGames };
+
+  const msg = showGames
+    .map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`)
+    .join("\n\n");
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
 ⚾ MLB近日賽程（台灣時間）
 ━━━━━━━━━━
 
@@ -1514,25 +1531,39 @@ ${msg}
 
 ━━━━━━━━━━
 請選擇場次查看AI分析`,
-      quickReply: q(showGames.map((_, i) => [`${i + 1}`, `MLB場次:${i + 1}`])),
+    quickReply: q(showGames.map((_, i) => [`${i + 1}`, `MLB場次:${i + 1}`])),
+  });
+}
+
+if (text === "MLB AI精選") {
+  S.sport[uid] = "mlb";
+  let games = S.mlb[uid]?.games || [];
+
+  if (!games.length) {
+    for (let i = -1; i < 7; i++) {
+      const data = await fetchMlbGames(i);
+      if (data.games?.length) {
+        games = data.games.slice(0, 10);
+        break;
+      }
+    }
+    S.mlb[uid] = { mode: "selectGame", games };
+  }
+
+  if (!games.length) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "目前查無MLB賽程，請稍後再試。",
+      quickReply: quickMLB(),
     });
   }
 
-  if (text === "MLB AI精選") {
-    S.sport[uid] = "mlb";
-    let games = S.mlb[uid]?.games || [];
-    if (!games.length) {
-      for (let i = -1; i < 7; i++) {
-        const data = await fetchMlbGames(i);
-        if (data.games?.length) {
-          games = data.games.slice(0, 10);
-          break;
-        }
-      }
-
-    if (!games.length) return client.replyMessage(event.replyToken, { type: "text", text: "目前查無MLB賽程，請稍後再試。", quickReply: quickMLB() });
-    return client.replyMessage(event.replyToken, { type: "text", text: mlbAnalyze(pick(games)), quickReply: quickMLB() });
-  }
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: mlbAnalyze(pick(games)),
+    quickReply: quickMLB(),
+  });
+}
 
   if (text === "NBA") {
     clearSessions(uid, "nba");
