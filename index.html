@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BLACKDOMAIN AI 黑域AI</title>
+<link rel="icon" type="image/png" href="favicon.png">
 
 <style>
 *{
@@ -15,7 +16,7 @@
 
 body{
   background:#030303;
-  color:#fff;
+  color:white;
   overflow-x:hidden;
 }
 
@@ -24,9 +25,9 @@ body::before{
   position:fixed;
   inset:0;
   background:
-    radial-gradient(circle at 20% 20%,rgba(245,197,66,.18),transparent 25%),
-    radial-gradient(circle at 80% 30%,rgba(245,197,66,.22),transparent 28%),
-    linear-gradient(135deg,#000,#080808,#121212);
+    radial-gradient(circle at 20% 15%,rgba(245,197,66,.18),transparent 25%),
+    radial-gradient(circle at 80% 25%,rgba(0,153,255,.16),transparent 28%),
+    linear-gradient(135deg,#000,#070707,#121212);
   z-index:-2;
 }
 
@@ -35,38 +36,46 @@ body::after{
   position:fixed;
   inset:0;
   background-image:
-    linear-gradient(rgba(245,197,66,.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245,197,66,.06) 1px, transparent 1px);
-  background-size:48px 48px;
-  z-index:-1;
+    linear-gradient(rgba(245,197,66,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,197,66,.05) 1px, transparent 1px);
+  background-size:50px 50px;
   opacity:.35;
+  z-index:-1;
 }
 
 .header{
   position:fixed;
   top:0;
   width:100%;
-  padding:18px 8%;
+  padding:16px 8%;
   display:flex;
   justify-content:space-between;
   align-items:center;
-  background:rgba(0,0,0,.72);
+  background:rgba(0,0,0,.75);
   backdrop-filter:blur(12px);
   border-bottom:1px solid rgba(245,197,66,.25);
-  z-index:10;
+  z-index:20;
 }
 
 .brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
   color:#f5c542;
   font-weight:900;
   letter-spacing:2px;
-  font-size:20px;
+}
+
+.brand img{
+  width:34px;
+  height:34px;
+  object-fit:contain;
 }
 
 .nav a{
   color:#ddd;
   text-decoration:none;
-  margin-left:26px;
+  margin-left:24px;
   font-size:15px;
 }
 
@@ -76,20 +85,11 @@ body::after{
 
 .hero{
   min-height:100vh;
-  padding:150px 8% 70px;
-  display:flex;
+  padding:140px 8% 70px;
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
   align-items:center;
-}
-
-.hero-box{
-  max-width:1150px;
-  width:100%;
-  margin:auto;
-  padding:48px;
-  border:1px solid rgba(245,197,66,.38);
-  border-radius:30px;
-  background:linear-gradient(145deg,rgba(15,15,15,.95),rgba(0,0,0,.85));
-  box-shadow:0 0 45px rgba(245,197,66,.18);
+  gap:40px;
 }
 
 .tag{
@@ -100,17 +100,17 @@ body::after{
 }
 
 h1{
-  font-size:72px;
+  font-size:76px;
   line-height:1.05;
   background:linear-gradient(90deg,#fff,#f5c542);
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
 }
 
-h2{
-  font-size:40px;
+.hero h2{
+  font-size:38px;
   color:#f5c542;
-  margin:18px 0 22px;
+  margin:20px 0;
 }
 
 .desc{
@@ -118,6 +118,16 @@ h2{
   color:#ddd;
   line-height:1.8;
   margin-bottom:34px;
+}
+
+.hero-logo{
+  text-align:center;
+}
+
+.hero-logo img{
+  width:430px;
+  max-width:90%;
+  filter:drop-shadow(0 0 35px rgba(245,197,66,.55));
 }
 
 .btns{
@@ -137,30 +147,38 @@ h2{
 
 .btn-line{
   background:#06C755;
-  color:#fff;
+  color:white;
   box-shadow:0 0 24px rgba(6,199,85,.45);
 }
 
-.btn-gold{
-  border:1px solid #f5c542;
-  color:#f5c542;
+.btn-ig{
+  background:linear-gradient(90deg,#833ab4,#fd1d1d,#fcb045);
+  color:white;
+  box-shadow:0 0 24px rgba(253,29,29,.35);
+}
+
+.btn-ai{
+  background:#0099ff;
+  color:white;
+  box-shadow:0 0 24px rgba(0,153,255,.45);
 }
 
 .section{
-  padding:80px 8%;
+  padding:85px 8%;
 }
 
 .section-title{
   text-align:center;
   color:#f5c542;
-  font-size:36px;
+  font-size:38px;
   margin-bottom:12px;
 }
 
 .section-sub{
   text-align:center;
   color:#aaa;
-  margin-bottom:42px;
+  margin-bottom:45px;
+  line-height:1.8;
 }
 
 .grid{
@@ -186,20 +204,140 @@ h2{
 
 .card h3{
   color:#f5c542;
-  font-size:22px;
+  font-size:23px;
   margin-bottom:12px;
 }
 
 .card p{
   color:#bbb;
-  line-height:1.7;
+  line-height:1.8;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:20px;
+  max-width:1000px;
+  margin:45px auto 0;
+}
+
+.stat{
+  text-align:center;
+  padding:28px;
+  border-radius:22px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(245,197,66,.25);
+}
+
+.stat b{
+  display:block;
+  font-size:42px;
+  color:#f5c542;
+}
+
+.stat span{
+  color:#aaa;
+}
+
+.feature-showcase{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:25px;
+  max-width:1180px;
+  margin:auto;
+}
+
+.feature{
+  padding:32px;
+  border-radius:26px;
+  background:linear-gradient(145deg,#121212,#070707);
+  border:1px solid rgba(245,197,66,.3);
+  min-height:260px;
+}
+
+.feature h3{
+  color:#f5c542;
+  font-size:28px;
+  margin-bottom:18px;
+}
+
+.feature ul{
+  list-style:none;
+  color:#ccc;
+  line-height:2;
+}
+
+.video-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:24px;
+  max-width:1150px;
+  margin:auto;
+}
+
+.video-box{
+  background:#111;
+  border:1px solid rgba(245,197,66,.3);
+  border-radius:22px;
+  padding:18px;
+  box-shadow:0 0 22px rgba(245,197,66,.12);
+}
+
+.video-box video{
+  width:100%;
+  border-radius:16px;
+  background:#000;
+}
+
+.video-box h3{
+  color:#f5c542;
+  margin:14px 0 5px;
+}
+
+.steps{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:20px;
+  max-width:1050px;
+  margin:auto;
+}
+
+.step{
+  text-align:center;
+  padding:30px 20px;
+  border-radius:22px;
+  background:#111;
+  border:1px solid rgba(245,197,66,.28);
+}
+
+.step .num{
+  font-size:38px;
+  color:#f5c542;
+  font-weight:900;
+}
+
+.ig-section{
+  text-align:center;
+  padding:85px 8%;
+  background:rgba(0,0,0,.5);
+  border-top:1px solid rgba(245,197,66,.16);
+  border-bottom:1px solid rgba(245,197,66,.16);
+}
+
+.ig-section h2{
+  color:#f5c542;
+  font-size:38px;
+  margin-bottom:15px;
+}
+
+.ig-section p{
+  color:#bbb;
+  font-size:20px;
+  margin-bottom:25px;
 }
 
 .qr-section{
   padding:90px 8%;
-  background:rgba(0,0,0,.55);
-  border-top:1px solid rgba(245,197,66,.18);
-  border-bottom:1px solid rgba(245,197,66,.18);
 }
 
 .qr-grid{
@@ -256,28 +394,18 @@ h2{
   font-weight:900;
 }
 
-.notice{
-  max-width:900px;
-  margin:45px auto 0;
-  padding:24px;
-  border-radius:20px;
-  border:1px solid rgba(245,197,66,.25);
-  color:#bbb;
-  line-height:1.8;
-  background:rgba(255,255,255,.03);
-}
-
 .footer{
   text-align:center;
-  padding:35px 20px;
+  padding:40px 20px;
   color:#777;
+  border-top:1px solid rgba(245,197,66,.18);
 }
 
 .float-line{
   position:fixed;
   right:22px;
   bottom:22px;
-  z-index:20;
+  z-index:30;
   background:#06C755;
   color:#fff;
   padding:15px 22px;
@@ -287,28 +415,18 @@ h2{
   box-shadow:0 0 22px rgba(6,199,85,.55);
 }
 
-@media(max-width:768px){
-  .header{
-    padding:15px 20px;
-  }
-
-  .nav{
-    display:none;
-  }
-
+@media(max-width:900px){
   .hero{
-    padding:120px 18px 55px;
-  }
-
-  .hero-box{
-    padding:32px 22px;
+    grid-template-columns:1fr;
+    text-align:center;
+    padding:120px 20px 60px;
   }
 
   h1{
-    font-size:46px;
+    font-size:48px;
   }
 
-  h2{
+  .hero h2{
     font-size:30px;
   }
 
@@ -316,13 +434,23 @@ h2{
     font-size:18px;
   }
 
+  .btns{
+    justify-content:center;
+  }
+
+  .nav{
+    display:none;
+  }
+}
+
+@media(max-width:500px){
   .btn{
     width:100%;
     text-align:center;
   }
 
-  .section{
-    padding:60px 18px;
+  .hero-logo img{
+    width:300px;
   }
 }
 </style>
@@ -331,152 +459,208 @@ h2{
 <body>
 
 <header class="header">
-  <div class="brand">BLACKDOMAIN AI</div>
+  <div class="brand">
+    <img src="favicon.png" alt="BLACKDOMAIN AI Logo">
+    BLACKDOMAIN AI
+  </div>
   <nav class="nav">
-    <a href="#features">功能介紹</a>
+    <a href="#why">品牌優勢</a>
+    <a href="#features">核心功能</a>
+    <a href="#videos">實戰展示</a>
     <a href="#line">加入LINE</a>
-    <a href="#contact">聯絡我們</a>
   </nav>
 </header>
 
 <section class="hero">
-  <div class="hero-box">
-   <div class="tag">
-NEXT GENERATION AI PLATFORM
-</div>
+  <div>
+    <div class="tag">NEXT GENERATION AI PLATFORM</div>
 
-<h1>
-BLACKDOMAIN AI
-</h1>
+    <h1>BLACKDOMAIN AI</h1>
+    <h2>黑域AI智能科技</h2>
 
-<h2>
-黑域AI智能科技
-</h2>
-
-<p class="desc">
-整合多項AI分析模組
-
-<br><br>
-
-✓ 百家樂AI<br>
-✓ 電子遊戲AI<br>
-✓ 體育數據AI<br>
-✓ 539智能分析<br>
-✓ LINE智能助手<br>
-✓ VIP權限系統
-
-<br><br>
-
-AI數據分析 × 即時資訊整合 × 智能輔助判斷
-</p>
+    <p class="desc">
+      百家樂AI｜電子AI｜體育AI｜539AI<br>
+      AI數據分析 × 即時資訊整合 × 智能輔助判斷
+    </p>
 
     <div class="btns">
-      <a class="btn btn-line" href="https://line.me/R/ti/p/@893jrweh">周賀官方LINE</a>
-      <a class="btn btn-gold" href="https://line.me/R/ti/p/@391wiftp">黑域AI LINE</a>
+      <a class="btn btn-line" href="https://line.me/R/ti/p/@893jrweh">加入周賀官方LINE</a>
+      <a class="btn btn-ai" href="https://line.me/R/ti/p/@391wiftp">進入黑域AI</a>
+      <a class="btn btn-ig" href="https://www.instagram.com/zu_88.8" target="_blank">追蹤 Instagram</a>
     </div>
+  </div>
+
+  <div class="hero-logo">
+    <img src="favicon.png" alt="BLACKDOMAIN AI Logo">
+  </div>
+</section>
+
+<section class="section" id="why">
+  <h2 class="section-title">為什麼選擇 BLACKDOMAIN AI</h2>
+  <p class="section-sub">打造更快、更穩、更直覺的智能資訊平台。</p>
+
+  <div class="grid">
+    <div class="card">
+      <h3>AI智能分析</h3>
+      <p>多模型交叉分析技術，協助使用者快速理解資訊與判斷方向。</p>
+    </div>
+
+    <div class="card">
+      <h3>即時資訊整合</h3>
+      <p>整合多項資訊來源，快速掌握重點內容與即時變化。</p>
+    </div>
+
+    <div class="card">
+      <h3>LINE快速操作</h3>
+      <p>免下載APP，透過LINE即可快速使用系統功能。</p>
+    </div>
+
+    <div class="card">
+      <h3>VIP權限系統</h3>
+      <p>支援會員權限查詢、功能開通與專屬服務管理。</p>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b>12+</b><span>AI模型</span></div>
+    <div class="stat"><b>6+</b><span>功能模組</span></div>
+    <div class="stat"><b>24/7</b><span>系統運作</span></div>
+    <div class="stat"><b>1000+</b><span>使用者</span></div>
   </div>
 </section>
 
 <section class="section" id="features">
   <h2 class="section-title">核心功能</h2>
-  <p class="section-sub">多項AI技術整合，讓資訊更直覺、更快速。</p>
+  <p class="section-sub">四大模組整合，打造完整智能資訊系統。</p>
 
-  <div class="grid">
-    <div class="card">
-      <h3>AI智能分析</h3>
-      <p>多模型交叉運算，輔助使用者快速理解資訊與判斷方向。</p>
+  <div class="feature-showcase">
+
+    <div class="feature">
+      <h3>♠️ 百家樂AI</h3>
+      <ul>
+        <li>DG百家樂</li>
+        <li>MT百家樂</li>
+        <li>AI配注模式</li>
+        <li>天門模式</li>
+        <li>自由配注模式</li>
+        <li>多模型交叉分析</li>
+      </ul>
     </div>
 
-    <div class="card">
-      <h3>即時資訊整合</h3>
-      <p>整合不同資料來源，提供更快、更清楚的即時資訊。</p>
+    <div class="feature">
+      <h3>🎰 電子AI</h3>
+      <ul>
+        <li>戰神賽特1</li>
+        <li>戰神賽特2</li>
+        <li>古神巴風特</li>
+        <li>AI篩選高勝率房間</li>
+        <li>快速查詢</li>
+        <li>即時分析</li>
+      </ul>
     </div>
 
-    <div class="card">
-      <h3>權限管理系統</h3>
-      <p>支援VIP權限、到期查詢、功能開通與會員服務。</p>
+    <div class="feature">
+      <h3>⚽ 體育AI</h3>
+      <ul>
+        <li>世界盃足球</li>
+        <li>NBA</li>
+        <li>MLB</li>
+        <li>熱門焦點</li>
+        <li>賽程查詢</li>
+        <li>AI精選內容</li>
+      </ul>
     </div>
 
-    <div class="card">
-      <h3>LINE機器人整合</h3>
-      <p>使用LINE即可操作系統，免安裝APP，快速方便。</p>
+    <div class="feature">
+      <h3>📊 539AI</h3>
+      <ul>
+        <li>熱號分析</li>
+        <li>冷號分析</li>
+        <li>趨勢統計</li>
+        <li>每日數據整理</li>
+        <li>智能分析參考</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<section class="section" id="videos">
+  <h2 class="section-title">🎥 BLACKDOMAIN AI 實戰展示</h2>
+  <p class="section-sub">
+    透過實際操作畫面，快速了解 BLACKDOMAIN AI 的運作模式與功能體驗。
+  </p>
+
+  <div class="video-grid">
+
+    <div class="video-box">
+      <video src="video1.mp4" controls playsinline></video>
+      <h3>實戰影片 01</h3>
+    </div>
+
+    <div class="video-box">
+      <video src="video2.mp4" controls playsinline></video>
+      <h3>實戰影片 02</h3>
+    </div>
+
+    <div class="video-box">
+      <video src="video3.mp4" controls playsinline></video>
+      <h3>實戰影片 03</h3>
+    </div>
+
+    <div class="video-box">
+      <video src="video4.mp4" controls playsinline></video>
+      <h3>實戰影片 04</h3>
+    </div>
+
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">如何開始使用</h2>
+  <p class="section-sub">四個步驟，快速進入 BLACKDOMAIN AI。</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="num">01</div>
+      <h3>加入LINE</h3>
+      <p>加入官方LINE取得完整資訊。</p>
+    </div>
+
+    <div class="step">
+      <div class="num">02</div>
+      <h3>開通權限</h3>
+      <p>聯繫客服完成VIP功能開通。</p>
+    </div>
+
+    <div class="step">
+      <div class="num">03</div>
+      <h3>選擇功能</h3>
+      <p>百家樂AI、電子AI、體育AI、539AI。</p>
+    </div>
+
+    <div class="step">
+      <div class="num">04</div>
+      <h3>開始使用</h3>
+      <p>透過LINE即可快速操作。</p>
     </div>
   </div>
 </section>
-<section class="section">
 
-<h2 class="section-title">
-系統功能介紹
-</h2>
-
-<p class="section-sub">
-BLACKDOMAIN AI 多模組智能系統
-</p>
-
-<div class="grid">
-
-<div class="card">
-<h3>百家樂AI</h3>
-<p>
-透過多模型交叉分析技術，
-即時整理牌局資訊與歷史數據，
-提供更直覺的資訊參考。
-</p>
-</div>
-
-<div class="card">
-<h3>電子AI</h3>
-<p>
-提供戰神賽特1、戰神賽特2、古神巴風特數據分析，
-透過AI模型篩選值得關注的高勝率房間，
-協助使用者快速掌握資訊。
-</p>
-</div>
-  
-<div class="card">
-<h3>體育AI</h3>
-<p>
-支援世界盃足球、NBA、MLB等熱門賽事，
-提供賽程查詢、焦點賽事整理、
-即時資訊與AI精選內容，
-快速掌握重要賽事動態。
-</p>
-</div>
-
-<div class="card">
-<h3>539 AI</h3>
-<p>
-透過歷史資料分析、
-熱號冷號整理與趨勢統計，
-提供數據參考資訊。
-</p>
-</div>
-
-<div class="card">
-<h3>VIP權限系統</h3>
-<p>
-會員可查詢權限期限、
-專屬功能與最新更新內容。
-</p>
-</div>
-
-<div class="card">
-<h3>LINE智能助手</h3>
-<p>
-透過LINE即可快速使用系統，
-免下載APP，
-手機即可操作。
-</p>
-</div>
-
-</div>
-
+<section class="ig-section">
+  <h2>📸 官方 Instagram</h2>
+  <p>追蹤最新更新、功能介紹與第一視角實戰影片。</p>
+  <a class="btn btn-ig" href="https://www.instagram.com/zu_88.8" target="_blank">
+    追蹤 IG @zu_88.8
+  </a>
 </section>
+
 <section class="qr-section" id="line">
-  <h2 class="section-title">立即加入官方LINE</h2>
+  <h2 class="section-title">官方入口</h2>
   <p class="section-sub">依照需求選擇入口，避免加錯帳號。</p>
 
   <div class="qr-grid">
+
     <div class="qr-box">
       <img src="zhouhe-line.png.png" alt="周賀官方LINE QR Code">
       <h3>周賀官方LINE</h3>
@@ -492,15 +676,14 @@ BLACKDOMAIN AI 多模組智能系統
       <p>AI功能｜權限查詢｜系統入口｜使用教學</p>
       <a href="https://line.me/R/ti/p/@391wiftp">加入黑域AI LINE</a>
     </div>
-  </div>
 
-  <div class="notice" id="contact">
-    周賀官方LINE主要負責開通、客服、活動與合作；黑域AI官方LINE主要提供AI系統入口與功能使用。
   </div>
 </section>
 
 <footer class="footer">
-  © 2026 BLACKDOMAIN AI. All Rights Reserved.
+  <p>BLACKDOMAIN AI 黑域AI智能科技</p>
+  <p>Instagram：@zu_88.8｜周賀官方LINE：@893jrweh｜黑域AI：@391wiftp</p>
+  <p>© 2026 BLACKDOMAIN AI. All Rights Reserved.</p>
 </footer>
 
 <a class="float-line" href="https://line.me/R/ti/p/@893jrweh">
