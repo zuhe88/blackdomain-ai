@@ -4,105 +4,344 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BLACKDOMAIN AI 黑域AI</title>
+
 <style>
-*{box-sizing:border-box}
-body{
+*{
   margin:0;
-  font-family:Arial,"Microsoft JhengHei",sans-serif;
+  padding:0;
+  box-sizing:border-box;
+  font-family:"Microsoft JhengHei",Arial,sans-serif;
+}
+
+body{
   background:#030303;
   color:#fff;
+  overflow-x:hidden;
 }
-.hero{
-  min-height:100vh;
-  padding:40px 20px;
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
   background:
-    radial-gradient(circle at 75% 30%,rgba(245,197,66,.35),transparent 28%),
-    linear-gradient(135deg,#000,#080808 55%,#111);
-  display:flex;
-  align-items:center;
-  justify-content:center;
+    radial-gradient(circle at 20% 20%,rgba(245,197,66,.18),transparent 25%),
+    radial-gradient(circle at 80% 30%,rgba(245,197,66,.22),transparent 28%),
+    linear-gradient(135deg,#000,#080808,#121212);
+  z-index:-2;
 }
-.box{
-  max-width:980px;
+
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(245,197,66,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,197,66,.06) 1px, transparent 1px);
+  background-size:48px 48px;
+  z-index:-1;
+  opacity:.35;
+}
+
+.header{
+  position:fixed;
+  top:0;
   width:100%;
-  border:1px solid rgba(245,197,66,.45);
-  border-radius:28px;
-  padding:50px 35px;
-  background:rgba(10,10,10,.86);
-  box-shadow:0 0 40px rgba(245,197,66,.18);
+  padding:18px 8%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:rgba(0,0,0,.72);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(245,197,66,.25);
+  z-index:10;
 }
-.logo{
+
+.brand{
   color:#f5c542;
-  letter-spacing:3px;
-  font-weight:bold;
-}
-h1{
-  font-size:56px;
-  margin:20px 0 10px;
-  background:linear-gradient(90deg,#fff,#f5c542);
-  -webkit-background-clip:text;
-  color:transparent;
-}
-h2{
-  font-size:34px;
-  color:#f5c542;
-  margin:0 0 25px;
-}
-.desc{
-  font-size:21px;
-  line-height:1.8;
-  color:#ddd;
-}
-.features{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:16px;
-  margin:35px 0;
-}
-.card{
-  border:1px solid rgba(245,197,66,.35);
-  border-radius:18px;
-  padding:20px;
-  background:linear-gradient(180deg,#151515,#090909);
-}
-.card b{
-  color:#f5c542;
+  font-weight:900;
+  letter-spacing:2px;
   font-size:20px;
 }
-.card p{
-  color:#aaa;
+
+.nav a{
+  color:#ddd;
+  text-decoration:none;
+  margin-left:26px;
   font-size:15px;
 }
+
+.nav a:hover{
+  color:#f5c542;
+}
+
+.hero{
+  min-height:100vh;
+  padding:150px 8% 70px;
+  display:flex;
+  align-items:center;
+}
+
+.hero-box{
+  max-width:1150px;
+  width:100%;
+  margin:auto;
+  padding:48px;
+  border:1px solid rgba(245,197,66,.38);
+  border-radius:30px;
+  background:linear-gradient(145deg,rgba(15,15,15,.95),rgba(0,0,0,.85));
+  box-shadow:0 0 45px rgba(245,197,66,.18);
+}
+
+.tag{
+  color:#f5c542;
+  letter-spacing:5px;
+  font-size:14px;
+  margin-bottom:18px;
+}
+
+h1{
+  font-size:72px;
+  line-height:1.05;
+  background:linear-gradient(90deg,#fff,#f5c542);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+h2{
+  font-size:40px;
+  color:#f5c542;
+  margin:18px 0 22px;
+}
+
+.desc{
+  font-size:22px;
+  color:#ddd;
+  line-height:1.8;
+  margin-bottom:34px;
+}
+
+.btns{
+  display:flex;
+  flex-wrap:wrap;
+  gap:15px;
+}
+
 .btn{
   display:inline-block;
-  margin-top:10px;
-  padding:18px 36px;
-  background:linear-gradient(90deg,#06C755,#00a844);
-  color:white;
-  text-decoration:none;
+  padding:17px 30px;
   border-radius:14px;
-  font-size:24px;
-  font-weight:bold;
-  box-shadow:0 0 22px rgba(6,199,85,.45);
+  text-decoration:none;
+  font-size:20px;
+  font-weight:900;
 }
+
+.btn-line{
+  background:#06C755;
+  color:#fff;
+  box-shadow:0 0 24px rgba(6,199,85,.45);
+}
+
+.btn-gold{
+  border:1px solid #f5c542;
+  color:#f5c542;
+}
+
+.section{
+  padding:80px 8%;
+}
+
+.section-title{
+  text-align:center;
+  color:#f5c542;
+  font-size:36px;
+  margin-bottom:12px;
+}
+
+.section-sub{
+  text-align:center;
+  color:#aaa;
+  margin-bottom:42px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:22px;
+  max-width:1150px;
+  margin:auto;
+}
+
+.card{
+  padding:28px;
+  border-radius:22px;
+  background:linear-gradient(180deg,#151515,#090909);
+  border:1px solid rgba(245,197,66,.28);
+  transition:.25s;
+}
+
+.card:hover{
+  transform:translateY(-6px);
+  box-shadow:0 0 24px rgba(245,197,66,.22);
+}
+
+.card h3{
+  color:#f5c542;
+  font-size:22px;
+  margin-bottom:12px;
+}
+
+.card p{
+  color:#bbb;
+  line-height:1.7;
+}
+
+.qr-section{
+  padding:90px 8%;
+  background:rgba(0,0,0,.55);
+  border-top:1px solid rgba(245,197,66,.18);
+  border-bottom:1px solid rgba(245,197,66,.18);
+}
+
+.qr-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:30px;
+  max-width:900px;
+  margin:auto;
+}
+
+.qr-box{
+  text-align:center;
+  background:#101010;
+  border:1px solid rgba(245,197,66,.35);
+  border-radius:26px;
+  padding:32px 24px;
+  box-shadow:0 0 26px rgba(245,197,66,.12);
+}
+
+.qr-box img{
+  width:230px;
+  max-width:100%;
+  background:#fff;
+  padding:10px;
+  border-radius:18px;
+}
+
+.qr-box h3{
+  color:#f5c542;
+  font-size:26px;
+  margin:20px 0 8px;
+}
+
+.qr-box .id{
+  color:#fff;
+  font-size:20px;
+  font-weight:900;
+  margin-bottom:10px;
+}
+
+.qr-box p{
+  color:#aaa;
+  line-height:1.7;
+}
+
+.qr-box a{
+  display:inline-block;
+  margin-top:18px;
+  padding:13px 24px;
+  border-radius:12px;
+  background:#06C755;
+  color:#fff;
+  text-decoration:none;
+  font-weight:900;
+}
+
 .notice{
-  margin-top:25px;
-  color:#999;
-  font-size:14px;
+  max-width:900px;
+  margin:45px auto 0;
+  padding:24px;
+  border-radius:20px;
+  border:1px solid rgba(245,197,66,.25);
+  color:#bbb;
+  line-height:1.8;
+  background:rgba(255,255,255,.03);
 }
+
 .footer{
   text-align:center;
-  padding:25px;
+  padding:35px 20px;
   color:#777;
-  border-top:1px solid #222;
+}
+
+.float-line{
+  position:fixed;
+  right:22px;
+  bottom:22px;
+  z-index:20;
+  background:#06C755;
+  color:#fff;
+  padding:15px 22px;
+  border-radius:50px;
+  text-decoration:none;
+  font-weight:900;
+  box-shadow:0 0 22px rgba(6,199,85,.55);
+}
+
+@media(max-width:768px){
+  .header{
+    padding:15px 20px;
+  }
+
+  .nav{
+    display:none;
+  }
+
+  .hero{
+    padding:120px 18px 55px;
+  }
+
+  .hero-box{
+    padding:32px 22px;
+  }
+
+  h1{
+    font-size:46px;
+  }
+
+  h2{
+    font-size:30px;
+  }
+
+  .desc{
+    font-size:18px;
+  }
+
+  .btn{
+    width:100%;
+    text-align:center;
+  }
+
+  .section{
+    padding:60px 18px;
+  }
 }
 </style>
 </head>
+
 <body>
 
+<header class="header">
+  <div class="brand">BLACKDOMAIN AI</div>
+  <nav class="nav">
+    <a href="#features">功能介紹</a>
+    <a href="#line">加入LINE</a>
+    <a href="#contact">聯絡我們</a>
+  </nav>
+</header>
+
 <section class="hero">
-  <div class="box">
-    <div class="logo">NEXT GENERATION AI SYSTEM</div>
+  <div class="hero-box">
+    <div class="tag">NEXT GENERATION AI SYSTEM</div>
 
     <h1>BLACKDOMAIN AI</h1>
     <h2>黑域AI智能系統</h2>
@@ -112,41 +351,74 @@ h2{
       打造更快、更穩、更直覺的智能資訊平台。
     </p>
 
-    <div class="features">
-      <div class="card">
-        <b>AI智能分析</b>
-        <p>多模型交叉運算，輔助判斷更清楚。</p>
-      </div>
-
-      <div class="card">
-        <b>即時資訊</b>
-        <p>整合即時數據，快速掌握最新狀態。</p>
-      </div>
-
-      <div class="card">
-        <b>LINE整合</b>
-        <p>加入官方LINE，快速取得功能資訊。</p>
-      </div>
-
-      <div class="card">
-        <b>黑金科技風</b>
-        <p>專屬品牌形象，提升信任與質感。</p>
-      </div>
+    <div class="btns">
+      <a class="btn btn-line" href="https://line.me/R/ti/p/@893jrweh">周賀官方LINE</a>
+      <a class="btn btn-gold" href="https://line.me/R/ti/p/@391wiftp">黑域AI LINE</a>
     </div>
-
-    <a class="btn" href="https://line.me/R/ti/p/@893jrweh">
-      加入官方LINE
-    </a>
-
-    <p class="notice">
-      加入後輸入「我要了解」即可取得完整資訊。
-    </p>
   </div>
 </section>
 
-<div class="footer">
+<section class="section" id="features">
+  <h2 class="section-title">核心功能</h2>
+  <p class="section-sub">多項AI技術整合，讓資訊更直覺、更快速。</p>
+
+  <div class="grid">
+    <div class="card">
+      <h3>AI智能分析</h3>
+      <p>多模型交叉運算，輔助使用者快速理解資訊與判斷方向。</p>
+    </div>
+
+    <div class="card">
+      <h3>即時資訊整合</h3>
+      <p>整合不同資料來源，提供更快、更清楚的即時資訊。</p>
+    </div>
+
+    <div class="card">
+      <h3>權限管理系統</h3>
+      <p>支援VIP權限、到期查詢、功能開通與會員服務。</p>
+    </div>
+
+    <div class="card">
+      <h3>LINE機器人整合</h3>
+      <p>使用LINE即可操作系統，免安裝APP，快速方便。</p>
+    </div>
+  </div>
+</section>
+
+<section class="qr-section" id="line">
+  <h2 class="section-title">立即加入官方LINE</h2>
+  <p class="section-sub">依照需求選擇入口，避免加錯帳號。</p>
+
+  <div class="qr-grid">
+    <div class="qr-box">
+      <img src="zhouhe-line.png.png" alt="周賀官方LINE QR Code">
+      <h3>周賀官方LINE</h3>
+      <div class="id">@893jrweh</div>
+      <p>VIP開通｜客服支援｜活動資訊｜代理合作</p>
+      <a href="https://line.me/R/ti/p/@893jrweh">加入周賀官方LINE</a>
+    </div>
+
+    <div class="qr-box">
+      <img src="blackdomain-line.png.png" alt="黑域AI官方LINE QR Code">
+      <h3>黑域AI官方LINE</h3>
+      <div class="id">@391wiftp</div>
+      <p>AI功能｜權限查詢｜系統入口｜使用教學</p>
+      <a href="https://line.me/R/ti/p/@391wiftp">加入黑域AI LINE</a>
+    </div>
+  </div>
+
+  <div class="notice" id="contact">
+    周賀官方LINE主要負責開通、客服、活動與合作；黑域AI官方LINE主要提供AI系統入口與功能使用。
+  </div>
+</section>
+
+<footer class="footer">
   © 2026 BLACKDOMAIN AI. All Rights Reserved.
-</div>
+</footer>
+
+<a class="float-line" href="https://line.me/R/ti/p/@893jrweh">
+  加入LINE
+</a>
 
 </body>
 </html>
