@@ -496,17 +496,9 @@ ${lines[2]}
 🕒 AI分析時間
 ${twDateTime()}`;
 }
-function slotCustomAnalyzeText(game, room) {
-  const hotRooms = buildHotRooms(game);
-
-  if (hotRooms.includes(Number(room))) {
-    return slotAnalyzeText(game, room);
-  }
-
-  const badRate = 0.35;
-
-  if (Math.random() < badRate) {
-    return `🤖 黑域AI
+return `━━━━━━━━━━━━
+🤖 黑域AI 數據選房
+━━━━━━━━━━━━
 
 🎰 ${game}
 🏠 ${slotNumber(room)}房
@@ -515,7 +507,11 @@ function slotCustomAnalyzeText(game, room) {
 ━━━━━━━━━━━━
 ⚠️ 數據未同步
 📉 波動不足
-🛑 暫不建議進場
+🔴 數據不足
+
+🎯 黑域評級
+━━━━━━━━━━━━
+🔴 暫不建議
 
 🕒 AI分析時間
 ${twDateTime()}`;
