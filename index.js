@@ -30,6 +30,7 @@ const S = {
   flow: {},
   tianmen: {},
   slot: {},
+  slotHot: {},
   sport: {},
   wc: {},
   mlb: {},
@@ -63,13 +64,20 @@ function quickMoney() {
 }
 
 function quickSlotGame() {
-  return q([["戰神賽特1"], ["戰神賽特2"], ["古神巴風特"]]);
+  return q([
+    ["🎰 戰神賽特1", "戰神賽特1"],
+    ["🎰 戰神賽特2", "戰神賽特2"],
+    ["👹 古神巴風特", "古神巴風特"],
+  ]);
 }
 
 function quickSlotMode() {
-  return q([["隨機爆分房"], ["自選房號"]]);
+  return q([
+    ["🎲 AI推薦房", "AI推薦房"],
+    ["🔥 熱門房排行", "熱門房排行"],
+    ["🔢 自選房號分析", "自選房號分析"],
+  ]);
 }
-
 
 function quick539(exclude) {
   return q([["本期推薦"], ["539熱號"], ["539冷號"]].filter(([x]) => x !== exclude));
@@ -113,17 +121,45 @@ function twDate(offset = 0) {
   return { slash: `${y}/${m}/${d}`, compact: `${y}${m}${d}` };
 }
 
-function tw539Date() {
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
-  if (now.getHours() > 20 || (now.getHours() === 20 && now.getMinutes() >= 30)) {
-    now.setDate(now.getDate() + 1);
-  }
-  if (now.getDay() === 0) {
-    now.setDate(now.getDate() + 1);
-  }
+function twNow() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+}
+
+function twDateTime() {
+  const now = twNow();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
+  const h = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+  return `${y}/${m}/${d} ${h}:${min}`;
+}
+
+function twSlotUpdateTime() {
+  const now = twNow();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const h = String(now.getHours()).padStart(2, "0");
+  const min = now.getMinutes() >= 30 ? "30" : "00";
+  return `${y}/${m}/${d} ${h}:${min}`;
+}
+
+function tw539Date() {
+  const now = twNow();
+
+  if (now.getHours() > 20 || (now.getHours() === 20 && now.getMinutes() >= 30)) {
+    now.setDate(now.getDate() + 1);
+  }
+
+  if (now.getDay() === 0) {
+    now.setDate(now.getDate() + 1);
+  }
+
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+
   return `${y}/${m}/${d}`;
 }
 
@@ -156,28 +192,37 @@ async function isVip(uid) {
 }
 
 async function openVip(uid, account, days) {
-  const expire_time = Date.now() + days * 86400000;
   const old = await getVip(uid);
+  const baseTime = old && Number(old.expire_time) > Date.now()
+    ? Number(old.expire_time)
+    : Date.now();
+
+  const expire_time = baseTime + days * 86400000;
+
   if (old) {
     await supabase.from("vip_users").update({ account, expire_time }).eq("user_id", uid);
   } else {
     await supabase.from("vip_users").insert({ user_id: uid, account, expire_time });
   }
+
   return expire_time;
 }
 
 function roomName(room) {
   const t = room.toUpperCase().replace(/\s+/g, "");
+
   if (t.startsWith("MT")) {
     const v = t.replace("MT", "");
     return v === "3A" || v === "13A" ? `MT ${v}` : `MT ${v.padStart(2, "0")}`;
   }
+
   if (t.startsWith("DG")) {
     const v = t.replace("DG", "");
     if (v.startsWith("RB")) return `DG RB${v.replace("RB", "").padStart(2, "0")}`;
     if (v.startsWith("S")) return `DG S${v.replace("S", "").padStart(2, "0")}`;
     return `DG ${v.padStart(2, "0")}`;
   }
+
   return room.toUpperCase();
 }
 
@@ -210,6 +255,7 @@ function aiBet(uid) {
   const b = S.bankroll[uid] || S.startBankroll[uid] || 1000;
   const limit = S.betLimit[uid] || b;
   const p = profit(uid);
+
   let minRate = 0.08;
   let maxRate = 0.18;
 
@@ -217,17 +263,26 @@ function aiBet(uid) {
     minRate = 0.12;
     maxRate = 0.35;
   }
+
   if (b >= 100000) {
     minRate = 0.08;
     maxRate = 0.28;
   }
-  if (p > 0) maxRate += 0.03;
+
+  if (p > 0) {
+    maxRate += 0.03;
+  }
 
   const style = Math.random();
   let rate;
-  if (style < 0.25) rate = minRate;
-  else if (style < 0.75) rate = minRate + Math.random() * (maxRate - minRate);
-  else rate = maxRate;
+
+  if (style < 0.25) {
+    rate = minRate;
+  } else if (style < 0.75) {
+    rate = minRate + Math.random() * (maxRate - minRate);
+  } else {
+    rate = maxRate;
+  }
 
   const bet = Math.min(b * rate, limit);
   return Math.max(betUnit(b), roundBet(bet, b));
@@ -241,31 +296,39 @@ function makeTianmen(money) {
 
 function currentBet(uid) {
   if (S.mode[uid] === "free") return 0;
+
   if (S.mode[uid] === "tianmen" && S.tianmen[uid]) {
     return S.tianmen[uid].levels[(S.tianmen[uid].level || 1) - 1];
   }
+
   return aiBet(uid);
 }
 
 function baccaratPick(history) {
   const h = history.filter((x) => x !== "和");
+
   if (h.length < 2) return pick(["莊", "閒"]);
+
   const banker = h.filter((x) => x === "莊").length;
   const player = h.filter((x) => x === "閒").length;
   const last = h[h.length - 1];
   const last2 = h.slice(-2);
+
   if (last2.length === 2 && last2[0] !== last2[1]) return last === "莊" ? "閒" : "莊";
   if (banker > player) return "莊";
   if (player > banker) return "閒";
+
   return pick(["莊", "閒"]);
 }
 
 function baccaratWarning(history) {
   const h = history.filter((x) => x !== "和");
   const recent = h.slice(-5);
+
   if (history.slice(-6).filter((x) => x === "和").length >= 2) return "⚠️ 和局波動偏高";
   if (recent.length >= 5 && recent.every((x) => x === recent[0])) return "⚠️ 偵測長龍波動";
   if (recent.length >= 5 && recent.every((v, i, arr) => i === 0 || v !== arr[i - 1])) return "⚠️ 偵測震盪波動";
+
   return "";
 }
 
@@ -273,16 +336,19 @@ function baccaratSpecial(history) {
   const h = history.filter((x) => x !== "和");
   const recent = h.slice(-5);
   const roll = Math.random();
+
   if (roll < 0.02 && recent.filter((x) => x === "莊").length >= 3) return "⚠️ 高倍率區同步完成\n\n可留意：\n莊龍寶";
   if (roll < 0.04 && recent.filter((x) => x === "閒").length >= 3) return "⚠️ 高倍率區同步完成\n\n可留意：\n閒龍寶";
   if (roll < 0.1) return "⚠️ 可留意：\n和局";
   if (roll < 0.16) return `⚠️ 可留意：\n${pick(["莊對", "閒對"])}`;
+
   return "";
 }
 
 function applyResult(uid, opened) {
   const last = S.lastPred[uid];
   const bet = S.lastBet[uid] || currentBet(uid);
+
   if (!last || !S.mode[uid]) return;
   if (!S.result[uid]) S.result[uid] = [];
 
@@ -295,8 +361,11 @@ function applyResult(uid, opened) {
   } else {
     S.result[uid].push("倒");
     if (S.mode[uid] !== "free") S.bankroll[uid] -= bet;
-    if (S.mode[uid] === "tianmen" && S.tianmen[uid]) S.tianmen[uid].level = Math.min(5, (S.tianmen[uid].level || 1) + 1);
+    if (S.mode[uid] === "tianmen" && S.tianmen[uid]) {
+      S.tianmen[uid].level = Math.min(5, (S.tianmen[uid].level || 1) + 1);
+    }
   }
+
   if (S.result[uid].length > 50) S.result[uid].shift();
 }
 
@@ -329,10 +398,13 @@ ${S.bankroll[uid]}
 
 目前獲利：
 ${profit(uid) >= 0 ? "+" : ""}${profit(uid)}`;
-  if (S.mode[uid] === "tianmen" && S.tianmen[uid]) money += `
+
+  if (S.mode[uid] === "tianmen" && S.tianmen[uid]) {
+    money += `
 
 目前階段：
 天門${S.tianmen[uid].level}`;
+  }
 
   return `━━━━━━━━━━
 🤖 黑域AI運算完成
@@ -356,69 +428,112 @@ ${money}
 function startAnalyze(uid) {
   const pred = pick(["莊", "閒"]);
   const bet = currentBet(uid);
+
   S.lastPred[uid] = pred;
   S.lastBet[uid] = bet;
   S.flow[uid] = "playing";
+
   return baccaratReply(uid, pred, bet);
 }
 
 function slotMaxRoom(game) {
-
-  if (game === "古神巴風特") {
-    return 1500;
-  }
-
-  if (game === "戰神賽特1") {
-
-    return 2500;
-  }
-
-  if (game === "戰神賽特2") {
-    return 3500;
-  }
-
+  if (game === "戰神賽特1") return 2500;
+  if (game === "戰神賽特2") return 3500;
+  if (game === "古神巴風特") return 1500;
   return 3500;
 }
 
-function slotAnalysis(game, room) {
-  const n = Number(room);
-  const score = (n * 7) % 100;
-  if (score >= 70) return { game, room: n, status: "高波動區", suggestion: "可進場", reason: "倍率區同步完成" };
-  if (score >= 45) return { game, room: n, status: "數據偏強", suggestion: "小注試水", reason: "倍率波動偏強" };
-  return { game, room: n, status: "回吐區", suggestion: "建議觀望", reason: "目前回吐波動偏高" };
+function slotNumber(room) {
+  return String(room).padStart(4, "0");
 }
 
-function slotText(a) {
-  return `━━━━━━━━━━
-⚡ 黑域電子AI同步完成
-━━━━━━━━━━
+function slotHotKey(game) {
+  return `${game}-${twSlotUpdateTime()}`;
+}
 
-目前遊戲：
-${a.game}
+function buildHotRooms(game) {
+  const key = slotHotKey(game);
 
-房間號碼：
-${a.room}
+  if (S.slotHot[key]) {
+    return S.slotHot[key];
+  }
 
-目前狀態：
-${a.status}
+  const max = slotMaxRoom(game);
+  const rooms = [];
 
-AI建議：
-${a.suggestion}
+  while (rooms.length < 5) {
+    const n = Math.floor(Math.random() * max) + 1;
+    if (!rooms.includes(n)) rooms.push(n);
+  }
 
-分析依據：
-${a.reason}
+  S.slotHot[key] = rooms;
+  return rooms;
+}
 
-⚠️ 僅供娛樂分析參考`;
+function slotDataLines() {
+  return pick([
+    ["🔥 活躍度提升", "📈 波動增強", "⚡ AI監控中"],
+    ["🔥 熱度上升", "📈 波動活躍", "⚡ AI監控中"],
+    ["🔥 活躍區同步", "📈 波動提升", "⚡ AI監控中"],
+    ["🔥 數據升溫", "📈 活躍增強", "⚡ AI監控中"],
+  ]);
+}
+
+function slotAnalyzeText(game, room) {
+  const lines = slotDataLines();
+
+  return `🤖 黑域AI
+
+🎰 ${game}
+🏠 ${slotNumber(room)}房
+
+📊 數據分析
+━━━━━━━━━━━━
+${lines[0]}
+${lines[1]}
+${lines[2]}
+
+🕒 AI分析時間
+${twDateTime()}`;
+}
+
+function slotHotRankText(game) {
+  const rooms = buildHotRooms(game);
+
+  return `🔥 ${game} 熱門房排行
+
+🥇 ${slotNumber(rooms[0])}房
+🥈 ${slotNumber(rooms[1])}房
+🥉 ${slotNumber(rooms[2])}房
+④ ${slotNumber(rooms[3])}房
+⑤ ${slotNumber(rooms[4])}房
+
+🕒 更新時間
+${twSlotUpdateTime()}
+
+點擊房號後直接分析`;
+}
+
+function quickSlotHotRooms(game) {
+  const rooms = buildHotRooms(game);
+
+  return q(rooms.map((room, i) => {
+    const labels = ["🥇", "🥈", "🥉", "④", "⑤"];
+    return [`${labels[i]} ${slotNumber(room)}房`, `電子房:${room}`];
+  }));
 }
 
 function gen539(mode) {
   const key = `${tw539Date()}-${mode}`;
+
   if (S.cache539[key]) return S.cache539[key];
+
   const nums = Array.from({ length: 39 }, (_, i) => i + 1)
     .sort(() => Math.random() - 0.5)
     .slice(0, 5)
     .sort((a, b) => a - b)
     .map((n) => String(n).padStart(2, "0"));
+
   S.cache539[key] = nums;
   return nums;
 }
@@ -427,8 +542,10 @@ function wcDates(page = 0) {
   const dates = Object.keys(worldCupSchedule || {});
   const start = page * 10;
   const items = dates.slice(start, start + 10).map((d) => [d, `世足日期:${d}`]);
+
   if (page > 0) items.push(["上一頁", "世足日期上一頁"]);
   if (start + 10 < dates.length) items.push(["下一頁", "世足日期下一頁"]);
+
   return q(items);
 }
 
@@ -439,6 +556,7 @@ function wcGamesText(date, games) {
 ━━━━━━━━━━
 
 `;
+
   games.forEach((g, i) => {
     msg += `${i + 1}️⃣ ${g.stage || "賽事"}${g.group ? `｜${g.group}組` : ""}
 ${g.home} vs ${g.away}
@@ -447,6 +565,7 @@ ${g.home} vs ${g.away}
 
 `;
   });
+
   return `${msg}━━━━━━━━━━
 請選擇場次查看AI分析`;
 }
@@ -470,6 +589,7 @@ AI分析：
 
 ━━━━━━━━━━`;
   }
+
   return `━━━━━━━━━━
 ⚽ 世足AI分析完成
 ━━━━━━━━━━
@@ -505,26 +625,11 @@ function wcTeamAnalysis(team) {
     "克羅埃西亞": { level: "A-", style: "控場穩定型", attack: "★★★★☆", defense: "★★★★☆", suggest: "低風險方向 / 不敗可留意" },
     "烏拉圭": { level: "B+", style: "防守反擊型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向 / 防守盤可留意" },
     "義大利": { level: "A-", style: "防守控制型", attack: "★★★★☆", defense: "★★★★★", suggest: "小球方向 / 防守優勢" },
-    "美國": { level: "B+", style: "體能衝擊型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "角球方向 / 速度戰可留意" },
-    "墨西哥": { level: "B", style: "高跑動壓迫型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "小球方向 / 上半場觀望" },
-    "瑞士": { level: "B+", style: "防守穩定型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向 / 不敗方向" },
-    "丹麥": { level: "B+", style: "紀律防守型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向" },
-    "塞爾維亞": { level: "B", style: "高點進攻型", attack: "★★★★☆", defense: "★★★☆☆", suggest: "雙方進球 / 大球方向" },
-    "摩洛哥": { level: "B+", style: "防守反擊型", attack: "★★★☆☆", defense: "★★★★☆", suggest: "小球方向 / 防守盤" },
-    "波蘭": { level: "B", style: "中路支點型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "保守觀望 / 小球方向" },
-    "哥倫比亞": { level: "B+", style: "速度反擊型", attack: "★★★★☆", defense: "★★★☆☆", suggest: "大球方向 / 反擊機會" },
-    "智利": { level: "B", style: "壓迫型球隊", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "角球方向" },
-    "厄瓜多": { level: "B", style: "體能反擊型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "下半場波動" },
-    "喀麥隆": { level: "B-", style: "身體對抗型", attack: "★★★☆☆", defense: "★★☆☆☆", suggest: "大球風險盤" },
-    "塞內加爾": { level: "B+", style: "速度反擊型", attack: "★★★★☆", defense: "★★★☆☆", suggest: "不敗方向 / 反擊可留意" },
-    "澳洲": { level: "B-", style: "防守硬朗型", attack: "★★☆☆☆", defense: "★★★☆☆", suggest: "小球方向" },
-    "加拿大": { level: "B", style: "速度衝擊型", attack: "★★★☆☆", defense: "★★★☆☆", suggest: "角球方向 / 大球可留意" },
-    "沙烏地阿拉伯": { level: "B-", style: "快速反擊型", attack: "★★☆☆☆", defense: "★★★☆☆", suggest: "受讓方向 / 小球" },
-    "伊朗": { level: "B-", style: "防守反擊型", attack: "★★☆☆☆", defense: "★★★☆☆", suggest: "小球方向" },
-    "卡達": { level: "C+", style: "保守控球型", attack: "★★☆☆☆", defense: "★★☆☆☆", suggest: "觀望 / 小球" },
   };
+
   const defaultStyles = ["平衡型球隊", "防守反擊型", "進攻型球隊", "快速轉換型", "控球型球隊"];
   const defaultSuggest = ["不敗方向", "大球方向", "小球方向", "角球方向", "雙方進球"];
+
   const data = strongTeams[team] || {
     level: pick(["B", "B+", "A-"]),
     style: pick(defaultStyles),
@@ -532,6 +637,7 @@ function wcTeamAnalysis(team) {
     defense: pick(["★★★☆☆", "★★★★☆"]),
     suggest: pick(defaultSuggest),
   };
+
   return `━━━━━━━━━━
 ⚽ ${team} AI球隊分析
 ━━━━━━━━━━
@@ -595,7 +701,9 @@ function wcAiPickText() {
       reasons: ["雙方控球偏保守", "中場消耗高", "上半場節奏慢", "防守穩定度高"],
     },
   ];
+
   const g = pick(matches);
+
   return `━━━━━━━━━━
 ⚽ 世足AI精選
 ━━━━━━━━━━
@@ -648,7 +756,6 @@ const mlbName = {
   "Minnesota Twins": "雙城",
   "New York Mets": "大都會",
   "New York Yankees": "洋基",
-  "Oakland Athletics": "運動家",
   "Athletics": "運動家",
   "Philadelphia Phillies": "費城人",
   "Pittsburgh Pirates": "海盜",
@@ -663,36 +770,12 @@ const mlbName = {
 };
 
 const mlbPower = {
-  道奇: 92,
-  洋基: 90,
-  勇士: 88,
-  費城人: 86,
-  太空人: 85,
-  水手: 82,
-  教士: 82,
-  藍鳥: 80,
-  紅襪: 79,
-  大都會: 78,
-  小熊: 77,
-  守護者: 76,
-  老虎: 75,
-  雙城: 74,
-  紅雀: 73,
-  光芒: 72,
-  遊騎兵: 72,
-  金鶯: 72,
-  紅人: 71,
-  皇家: 70,
-  釀酒人: 70,
-  巨人: 69,
-  天使: 68,
-  海盜: 67,
-  國民: 66,
-  馬林魚: 65,
-  響尾蛇: 65,
-  洛磯: 62,
-  白襪: 60,
-  運動家: 60,
+  道奇: 92, 洋基: 90, 勇士: 88, 費城人: 86, 太空人: 85,
+  水手: 82, 教士: 82, 藍鳥: 80, 紅襪: 79, 大都會: 78,
+  小熊: 77, 守護者: 76, 老虎: 75, 雙城: 74, 紅雀: 73,
+  光芒: 72, 遊騎兵: 72, 金鶯: 72, 紅人: 71, 皇家: 70,
+  釀酒人: 70, 巨人: 69, 天使: 68, 海盜: 67, 國民: 66,
+  馬林魚: 65, 響尾蛇: 65, 洛磯: 62, 白襪: 60, 運動家: 60,
 };
 
 const nbaPower = {
@@ -715,18 +798,25 @@ function teamZh(name) {
 async function fetchMlbGames(offset = 0) {
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
   now.setDate(now.getDate() + offset);
+
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
   const date = `${y}-${m}-${d}`;
+
   const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}`;
   const { data } = await axios.get(url, { timeout: 10000 });
+
   const games = (data.dates?.[0]?.games || []).map((g) => ({
     id: g.gamePk,
     away: teamZh(g.teams.away.team.name),
     home: teamZh(g.teams.home.team.name),
-    time: new Date(g.gameDate).toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour12: false }),
+    time: new Date(g.gameDate).toLocaleString("zh-TW", {
+      timeZone: "Asia/Taipei",
+      hour12: false,
+    }),
   }));
+
   return { games };
 }
 
@@ -854,14 +944,14 @@ async function handleEvent(event) {
     "MLB近日賽程", "MLB AI精選", "NBA近日賽程", "NBA AI精選",
     "世足賽程查詢", "世足球隊查詢", "世足AI精選", "世足冠軍預測",
   ].includes(text) || /^mt/i.test(text) || /^dg/i.test(text) ||
-    /^世足日期:/.test(text) || /^世足場次:/.test(text) || /^MLB場次:/.test(text) || /^NBA場次:/.test(text) ||
+    /^世足日期:/.test(text) || /^世足場次:/.test(text) ||
+    /^MLB場次:/.test(text) || /^NBA場次:/.test(text) ||
+    /^電子房:\d+$/.test(text) ||
     (/^\d{1,6}$/.test(text) && ["awaitMoney", "awaitBetLimit", "custom"].includes(S.flow[uid] || S.slot[uid]?.mode));
 
   if (needsVip && uid !== adminId && !(await isVip(uid))) {
     return client.replyMessage(event.replyToken, { type: "text", text: noVip() });
   }
-
-  // ===== 優先處理狀態模式，避免指令互撞 =====
 
   if (S.sport[uid] === "wc" && S.wc[uid]?.mode === "teamSearch") {
     S.wc[uid].mode = "menu";
@@ -869,6 +959,24 @@ async function handleEvent(event) {
       type: "text",
       text: wcTeamAnalysis(text),
       quickReply: quickWorldCup(),
+    });
+  }
+
+  if (/^電子房:\d+$/.test(text)) {
+    const room = Number(text.split(":")[1]);
+    const game = S.slot[uid]?.game;
+    if (!game) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "請先選擇遊戲。",
+        quickReply: quickSlotGame(),
+      });
+    }
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: slotAnalyzeText(game, room),
+      quickReply: quickSlotMode(),
     });
   }
 
@@ -897,40 +1005,79 @@ async function handleEvent(event) {
   if (/^世足場次:\d+$/.test(text)) {
     const n = Number(text.split(":")[1]);
     const g = S.wc[uid]?.games?.[n - 1];
+
     if (!g) {
-      return client.replyMessage(event.replyToken, { type: "text", text: "查無此場次", quickReply: quickWorldCup() });
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "查無此場次",
+        quickReply: quickWorldCup(),
+      });
     }
-    return client.replyMessage(event.replyToken, { type: "text", text: wcAnalyze(g), quickReply: quickWorldCup() });
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: wcAnalyze(g),
+      quickReply: quickWorldCup(),
+    });
   }
 
   if (/^MLB場次:\d+$/.test(text)) {
     const n = Number(text.split(":")[1]);
     const g = S.mlb[uid]?.games?.[n - 1];
-    if (!g) return client.replyMessage(event.replyToken, { type: "text", text: "查無此場次", quickReply: quickMLB() });
-    return client.replyMessage(event.replyToken, { type: "text", text: mlbAnalyze(g), quickReply: quickMLB() });
+
+    if (!g) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "查無此場次",
+        quickReply: quickMLB(),
+      });
+    }
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: mlbAnalyze(g),
+      quickReply: quickMLB(),
+    });
   }
 
   if (/^NBA場次:\d+$/.test(text)) {
     const n = Number(text.split(":")[1]);
     const g = S.nba[uid]?.games?.[n - 1];
-    if (!g) return client.replyMessage(event.replyToken, { type: "text", text: "查無此場次", quickReply: quickNBA() });
-    return client.replyMessage(event.replyToken, { type: "text", text: nbaAnalyze(g), quickReply: quickNBA() });
-  }
 
- if (/^\d{1,6}$/.test(text) && S.slot[uid]?.mode === "custom") {
-    const n = Number(text);
-    const maxRoom = slotMaxRoom(S.slot[uid].game);
-    if (n < 1 || n > maxRoom) {
-      return client.replyMessage(event.replyToken, { type: "text", text: `房號範圍錯誤，請輸入 1～${maxRoom}。` });
+    if (!g) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "查無此場次",
+        quickReply: quickNBA(),
+      });
     }
+
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: slotText(slotAnalysis(S.slot[uid].game, n)),
-      quickReply: quickSlotMode(),
+      text: nbaAnalyze(g),
+      quickReply: quickNBA(),
     });
   }
 
-  // ===== 一般功能 =====
+  if (/^\d{1,6}$/.test(text) && S.slot[uid]?.mode === "custom") {
+    const n = Number(text);
+    const maxRoom = slotMaxRoom(S.slot[uid].game);
+
+    if (n < 1 || n > maxRoom) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: `房號範圍錯誤，請輸入 1～${maxRoom}。`,
+      });
+    }
+
+    S.slot[uid].mode = null;
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: slotAnalyzeText(S.slot[uid].game, n),
+      quickReply: quickSlotMode(),
+    });
+  }
 
   if (text === "我的ID") {
     return client.replyMessage(event.replyToken, { type: "text", text: uid });
@@ -938,10 +1085,13 @@ async function handleEvent(event) {
 
   if (["VIP查詢", "VIP", "VIP時間"].includes(text)) {
     const data = await getVip(uid);
+
     if (!data || Number(data.expire_time) <= Date.now()) {
       return client.replyMessage(event.replyToken, { type: "text", text: noVip() });
     }
+
     const days = Math.ceil((Number(data.expire_time) - Date.now()) / 86400000);
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -965,8 +1115,16 @@ ${twTime(data.expire_time)}`,
 
   if (text.startsWith("申請開通 ")) {
     const account = text.replace("申請開通 ", "").trim();
-    if (!account) return client.replyMessage(event.replyToken, { type: "text", text: "請輸入3A帳號\n範例：申請開通 abc123" });
+
+    if (!account) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "請輸入3A帳號\n範例：申請開通 abc123",
+      });
+    }
+
     await supabase.from("vip_requests").insert({ user_id: uid, account });
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -981,10 +1139,22 @@ ${account}
   }
 
   if (text.startsWith("開通 ")) {
-    if (uid !== adminId) return client.replyMessage(event.replyToken, { type: "text", text: "你沒有管理員權限" });
+    if (uid !== adminId) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "你沒有管理員權限",
+      });
+    }
+
     const [, account, dayText] = text.split(" ");
     const days = parseInt(dayText, 10);
-    if (!account || !days) return client.replyMessage(event.replyToken, { type: "text", text: "格式錯誤\n範例：開通 abc123 2" });
+
+    if (!account || !days) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "格式錯誤\n範例：開通 abc123 2",
+      });
+    }
 
     const { data } = await supabase
       .from("vip_requests")
@@ -994,8 +1164,15 @@ ${account}
       .limit(1)
       .maybeSingle();
 
-    if (!data?.user_id) return client.replyMessage(event.replyToken, { type: "text", text: "查無此申請帳號" });
+    if (!data?.user_id) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "查無此申請帳號",
+      });
+    }
+
     const exp = await openVip(data.user_id, account, days);
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1016,6 +1193,7 @@ ${twTime(exp)}`,
   if (text === "百家樂") {
     clearSessions(uid);
     S.flow[uid] = "awaitPlatform";
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1032,6 +1210,7 @@ ${twTime(exp)}`,
 
   if ((lower === "dg" || lower === "mt") && S.flow[uid] === "awaitPlatform") {
     S.flow[uid] = "awaitRoom";
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1056,6 +1235,7 @@ MT 01`,
     S.result[uid] = [];
     S.lastPred[uid] = null;
     S.lastBet[uid] = null;
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1081,15 +1261,26 @@ ${S.pendingRoom[uid]}
   }
 
   if (/^mt/i.test(text) || /^dg/i.test(text)) {
-    return client.replyMessage(event.replyToken, { type: "text", text: "查無此房間" });
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "查無此房間",
+    });
   }
 
   if (/^\d+$/.test(text) && S.flow[uid] === "awaitMoney") {
     const money = Number(text);
-    if (money < 100) return client.replyMessage(event.replyToken, { type: "text", text: "本金金額過低，請重新輸入。" });
+
+    if (money < 100) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "本金金額過低，請重新輸入。",
+      });
+    }
+
     resetMoney(uid, money);
     S.pendingMoney[uid] = money;
     S.flow[uid] = "awaitBetLimit";
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1113,15 +1304,32 @@ ${money}
   if (/^\d+$/.test(text) && S.flow[uid] === "awaitBetLimit") {
     const limit = Number(text);
     const money = S.pendingMoney[uid];
+
     if (!money) {
       S.flow[uid] = "awaitMoney";
-      return client.replyMessage(event.replyToken, { type: "text", text: "請先輸入本金。" });
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "請先輸入本金。",
+      });
     }
-    if (limit < betUnit(money)) return client.replyMessage(event.replyToken, { type: "text", text: `單柱上限太低，至少需 ${betUnit(money)} 以上。` });
-    if (limit > money) return client.replyMessage(event.replyToken, { type: "text", text: "單柱上限不能超過本金，請重新輸入。" });
+
+    if (limit < betUnit(money)) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: `單柱上限太低，至少需 ${betUnit(money)} 以上。`,
+      });
+    }
+
+    if (limit > money) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "單柱上限不能超過本金，請重新輸入。",
+      });
+    }
 
     S.betLimit[uid] = limit;
     S.flow[uid] = "awaitMode";
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1150,50 +1358,45 @@ ${limit}
     S.flow[uid] = "playing";
     S.bankroll[uid] = S.pendingMoney[uid];
     S.startBankroll[uid] = S.pendingMoney[uid];
-    return client.replyMessage(event.replyToken, { type: "text", text: startAnalyze(uid), quickReply: quickBaccarat() });
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: startAnalyze(uid),
+      quickReply: quickBaccarat(),
+    });
   }
 
   if (text === "天門五關" || (text === "2" && S.flow[uid] === "awaitMode")) {
     const money = S.pendingMoney[uid] || 1000;
     const plan = makeTianmen(money);
+
     resetMoney(uid, money);
     S.mode[uid] = "tianmen";
     S.flow[uid] = "playing";
     S.tianmen[uid] = { level: 1, ...plan };
-    if (money < 1000) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: `━━━━━━━━━━
-⛩️ 黑域AI天門配置
-━━━━━━━━━━
 
-目前本金：
-${money}
-
-⚠️ 不建議使用天門模式
-
-建議本金至少：
-1000以上
-
-目前較適合：
-AI配注模式
-
-━━━━━━━━━━`,
-        quickReply: quickMoney(),
-      });
-    }
-    return client.replyMessage(event.replyToken, { type: "text", text: startAnalyze(uid), quickReply: quickBaccarat() });
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: startAnalyze(uid),
+      quickReply: quickBaccarat(),
+    });
   }
 
   if (text === "自由配注" || (text === "3" && S.flow[uid] === "awaitMode")) {
     S.mode[uid] = "free";
     S.flow[uid] = "playing";
-    return client.replyMessage(event.replyToken, { type: "text", text: startAnalyze(uid), quickReply: quickBaccarat() });
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: startAnalyze(uid),
+      quickReply: quickBaccarat(),
+    });
   }
 
   if (text === "重新設定本金") {
     resetMoney(uid, 0);
     S.flow[uid] = "awaitMoney";
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1211,8 +1414,10 @@ AI配注模式
 
   if (["莊", "閒", "和"].includes(text)) {
     applyResult(uid, text);
+
     if (S.mode[uid] !== "free" && (S.bankroll[uid] || 0) <= 0) {
       S.bankroll[uid] = 0;
+
       return client.replyMessage(event.replyToken, {
         type: "text",
         text: `━━━━━━━━━━
@@ -1235,79 +1440,117 @@ AI配注模式
 
     S.baccarat[uid].push(text);
     if (S.baccarat[uid].length > 20) S.baccarat[uid].shift();
+
     const pred = baccaratPick(S.baccarat[uid]);
     const bet = currentBet(uid);
     S.lastPred[uid] = pred;
     S.lastBet[uid] = bet;
+
     const extra = [baccaratWarning(S.baccarat[uid]), baccaratSpecial(S.baccarat[uid])]
       .filter(Boolean)
       .map((x) => `\n\n${x}`)
       .join("");
-    return client.replyMessage(event.replyToken, { type: "text", text: baccaratReply(uid, pred, bet, extra), quickReply: quickBaccarat() });
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: baccaratReply(uid, pred, bet, extra),
+      quickReply: quickBaccarat(),
+    });
   }
 
   if (text === "電子" || text === "電子AI") {
     clearSessions(uid, "slot");
+
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: `━━━━━━━━━━
-⚡ 黑域電子AI
-━━━━━━━━━━
+      text: `⚡ 黑域電子AI
 
 請選擇遊戲：
 
 🎰 戰神賽特1
 🎰 戰神賽特2
-🎰 古神巴風特`,
+👹 古神巴風特`,
       quickReply: quickSlotGame(),
     });
   }
 
   if (["戰神賽特1", "戰神賽特2", "古神巴風特"].includes(text)) {
     S.slot[uid] = { game: text, mode: null };
+
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: `━━━━━━━━━━
-⚡ ${text}
-━━━━━━━━━━
+      text: `🎰 ${text}
 
-請選擇模式：
+請選擇功能：
 
-1️⃣ 隨機爆分房
-2️⃣ 自選房號分析`,
+🎲 AI推薦房
+🔥 熱門房排行
+🔢 自選房號分析`,
       quickReply: quickSlotMode(),
     });
   }
 
-  if (text === "隨機爆分房") {
-    const s = S.slot[uid];
-    if (!s?.game) return client.replyMessage(event.replyToken, { type: "text", text: "請先選擇遊戲：戰神賽特1 / 戰神賽特2 / 古神巴風特", quickReply: quickSlotGame() });
-    let analysis;
-    do {
-      const maxRoom = slotMaxRoom(s.game);
-      analysis = slotAnalysis(s.game, Math.floor(Math.random() * maxRoom) + 1);
-    } while (analysis.suggestion === "建議觀望");
-    return client.replyMessage(event.replyToken, { type: "text", text: slotText(analysis), quickReply: quickSlotMode() });
-  }
+  if (text === "熱門房排行") {
+    const game = S.slot[uid]?.game;
 
-  if (text === "自選房號") {
-    if (!S.slot[uid]?.game) return client.replyMessage(event.replyToken, { type: "text", text: "請先選擇遊戲：戰神賽特1 / 戰神賽特2 / 古神巴風特", quickReply: quickSlotGame() });
-    S.slot[uid].mode = "custom";
-    const maxRoom = slotMaxRoom(S.slot[uid].game);
+    if (!game) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "請先選擇遊戲。",
+        quickReply: quickSlotGame(),
+      });
+    }
+
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: `━━━━━━━━━━
-⚡ 自選房號分析
-━━━━━━━━━━
+      text: slotHotRankText(game),
+      quickReply: quickSlotHotRooms(game),
+    });
+  }
 
-目前遊戲：
-${S.slot[uid].game}
+  if (text === "AI推薦房") {
+    const game = S.slot[uid]?.game;
 
-請輸入房號：
-1～${maxRoom}
+    if (!game) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "請先選擇遊戲。",
+        quickReply: quickSlotGame(),
+      });
+    }
 
-範例：
-377`,
+    const rooms = buildHotRooms(game);
+    const room = pick(rooms);
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: slotAnalyzeText(game, room),
+      quickReply: quickSlotMode(),
+    });
+  }
+
+  if (text === "自選房號分析") {
+    const game = S.slot[uid]?.game;
+
+    if (!game) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "請先選擇遊戲。",
+        quickReply: quickSlotGame(),
+      });
+    }
+
+    S.slot[uid].mode = "custom";
+    const maxRoom = slotMaxRoom(game);
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `🔢 自選房號分析
+
+🎰 ${game}
+房號範圍：1～${maxRoom}
+
+請輸入房號：`,
     });
   }
 
@@ -1328,9 +1571,11 @@ ${S.slot[uid].game}
   }
 
   const mode539 = { "本期推薦": "stable", "539熱號": "hot", "539冷號": "cold" }[text];
+
   if (mode539) {
     const nums = gen539(mode539);
     const date = tw539Date();
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1355,6 +1600,7 @@ ${nums[0]} / ${nums[2]}
   if (text === "體育") {
     clearSessions(uid);
     S.sport[uid] = "sports";
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1376,6 +1622,7 @@ ${nums[0]} / ${nums[2]}
     clearSessions(uid, "wc");
     S.sport[uid] = "wc";
     S.wc[uid] = { mode: "menu", page: 0, games: [] };
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1397,6 +1644,7 @@ ${nums[0]} / ${nums[2]}
   if (text === "世足賽程查詢") {
     S.sport[uid] = "wc";
     S.wc[uid] = { mode: "date", page: 0, games: [] };
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1411,9 +1659,14 @@ ${nums[0]} / ${nums[2]}
 
   if (["世足日期下一頁", "世足日期上一頁"].includes(text)) {
     S.sport[uid] = "wc";
+
     if (!S.wc[uid]) S.wc[uid] = { mode: "date", page: 0, games: [] };
+
     S.wc[uid].mode = "date";
-    S.wc[uid].page = text === "世足日期下一頁" ? (S.wc[uid].page || 0) + 1 : Math.max(0, (S.wc[uid].page || 0) - 1);
+    S.wc[uid].page = text === "世足日期下一頁"
+      ? (S.wc[uid].page || 0) + 1
+      : Math.max(0, (S.wc[uid].page || 0) - 1);
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1429,6 +1682,7 @@ ${nums[0]} / ${nums[2]}
   if (text === "世足球隊查詢") {
     S.sport[uid] = "wc";
     S.wc[uid] = { mode: "teamSearch", page: 0, games: [] };
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1446,7 +1700,11 @@ ${nums[0]} / ${nums[2]}
   }
 
   if (text === "世足AI精選") {
-    return client.replyMessage(event.replyToken, { type: "text", text: wcAiPickText(), quickReply: quickWorldCup() });
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: wcAiPickText(),
+      quickReply: quickWorldCup(),
+    });
   }
 
   if (text === "世足冠軍預測") {
@@ -1469,6 +1727,7 @@ ${nums[0]} / ${nums[2]}
     clearSessions(uid, "mlb");
     S.sport[uid] = "mlb";
     S.mlb[uid] = { mode: "menu", games: [] };
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1486,44 +1745,46 @@ ${nums[0]} / ${nums[2]}
   }
 
   if (text === "MLB近日賽程") {
-  S.sport[uid] = "mlb";
-  let games = [];
+    S.sport[uid] = "mlb";
+    let games = [];
 
-  try {
-    for (let i = -1; i < 7; i++) {
-      const data = await fetchMlbGames(i);
-      if (data.games?.length) {
-        games = data.games;
-        break;
+    try {
+      for (let i = -1; i < 7; i++) {
+        const data = await fetchMlbGames(i);
+
+        if (data.games?.length) {
+          games = data.games;
+          break;
+        }
       }
+    } catch (err) {
+      console.log("MLB API ERROR:", err.message);
+
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "MLB賽程資料暫時無法同步，請稍後再試。",
+        quickReply: quickMLB(),
+      });
     }
-  } catch (err) {
-    console.log("MLB API ERROR:", err.message);
+
+    if (!games.length) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "目前查無MLB近日賽程。",
+        quickReply: quickMLB(),
+      });
+    }
+
+    const showGames = games.slice(0, 10);
+    S.mlb[uid] = { mode: "selectGame", games: showGames };
+
+    const msg = showGames
+      .map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`)
+      .join("\n\n");
+
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: "MLB賽程資料暫時無法同步，請稍後再試。",
-      quickReply: quickMLB(),
-    });
-  }
-
-  if (!games.length) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "目前查無MLB近日賽程。",
-      quickReply: quickMLB(),
-    });
-  }
-
-  const showGames = games.slice(0, 10);
-  S.mlb[uid] = { mode: "selectGame", games: showGames };
-
-  const msg = showGames
-    .map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`)
-    .join("\n\n");
-
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: `━━━━━━━━━━
+      text: `━━━━━━━━━━
 ⚾ MLB近日賽程（台灣時間）
 ━━━━━━━━━━
 
@@ -1531,39 +1792,41 @@ ${msg}
 
 ━━━━━━━━━━
 請選擇場次查看AI分析`,
-    quickReply: q(showGames.map((_, i) => [`${i + 1}`, `MLB場次:${i + 1}`])),
-  });
-}
-
-if (text === "MLB AI精選") {
-  S.sport[uid] = "mlb";
-  let games = S.mlb[uid]?.games || [];
-
-  if (!games.length) {
-    for (let i = -1; i < 7; i++) {
-      const data = await fetchMlbGames(i);
-      if (data.games?.length) {
-        games = data.games.slice(0, 10);
-        break;
-      }
-    }
-    S.mlb[uid] = { mode: "selectGame", games };
-  }
-
-  if (!games.length) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "目前查無MLB賽程，請稍後再試。",
-      quickReply: quickMLB(),
+      quickReply: q(showGames.map((_, i) => [`${i + 1}`, `MLB場次:${i + 1}`])),
     });
   }
 
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: mlbAnalyze(pick(games)),
-    quickReply: quickMLB(),
-  });
-}
+  if (text === "MLB AI精選") {
+    S.sport[uid] = "mlb";
+    let games = S.mlb[uid]?.games || [];
+
+    if (!games.length) {
+      for (let i = -1; i < 7; i++) {
+        const data = await fetchMlbGames(i);
+
+        if (data.games?.length) {
+          games = data.games.slice(0, 10);
+          break;
+        }
+      }
+
+      S.mlb[uid] = { mode: "selectGame", games };
+    }
+
+    if (!games.length) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "目前查無MLB賽程，請稍後再試。",
+        quickReply: quickMLB(),
+      });
+    }
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: mlbAnalyze(pick(games)),
+      quickReply: quickMLB(),
+    });
+  }
 
   if (text === "NBA") {
     clearSessions(uid, "nba");
@@ -1575,6 +1838,7 @@ if (text === "MLB AI精選") {
         { away: "雷霆", home: "馬刺", time: "2026/5/23 08:30:00" },
       ],
     };
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1595,6 +1859,7 @@ if (text === "MLB AI精選") {
     S.sport[uid] = "nba";
     const games = S.nba[uid]?.games || [];
     const msg = games.map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`).join("\n\n");
+
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -1612,8 +1877,20 @@ ${msg || "目前查無賽程"}
   if (text === "NBA AI精選") {
     S.sport[uid] = "nba";
     const games = S.nba[uid]?.games || [];
-    if (!games.length) return client.replyMessage(event.replyToken, { type: "text", text: "目前查無NBA賽程，請稍後再試。", quickReply: quickNBA() });
-    return client.replyMessage(event.replyToken, { type: "text", text: nbaAnalyze(pick(games)), quickReply: quickNBA() });
+
+    if (!games.length) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "目前查無NBA賽程，請稍後再試。",
+        quickReply: quickNBA(),
+      });
+    }
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: nbaAnalyze(pick(games)),
+      quickReply: quickNBA(),
+    });
   }
 
   return client.replyMessage(event.replyToken, {
