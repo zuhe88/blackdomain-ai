@@ -496,7 +496,28 @@ ${lines[2]}
 🕒 AI分析時間
 ${twDateTime()}`;
 }
+function slotCustomAnalyzeText(game, room) {
 
+  const badRate = 0.28;
+
+  if (Math.random() < badRate) {
+    return `🤖 黑域AI
+
+🎰 ${game}
+🏠 ${slotNumber(room)}房
+
+📊 數據分析
+━━━━━━━━━━━━
+⚠️ 數據未同步
+📉 波動不足
+🛑 暫不建議進場
+
+🕒 AI分析時間
+${twDateTime()}`;
+  }
+
+  return slotAnalyzeText(game, room);
+}
 function slotHotRankText(game) {
   const rooms = buildHotRooms(game);
 
@@ -1074,7 +1095,7 @@ async function handleEvent(event) {
 
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: slotAnalyzeText(S.slot[uid].game, n),
+      text: slotCustomAnalyzeText(S.slot[uid].game, n),
       quickReply: quickSlotMode(),
     });
   }
