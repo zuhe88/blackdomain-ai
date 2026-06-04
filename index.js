@@ -482,7 +482,9 @@ function slotDataLines() {
 function slotAnalyzeText(game, room) {
   const lines = slotDataLines();
 
-  return `🤖 黑域AI
+  return `━━━━━━━━━━━━
+🤖 黑域AI 數據選房
+━━━━━━━━━━━━
 
 🎰 ${game}
 🏠 ${slotNumber(room)}房
@@ -493,10 +495,25 @@ ${lines[0]}
 ${lines[1]}
 ${lines[2]}
 
+🎯 黑域評級
+━━━━━━━━━━━━
+🟢 可進場
+
 🕒 AI分析時間
 ${twDateTime()}`;
 }
-return `━━━━━━━━━━━━
+
+function slotCustomAnalyzeText(game, room) {
+  const hotRooms = buildHotRooms(game);
+
+  if (hotRooms.includes(Number(room))) {
+    return slotAnalyzeText(game, room);
+  }
+
+  const badRate = 0.35;
+
+  if (Math.random() < badRate) {
+    return `━━━━━━━━━━━━
 🤖 黑域AI 數據選房
 ━━━━━━━━━━━━
 
