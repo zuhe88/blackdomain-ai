@@ -510,7 +510,7 @@ function slotCustomAnalyzeText(game, room) {
     return slotAnalyzeText(game, room);
   }
 
-  const badRate = 0.35;
+  const badRate = 0.6;
 
   if (Math.random() < badRate) {
     return `━━━━━━━━━━━━
