@@ -497,8 +497,13 @@ ${lines[2]}
 ${twDateTime()}`;
 }
 function slotCustomAnalyzeText(game, room) {
+  const hotRooms = buildHotRooms(game);
 
-  const badRate = 0.28;
+  if (hotRooms.includes(Number(room))) {
+    return slotAnalyzeText(game, room);
+  }
+
+  const badRate = 0.35;
 
   if (Math.random() < badRate) {
     return `🤖 黑域AI
