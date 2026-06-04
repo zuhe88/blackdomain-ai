@@ -536,6 +536,7 @@ ${twDateTime()}`;
 
   return slotAnalyzeText(game, room);
 }
+
 function slotHotRankText(game) {
   const rooms = buildHotRooms(game);
 
@@ -560,9 +561,7 @@ function quickSlotHotRooms(game) {
     const labels = ["🥇", "🥈", "🥉", "④", "⑤"];
     return [`${labels[i]} ${slotNumber(room)}房`, `電子房:${room}`];
   }));
-}
-
-function gen539(mode) {
+}function gen539(mode) {
   const key = `${tw539Date()}-${mode}`;
 
   if (S.cache539[key]) return S.cache539[key];
