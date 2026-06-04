@@ -533,8 +533,7 @@ function slotCustomAnalyzeText(game, room) {
 🕒 AI分析時間
 ${twDateTime()}`;
   }
-
-  return slotAnalyzeText(game, room);
+ return slotAnalyzeText(game, room);
 }
 
 function slotHotRankText(game) {
