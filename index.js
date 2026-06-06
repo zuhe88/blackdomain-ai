@@ -503,14 +503,15 @@ ${lines[2]}
 ${twDateTime()}`;
 }
 
-function slotCustomAnalyzeText(game, room) {
+function slotCustomAnalyzeText(game, room, uid) {
   const hotRooms = buildHotRooms(game);
+  const aiRooms = S.slot[uid]?.aiRooms || [];
 
-  if (hotRooms.includes(Number(room))) {
+  if (hotRooms.includes(Number(room)) || aiRooms.includes(Number(room))) {
     return slotAnalyzeText(game, room);
   }
 
-  const badRate = 0.6;
+  const badRate = 0.55;
 
   if (Math.random() < badRate) {
     return `━━━━━━━━━━━━
@@ -533,7 +534,8 @@ function slotCustomAnalyzeText(game, room) {
 🕒 AI分析時間
 ${twDateTime()}`;
   }
- return slotAnalyzeText(game, room);
+
+  return slotAnalyzeText(game, room);
 }
 
 function slotHotRankText(game) {
@@ -1111,7 +1113,7 @@ async function handleEvent(event) {
 
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: slotCustomAnalyzeText(S.slot[uid].game, n),
+      text: slotCustomAnalyzeText(S.slot[uid].game, n, uid),
       quickReply: quickSlotMode(),
     });
   }
@@ -1545,26 +1547,29 @@ ${limit}
     });
   }
 
-  if (text === "AI推薦房") {
-    const game = S.slot[uid]?.game;
+ if (text === "AI推薦房") {
+  const game = S.slot[uid]?.game;
 
-    if (!game) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "請先選擇遊戲。",
-        quickReply: quickSlotGame(),
-      });
-    }
-
-    const rooms = buildHotRooms(game);
-    const room = pick(rooms);
-
+  if (!game) {
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: slotAnalyzeText(game, room),
-      quickReply: quickSlotMode(),
+      text: "請先選擇遊戲。",
+      quickReply: quickSlotGame(),
     });
   }
+
+  const maxRoom = slotMaxRoom(game);
+  const room = Math.floor(Math.random() * maxRoom) + 1;
+
+  if (!S.slot[uid].aiRooms) S.slot[uid].aiRooms = [];
+  S.slot[uid].aiRooms.push(room);
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: slotAnalyzeText(game, room),
+    quickReply: quickSlotMode(),
+  });
+}
 
   if (text === "自選房號分析") {
     const game = S.slot[uid]?.game;
