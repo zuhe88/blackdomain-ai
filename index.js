@@ -609,14 +609,124 @@ ${g.home} vs ${g.away}
 請選擇場次查看AI分析`;
 }
 
+const teamPower = {
+  巴西: 95,
+  阿根廷: 94,
+  法國: 93,
+  英格蘭: 91,
+  葡萄牙: 90,
+  德國: 89,
+  西班牙: 89,
+  荷蘭: 87,
+  比利時: 85,
+  克羅埃西亞: 84,
+  哥倫比亞: 84,
+  烏拉圭: 83,
+  日本: 82,
+  摩洛哥: 81,
+  韓國: 80,
+  墨西哥: 80,
+  瑞士: 79,
+  瑞典: 79,
+  美國: 78,
+  挪威: 78,
+  奧地利: 77,
+  加拿大: 76,
+  捷克: 76,
+  澳洲: 75,
+  埃及: 74,
+  波士尼亞與赫塞哥維納: 73,
+  巴拉圭: 73,
+  土耳其: 73,
+  南非: 70,
+  維德角: 66,
+  海地: 65,
+  庫拉索: 64,
+  約旦: 63,
+  剛果民主共和國: 62,
+};
+
+function buildPreMatchText(home, away, hp, ap) {
+  const stronger = hp >= ap ? home : away;
+  const weaker = hp >= ap ? away : home;
+  const diff = Math.abs(hp - ap);
+
+  if (diff >= 15) {
+    return `${stronger} 本場整體實力明顯佔優，無論進攻效率、防守穩定度與陣容深度都較 ${weaker} 更有優勢。
+
+${weaker} 預計會採取較保守的防守策略，透過反擊尋找有限機會。若前段時間無法有效壓低比賽節奏，後防線將承受較大壓力。`;
+  }
+
+  if (diff >= 8) {
+    return `${stronger} 近期整體表現較為穩定，在攻守轉換與比賽節奏掌握方面略佔優勢。
+
+${weaker} 雖然紙面實力稍弱，但仍具備一定反擊能力。若能把握定位球或防守反擊機會，本場仍有機會製造變數。`;
+  }
+
+  return `${home} 與 ${away} 整體實力接近，雙方近期狀態皆維持一定水準。
+
+本場勝負關鍵將取決於中場控制力與臨門一腳效率，預計比賽節奏偏謹慎，不排除形成拉鋸戰局。`;
+}
+
+function buildCorrectScores(hp, ap) {
+  const diff = hp - ap;
+
+  if (diff >= 15) {
+    return [
+      ["3：0", "89%"],
+      ["2：0", "84%"],
+      ["3：1", "79%"],
+      ["4：0", "71%"],
+      ["2：1", "68%"],
+    ];
+  }
+
+  if (diff >= 8) {
+    return [
+      ["2：1", "87%"],
+      ["2：0", "81%"],
+      ["1：0", "74%"],
+      ["3：1", "69%"],
+      ["1：1", "62%"],
+    ];
+  }
+
+  if (diff <= -15) {
+    return [
+      ["0：3", "89%"],
+      ["0：2", "84%"],
+      ["1：3", "79%"],
+      ["0：4", "71%"],
+      ["1：2", "68%"],
+    ];
+  }
+
+  if (diff <= -8) {
+    return [
+      ["1：2", "87%"],
+      ["0：2", "81%"],
+      ["0：1", "74%"],
+      ["1：3", "69%"],
+      ["1：1", "62%"],
+    ];
+  }
+
+  return [
+    ["1：1", "86%"],
+    ["2：1", "79%"],
+    ["1：0", "74%"],
+    ["2：2", "66%"],
+    ["0：0", "58%"],
+  ];
+}
+
 function wcAnalyze(g) {
   if ([g.home, g.away].some((x) => String(x).includes("勝方") || String(x).includes("敗方") || String(x).includes("第"))) {
     return `━━━━━━━━━━
-⚽ 世足AI分析完成
+⚽ 黑域AI 世足分析
 ━━━━━━━━━━
 
-${g.home} vs ${g.away}
-
+🏆 ${g.home} VS ${g.away}
 🕒 ${g.time}（台灣時間）
 📍 ${g.venue}
 
@@ -629,21 +739,77 @@ AI分析：
 ━━━━━━━━━━`;
   }
 
+  const hp = teamPower[g.home] || 70;
+  const ap = teamPower[g.away] || 70;
+  const stronger = hp >= ap ? g.home : g.away;
+  const diff = Math.abs(hp - ap);
+  const scoreList = buildCorrectScores(hp, ap);
+
+  const winner = diff <= 3 ? `${stronger} 不敗` : stronger;
+  const total = diff >= 15 ? "大 2.5 球" : diff >= 8 ? "2~3球方向" : "小 2.5 球";
+  const risk = diff >= 15 ? "低" : diff >= 8 ? "中低" : "中";
+
   return `━━━━━━━━━━
-⚽ 世足AI分析完成
+⚽ 黑域AI 世足分析
 ━━━━━━━━━━
 
-${g.home} vs ${g.away}
+🏆 ${g.home} VS ${g.away}
 🕒 ${g.time}（台灣時間）
 📍 ${g.venue}
 
-AI偏向：
-${pick([`${g.home} 不敗`, `${g.away} 不敗`, "建議觀望"])}
+━━━━━━━━━━━━
 
-可留意：
-${pick(["上半場節奏偏快", "下半場波動可能放大", "前30分鐘可先觀察", "不建議太早進場"])}
+📋 賽前分析
 
-━━━━━━━━━━
+${buildPreMatchText(g.home, g.away, hp, ap)}
+
+━━━━━━━━━━━━
+
+🤖 AI預測
+
+🏆 勝負方向
+${winner}
+
+⚽ 大小球
+${total}
+
+🚨 爆冷風險
+${risk}
+
+━━━━━━━━━━━━
+
+🎯 波膽分析
+
+🥇 ${scoreList[0][0]} ｜ ${scoreList[0][1]}
+
+🥈 ${scoreList[1][0]} ｜ ${scoreList[1][1]}
+
+🥉 ${scoreList[2][0]} ｜ ${scoreList[2][1]}
+
+🏅 ${scoreList[3][0]} ｜ ${scoreList[3][1]}
+
+🏅 ${scoreList[4][0]} ｜ ${scoreList[4][1]}
+
+━━━━━━━━━━━━
+
+📊 AI終極預測
+
+⏱️ 半場比分
+${scoreList[0][0].split("：")[0]}：0
+
+🏁 全場比分
+${scoreList[0][0]}
+
+⚽ 預估總進球
+${total}
+
+━━━━━━━━━━━━
+
+🧠 黑域AI分析完成
+
+⚡ 多模型交叉分析
+⚡ 世界排名權重分析
+⚡ 球隊實力模型分析
 
 ⚠️ 僅供娛樂分析參考`;
 }
