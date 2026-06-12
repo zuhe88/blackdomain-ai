@@ -652,8 +652,6 @@ async function fetchFootballGames(days = 7) {
       },
      params: {
   date,
-  league: 1,
-  season: 2026,
   timezone: "Asia/Taipei",
 },
     });
