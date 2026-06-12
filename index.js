@@ -1263,24 +1263,126 @@ async function handleEvent(event) {
     });
   }
 
-  if (/^世足場次:\d+$/.test(text)) {
-    const n = Number(text.split(":")[1]);
-    const g = S.wc[uid]?.games?.[n - 1];
+ if (/^世足場次:\d+$/.test(text)) {
+  const n = Number(text.split(":")[1]);
+  const g = S.wc[uid]?.games?.[n - 1];
 
-    if (!g) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此場次",
-        quickReply: quickWorldCup(),
-      });
-    }
-
+  if (!g) {
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: wcAnalyze(g),
+      text: "查無此場次",
       quickReply: quickWorldCup(),
     });
   }
+async function wcMatchAnalysis(g) {
+  const response = await openai.responses.create({
+    model: "gpt-4.1-mini",
+    input: `
+你是黑域AI世足賽前分析系統。
+
+請使用繁體中文分析以下比賽：
+
+時間：${g.time || "未提供"}
+主隊：${g.home || g.team1 || g.a || "主隊"}
+客隊：${g.away || g.team2 || g.b || "客隊"}
+
+請嚴格依照以下格式輸出：
+
+⚽ 黑域AI 賽前分析
+
+🏆 ${g.home || g.team1 || g.a || "主隊"} VS ${g.away || g.team2 || g.b || "客隊"}
+
+━━━━━━━━━━━━
+
+📊 球隊狀態
+
+分析雙方近期狀態、進攻能力、防守能力與比賽節奏。
+
+━━━━━━━━━━━━
+
+⚔️ 關鍵對位
+
+分析本場最關鍵的勝負因素。
+
+━━━━━━━━━━━━
+
+🥅 半場波膽推薦
+
+① 比分（機率）
+② 比分（機率）
+③ 比分（機率）
+
+機率請控制於15%~45%。
+
+━━━━━━━━━━━━
+
+⚽ 全場波膽推薦
+
+① 比分（機率）
+② 比分（機率）
+③ 比分（機率）
+
+機率請控制於15%~45%。
+
+避免出現不合理比分。
+
+━━━━━━━━━━━━
+
+🎯 預估總進球
+
+請直接輸出：
+
+0~1球方向
+或
+2~3球方向
+或
+4球以上方向
+
+━━━━━━━━━━━━
+
+📈 AI大小分
+
+推薦：大2.5 或 小2.5
+
+分析：
+簡短說明原因。
+
+━━━━━━━━━━━━
+
+📊 AI讓分
+
+推薦：請直接寫出讓分方向。
+
+例如：
+阿根廷 -1
+法國 -0.5
+日本 +1
+
+分析：
+簡短說明原因。
+
+━━━━━━━━━━━━
+
+🏆 AI預測勝方
+
+直接寫出最看好的獲勝球隊名稱。
+
+若平手機率較高可寫：
+
+平局機率偏高
+
+━━━━━━━━━━━━
+
+⚠️ 本分析由黑域AI生成，僅供娛樂參考。
+
+不要輸出Markdown。
+不要輸出程式碼。
+不要輸出額外說明。
+`
+  });
+
+  return response.output_text;
+}
 
   if (/^MLB場次:\d+$/.test(text)) {
     const n = Number(text.split(":")[1]);
