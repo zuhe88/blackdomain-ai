@@ -2051,9 +2051,22 @@ if (text === "世足賽程查詢") {
     });
   }
 
-  if (text === "世足AI精選") {
+ if (text === "世足AI精選") {
 
-  const aiText = await wcAiPickText();
+  const dates = Object.keys(worldCupSchedule || {});
+  const firstDate = dates[0];
+  const games = worldCupSchedule[firstDate] || [];
+  const g = games[0];
+
+  if (!g) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "目前查無可分析賽事",
+      quickReply: quickWorldCup(),
+    });
+  }
+
+  const aiText = await wcMatchAnalysis(g);
 
   return client.replyMessage(event.replyToken, {
     type: "text",
