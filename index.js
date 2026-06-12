@@ -1,3 +1,8 @@
+const OpenAI = require("openai");
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 const WebSocket = require("ws");
 global.WebSocket = WebSocket;
 
@@ -2118,6 +2123,34 @@ ${msg || "目前查無賽程"}
       quickReply: quickNBA(),
     });
   }
+
+
+  if (text === "GPT測試") {
+
+  try {
+
+    const response = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: "請用一句話介紹黑域AI"
+    });
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: response.output_text
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "GPT連線失敗"
+    });
+
+  }
+
+}
 
   return client.replyMessage(event.replyToken, {
     type: "text",
