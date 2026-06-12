@@ -650,10 +650,12 @@ async function fetchFootballGames(days = 7) {
       headers: {
         "x-apisports-key": process.env.APIFOOTBALL_KEY,
       },
-      params: {
-        date,
-        timezone: "Asia/Taipei",
-      },
+     params: {
+  date,
+  league: 1,
+  season: 2026,
+  timezone: "Asia/Taipei",
+},
     });
 
     const games = (data.response || []).map((x) => ({
