@@ -598,6 +598,47 @@ function wcDates(page = 0) {
 
   return q(items);
 }
+const teamNameMap = {
+  Brazil: "巴西",
+  England: "英格蘭",
+  Germany: "德國",
+  Argentina: "阿根廷",
+  France: "法國",
+  Spain: "西班牙",
+  Portugal: "葡萄牙",
+  Netherlands: "荷蘭",
+  Belgium: "比利時",
+  Croatia: "克羅埃西亞",
+  Uruguay: "烏拉圭",
+  Japan: "日本",
+  "South Korea": "韓國",
+  "Korea Republic": "韓國",
+  Morocco: "摩洛哥",
+  Switzerland: "瑞士",
+  "United States": "美國",
+  USA: "美國",
+  Canada: "加拿大",
+  Mexico: "墨西哥",
+  Australia: "澳洲",
+  Norway: "挪威",
+  Sweden: "瑞典",
+  Austria: "奧地利",
+  "Czech Republic": "捷克",
+  Czechia: "捷克",
+  Egypt: "埃及",
+  Paraguay: "巴拉圭",
+  Turkey: "土耳其",
+  Turkiye: "土耳其",
+  Colombia: "哥倫比亞",
+  "Bosnia and Herzegovina": "波士尼亞與赫塞哥維納",
+  Qatar: "卡達",
+  "Saudi Arabia": "沙烏地阿拉伯",
+  "South Africa": "南非",
+};
+
+function translateTeam(name) {
+  return teamNameMap[name] || name;
+}
 async function fetchFootballGames(days = 7) {
   let allGames = [];
 
@@ -619,8 +660,8 @@ async function fetchFootballGames(days = 7) {
       id: x.fixture.id,
       stage: x.league.name,
       group: "",
-      home: x.teams.home.name,
-      away: x.teams.away.name,
+     home: translateTeam(x.teams.home.name),
+away: translateTeam(x.teams.away.name),
       time: new Date(x.fixture.date).toLocaleString("zh-TW", {
         timeZone: "Asia/Taipei",
         hour12: false,
