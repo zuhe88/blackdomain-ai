@@ -598,38 +598,44 @@ function wcDates(page = 0) {
 
   return q(items);
 }
-async function fetchFootballGames(offset = 0) {
-  const date = apiDate(offset);
+async function fetchFootballGames(days = 7) {
+  let allGames = [];
 
-  const { data } = await axios.get("https://v3.football.api-sports.io/fixtures", {
-    timeout: 10000,
-    headers: {
-      "x-apisports-key": process.env.API_FOOTBALL_KEY,
-    },
-    params: {
-      date,
-      timezone: "Asia/Taipei",
-    },
-  });
+  for (let i = 0; i < days; i++) {
+    const date = apiDate(i);
 
-  const games = (data.response || []).map((x) => ({
-    id: x.fixture.id,
-    stage: x.league.name,
-    group: "",
-    home: x.teams.home.name,
-    away: x.teams.away.name,
-    time: new Date(x.fixture.date).toLocaleString("zh-TW", {
-      timeZone: "Asia/Taipei",
-      hour12: false,
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-    venue: x.fixture.venue?.name || "未公布",
-  }));
+    const { data } = await axios.get("https://v3.football.api-sports.io/fixtures", {
+      timeout: 10000,
+      headers: {
+        "x-apisports-key": process.env.APIFOOTBALL_KEY,
+      },
+      params: {
+        date,
+        timezone: "Asia/Taipei",
+      },
+    });
 
-  return games;
+    const games = (data.response || []).map((x) => ({
+      id: x.fixture.id,
+      stage: x.league.name,
+      group: "",
+      home: x.teams.home.name,
+      away: x.teams.away.name,
+      time: new Date(x.fixture.date).toLocaleString("zh-TW", {
+        timeZone: "Asia/Taipei",
+        hour12: false,
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      venue: x.fixture.venue?.name || "未公布",
+    }));
+
+    allGames = allGames.concat(games);
+  }
+
+  return allGames.slice(0, 13);
 }
 function wcGamesText(date, games) {
   let msg = `━━━━━━━━━━
@@ -917,67 +923,17 @@ ${data.suggest}
 }
 
 function wcAiPickText() {
-  const matches = [
-    {
-      home: "阿根廷",
-      away: "法國",
-      time: "06/13 03:00",
-      pick: "阿根廷不敗",
-      handicap: "阿根廷 +0.5",
-      total: "2.5 小分方向",
-      risk: "中低風險",
-      reasons: ["控球率優勢", "防守穩定性較高", "法國後防輪替風險", "下半場節奏偏慢"],
-    },
-    {
-      home: "巴西",
-      away: "英格蘭",
-      time: "06/14 10:00",
-      pick: "巴西不敗",
-      handicap: "巴西 -0.5",
-      total: "3.5 大分方向",
-      risk: "中風險",
-      reasons: ["邊路突破優勢", "英格蘭客場波動", "進攻效率較高", "節奏偏快"],
-    },
-    {
-      home: "西班牙",
-      away: "葡萄牙",
-      time: "06/15 08:00",
-      pick: "小分方向",
-      handicap: "葡萄牙 +0.5",
-      total: "2.5 小分方向",
-      risk: "低風險",
-      reasons: ["雙方控球偏保守", "中場消耗高", "上半場節奏慢", "防守穩定度高"],
-    },
-  ];
-
-  const g = pick(matches);
-
   return `━━━━━━━━━━
 ⚽ 世足AI精選
 ━━━━━━━━━━
 
-${g.home} vs ${g.away}
+目前AI精選已改為即時賽程分析。
 
-🕒 台灣時間：
-${g.time}
+請先點選：
 
-AI方向：
-${g.pick}
+📅 賽程查詢
 
-讓分方向：
-${g.handicap}
-
-大小分：
-${g.total}
-
-風險指數：
-${g.risk}
-
-分析依據：
-• ${g.reasons[0]}
-• ${g.reasons[1]}
-• ${g.reasons[2]}
-• ${g.reasons[3]}
+再選擇實際場次查看AI分析。
 
 ━━━━━━━━━━
 
@@ -1896,7 +1852,7 @@ ${nums[0]} / ${nums[2]}
   S.sport[uid] = "wc";
 
   try {
-    const games = await fetchFootballGames(0);
+   const games = await fetchFootballGames(7);
 
     if (!games.length) {
       return client.replyMessage(event.replyToken, {
