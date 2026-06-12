@@ -968,24 +968,35 @@ ${data.suggest}
 ⚠️ 僅供娛樂分析參考`;
 }
 
-function wcAiPickText() {
-  return `━━━━━━━━━━
-⚽ 世足AI精選
-━━━━━━━━━━
+async function wcAiPickText() {
+  const response = await openai.responses.create({
+    model: "gpt-4.1-mini",
+    input: `
+你是「黑域AI」世足賽前分析系統。
 
-目前AI精選已改為即時賽程分析。
+請用繁體中文，產生一段世足 AI 精選分析。
+語氣要專業、有氣勢，但不能保證穩贏。
 
-請先點選：
+輸出格式：
 
-📅 賽程查詢
+🌐 世足AI精選
 
-再選擇實際場次查看AI分析。
+📊 賽前觀察
+請分析目前世足賽事可能出現的比賽節奏。
 
-━━━━━━━━━━
+🤖 AI綜合判斷
+請給出 2~3 句綜合分析。
 
-⚠️ 僅供娛樂分析參考`;
+🔥 AI傾向
+請給出一個方向，例如：
+小分方向 / 大分方向 / 強隊不敗 / 雙方進球偏低
+
+⚠️ 僅供娛樂分析參考
+`
+  });
+
+  return response.output_text;
 }
-
 const mlbName = {
   "Arizona Diamondbacks": "響尾蛇",
   "Atlanta Braves": "勇士",
@@ -1931,12 +1942,16 @@ if (text === "世足賽程查詢") {
   }
 
   if (text === "世足AI精選") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: wcAiPickText(),
-      quickReply: quickWorldCup(),
-    });
-  }
+
+  const aiText = await wcAiPickText();
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: aiText,
+    quickReply: quickWorldCup(),
+  });
+
+}
 
   if (text === "世足冠軍預測") {
     return client.replyMessage(event.replyToken, {
