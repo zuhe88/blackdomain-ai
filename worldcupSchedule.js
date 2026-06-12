@@ -24,10 +24,10 @@ const worldCupSchedule = {
   ],
 
   "6/16": [
-    { stage: "小組賽", group: "H", home: "西班牙", away: "維德角", time: "00:00", venue: "亞特蘭大" },
-    { stage: "小組賽", group: "G", home: "比利時", away: "埃及", time: "03:00", venue: "西雅圖" },
+    { stage: "小組賽", group: "H", home: "西班牙", away: "維德角", time: "01:00", venue: "亞特蘭大" },
+    { stage: "小組賽", group: "G", home: "比利時", away: "埃及", time: "06:00", venue: "西雅圖" },
     { stage: "小組賽", group: "H", home: "沙烏地阿拉伯", away: "烏拉圭", time: "06:00", venue: "邁阿密" },
-    { stage: "小組賽", group: "G", home: "伊朗", away: "紐西蘭", time: "09:00", venue: "洛杉磯" },
+    { stage: "小組賽", group: "G", home: "伊朗", away: "紐西蘭", time: "12:00", venue: "洛杉磯" },
   ],
 
   "6/17": [
@@ -48,14 +48,14 @@ const worldCupSchedule = {
     { stage: "小組賽", group: "A", home: "捷克", away: "南非", time: "00:00", venue: "亞特蘭大" },
     { stage: "小組賽", group: "B", home: "瑞士", away: "波士尼亞與赫塞哥維納", time: "03:00", venue: "洛杉磯" },
     { stage: "小組賽", group: "B", home: "加拿大", away: "卡達", time: "06:00", venue: "溫哥華" },
-    { stage: "小組賽", group: "A", home: "墨西哥", away: "韓國", time: "09:00", venue: "瓜達拉哈拉" },
+    { stage: "小組賽", group: "A", home: "墨西哥", away: "韓國", time: "11:00", venue: "瓜達拉哈拉" },
   ],
 
   "6/20": [
     { stage: "小組賽", group: "D", home: "美國", away: "澳洲", time: "03:00", venue: "西雅圖" },
     { stage: "小組賽", group: "C", home: "蘇格蘭", away: "摩洛哥", time: "06:00", venue: "波士頓" },
-    { stage: "小組賽", group: "C", home: "巴西", away: "海地", time: "08:30", venue: "費城" },
-    { stage: "小組賽", group: "D", home: "土耳其", away: "巴拉圭", time: "11:00", venue: "聖塔克拉拉" },
+    { stage: "小組賽", group: "C", home: "巴西", away: "海地", time: "09:00", venue: "費城" },
+    { stage: "小組賽", group: "D", home: "土耳其", away: "巴拉圭", time: "12:00", venue: "聖塔克拉拉" },
   ],
 
   "6/21": [
@@ -75,31 +75,31 @@ const worldCupSchedule = {
   "6/23": [
     { stage: "小組賽", group: "J", home: "阿根廷", away: "奧地利", time: "01:00", venue: "阿靈頓" },
     { stage: "小組賽", group: "I", home: "法國", away: "伊拉克", time: "05:00", venue: "費城" },
-    { stage: "小組賽", group: "I", home: "挪威", away: "塞內加爾", time: "08:00", venue: "多倫多" },
+    { stage: "小組賽", group: "I", home: "挪威", away: "塞內加爾", time: "08:00", venue: "紐約/紐澤西" },
     { stage: "小組賽", group: "J", home: "約旦", away: "阿爾及利亞", time: "11:00", venue: "聖塔克拉拉" },
   ],
 
   "6/24": [
     { stage: "小組賽", group: "K", home: "葡萄牙", away: "烏茲別克", time: "01:00", venue: "休士頓" },
     { stage: "小組賽", group: "L", home: "英格蘭", away: "迦納", time: "04:00", venue: "波士頓" },
-    { stage: "小組賽", group: "L", home: "巴拿馬", away: "克羅埃西亞", time: "07:00", venue: "波士頓" },
+    { stage: "小組賽", group: "L", home: "巴拿馬", away: "克羅埃西亞", time: "07:00", venue: "多倫多" },
     { stage: "小組賽", group: "K", home: "哥倫比亞", away: "剛果民主共和國", time: "10:00", venue: "瓜達拉哈拉" },
   ],
 
   "6/25": [
     { stage: "小組賽", group: "B", home: "瑞士", away: "加拿大", time: "03:00", venue: "溫哥華" },
     { stage: "小組賽", group: "B", home: "波士尼亞與赫塞哥維納", away: "卡達", time: "03:00", venue: "西雅圖" },
-    { stage: "小組賽", group: "C", home: "摩洛哥", away: "海地", time: "06:00", venue: "亞特蘭大" },
     { stage: "小組賽", group: "C", home: "蘇格蘭", away: "巴西", time: "06:00", venue: "邁阿密" },
-    { stage: "小組賽", group: "A", home: "南非", away: "韓國", time: "09:00", venue: "蒙特雷" },
+    { stage: "小組賽", group: "C", home: "摩洛哥", away: "海地", time: "06:00", venue: "亞特蘭大" },
     { stage: "小組賽", group: "A", home: "捷克", away: "墨西哥", time: "09:00", venue: "墨西哥城" },
+    { stage: "小組賽", group: "A", home: "南非", away: "韓國", time: "09:00", venue: "蒙特雷" },
   ],
 
   "6/26": [
-    { stage: "小組賽", group: "E", home: "庫拉索", away: "象牙海岸", time: "04:00", venue: "費城" },
     { stage: "小組賽", group: "E", home: "厄瓜多", away: "德國", time: "04:00", venue: "紐約/紐澤西" },
-    { stage: "小組賽", group: "F", home: "突尼西亞", away: "荷蘭", time: "07:00", venue: "堪薩斯城" },
+    { stage: "小組賽", group: "E", home: "庫拉索", away: "象牙海岸", time: "04:00", venue: "費城" },
     { stage: "小組賽", group: "F", home: "日本", away: "瑞典", time: "07:00", venue: "阿靈頓" },
+    { stage: "小組賽", group: "F", home: "突尼西亞", away: "荷蘭", time: "07:00", venue: "堪薩斯城" },
     { stage: "小組賽", group: "D", home: "土耳其", away: "美國", time: "10:00", venue: "洛杉磯" },
     { stage: "小組賽", group: "D", home: "巴拉圭", away: "澳洲", time: "10:00", venue: "聖塔克拉拉" },
   ],
@@ -109,8 +109,8 @@ const worldCupSchedule = {
     { stage: "小組賽", group: "I", home: "塞內加爾", away: "伊拉克", time: "03:00", venue: "多倫多" },
     { stage: "小組賽", group: "H", home: "維德角", away: "沙烏地阿拉伯", time: "08:00", venue: "休士頓" },
     { stage: "小組賽", group: "H", home: "烏拉圭", away: "西班牙", time: "08:00", venue: "瓜達拉哈拉" },
-    { stage: "小組賽", group: "G", home: "紐西蘭", away: "比利時", time: "11:00", venue: "溫哥華" },
     { stage: "小組賽", group: "G", home: "埃及", away: "伊朗", time: "11:00", venue: "西雅圖" },
+    { stage: "小組賽", group: "G", home: "紐西蘭", away: "比利時", time: "11:00", venue: "溫哥華" },
   ],
 
   "6/28": [
@@ -157,52 +157,52 @@ const worldCupSchedule = {
   ],
 
   "7/5": [
-    { stage: "16強", group: "", home: "第73場勝方", away: "第75場勝方", time: "01:00", venue: "休士頓" },
-    { stage: "16強", group: "", home: "第74場勝方", away: "第77場勝方", time: "05:00", venue: "費城" },
+    { stage: "16強", group: "", home: "32強勝方", away: "32強勝方", time: "01:00", venue: "休士頓" },
+    { stage: "16強", group: "", home: "32強勝方", away: "32強勝方", time: "05:00", venue: "費城" },
   ],
 
   "7/6": [
-    { stage: "16強", group: "", home: "第76場勝方", away: "第78場勝方", time: "04:00", venue: "紐約/紐澤西" },
+    { stage: "16強", group: "", home: "32強勝方", away: "32強勝方", time: "04:00", venue: "紐約/紐澤西" },
+    { stage: "16強", group: "", home: "32強勝方", away: "32強勝方", time: "08:00", venue: "墨西哥城" },
   ],
 
   "7/7": [
-    { stage: "16強", group: "", home: "第79場勝方", away: "第80場勝方", time: "08:00", venue: "墨西哥城" },
-    { stage: "16強", group: "", home: "第83場勝方", away: "第84場勝方", time: "03:00", venue: "阿靈頓" },
+    { stage: "16強", group: "", home: "32強勝方", away: "32強勝方", time: "03:00", venue: "阿靈頓" },
+    { stage: "16強", group: "", home: "32強勝方", away: "32強勝方", time: "05:00", venue: "西雅圖" },
   ],
 
   "7/8": [
-    { stage: "16強", group: "", home: "第81場勝方", away: "第82場勝方", time: "08:00", venue: "西雅圖" },
-    { stage: "16強", group: "", home: "第86場勝方", away: "第88場勝方", time: "00:00", venue: "亞特蘭大" },
-    { stage: "16強", group: "", home: "第85場勝方", away: "第87場勝方", time: "04:00", venue: "溫哥華" },
+    { stage: "16強", group: "", home: "32強勝方", away: "32強勝方", time: "00:00", venue: "亞特蘭大" },
+    { stage: "16強", group: "", home: "32強勝方", away: "32強勝方", time: "04:00", venue: "溫哥華" },
   ],
 
   "7/10": [
-    { stage: "8強", group: "", home: "第89場勝方", away: "第90場勝方", time: "04:00", venue: "波士頓" },
+    { stage: "8強", group: "", home: "16強勝方", away: "16強勝方", time: "04:00", venue: "波士頓" },
   ],
 
   "7/11": [
-    { stage: "8強", group: "", home: "第93場勝方", away: "第94場勝方", time: "03:00", venue: "洛杉磯" },
+    { stage: "8強", group: "", home: "16強勝方", away: "16強勝方", time: "03:00", venue: "洛杉磯" },
   ],
 
   "7/12": [
-    { stage: "8強", group: "", home: "第91場勝方", away: "第92場勝方", time: "05:00", venue: "邁阿密" },
-    { stage: "8強", group: "", home: "第95場勝方", away: "第96場勝方", time: "09:00", venue: "堪薩斯城" },
+    { stage: "8強", group: "", home: "16強勝方", away: "16強勝方", time: "05:00", venue: "邁阿密" },
+    { stage: "8強", group: "", home: "16強勝方", away: "16強勝方", time: "09:00", venue: "堪薩斯城" },
   ],
 
   "7/15": [
-    { stage: "準決賽", group: "", home: "第97場勝方", away: "第98場勝方", time: "03:00", venue: "阿靈頓" },
+    { stage: "4強", group: "", home: "8強勝方", away: "8強勝方", time: "03:00", venue: "阿靈頓" },
   ],
 
   "7/16": [
-    { stage: "準決賽", group: "", home: "第99場勝方", away: "第100場勝方", time: "03:00", venue: "亞特蘭大" },
+    { stage: "4強", group: "", home: "8強勝方", away: "8強勝方", time: "03:00", venue: "亞特蘭大" },
   ],
 
   "7/19": [
-    { stage: "季軍戰", group: "", home: "第101場敗方", away: "第102場敗方", time: "05:00", venue: "邁阿密" },
+    { stage: "季軍戰", group: "", home: "4強敗方", away: "4強敗方", time: "05:00", venue: "邁阿密" },
   ],
 
   "7/20": [
-    { stage: "決賽", group: "", home: "第101場勝方", away: "第102場勝方", time: "03:00", venue: "紐約/紐澤西" },
+    { stage: "決賽", group: "", home: "4強勝方", away: "4強勝方", time: "03:00", venue: "紐約/紐澤西" },
   ],
 };
 
