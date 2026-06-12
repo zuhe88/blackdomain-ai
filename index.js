@@ -1889,59 +1889,21 @@ ${nums[0]} / ${nums[2]}
     });
   }
 
- if (text === "世足賽程查詢") {
+if (text === "世足賽程查詢") {
   S.sport[uid] = "wc";
+  S.wc[uid] = { mode: "date", page: 0, games: [] };
 
-  try {
-   const games = await fetchFootballGames(7);
-
-    if (!games.length) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "今日查無足球賽程。",
-        quickReply: quickWorldCup(),
-      });
-    }
-
-    S.wc[uid] = { mode: "selectGame", games };
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: wcGamesText("今日", games),
-      quickReply: q(games.slice(0, 13).map((_, i) => [`${i + 1}`, `世足場次:${i + 1}`])),
-    });
-  } catch (err) {
-    console.log(err.response?.data || err.message);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "足球賽程同步失敗，請稍後再試。",
-      quickReply: quickWorldCup(),
-    });
-  }
-}
-
-  if (["世足日期下一頁", "世足日期上一頁"].includes(text)) {
-    S.sport[uid] = "wc";
-
-    if (!S.wc[uid]) S.wc[uid] = { mode: "date", page: 0, games: [] };
-
-    S.wc[uid].mode = "date";
-    S.wc[uid].page = text === "世足日期下一頁"
-      ? (S.wc[uid].page || 0) + 1
-      : Math.max(0, (S.wc[uid].page || 0) - 1);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
 📅 世足賽程查詢
 🕒 全部為台灣時間
 ━━━━━━━━━━
 
 請選擇日期：`,
-      quickReply: wcDates(S.wc[uid].page),
-    });
-  }
+    quickReply: wcDates(0),
+  });
+}
 
   if (text === "世足球隊查詢") {
     S.sport[uid] = "wc";
