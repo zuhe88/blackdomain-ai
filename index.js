@@ -2063,43 +2063,23 @@ if (text === "世足AI精選") {
     }
   }
 
-  if (!g) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "目前查無可分析賽事",
-      quickReply: quickWorldCup(),
-    });
-  }
-
-  return wcMatchAnalysis(g).then((aiText) => {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: aiText,
-      quickReply: quickWorldCup(),
-    });
+if (!g) {
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: "目前查無可分析賽事",
+    quickReply: quickWorldCup(),
   });
 }
 
-  return wcMatchAnalysis(g).then((aiText) => {
+return wcMatchAnalysis(g).then((aiText) => {
   return client.replyMessage(event.replyToken, {
     type: "text",
     text: aiText,
     quickReply: quickWorldCup(),
   });
 });
-  
-}
-
-  const aiText = await wcMatchAnalysis(g);
-
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: aiText,
-    quickReply: quickWorldCup(),
-  });
 
 }
-
   if (text === "世足冠軍預測") {
     return client.replyMessage(event.replyToken, {
       type: "text",
