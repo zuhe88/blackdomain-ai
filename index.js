@@ -1382,14 +1382,29 @@ if (/^世足場次:\d+$/.test(text)) {
       quickReply: quickWorldCup(),
     });
   }
+  
+client.replyMessage(event.replyToken, {
+  type: "text",
+  text: "🤖 黑域AI分析中...\n\n⚽ 正在同步賽事資料\n📊 正在運算波膽、大小分、讓分\n\n請稍候 3～5 秒。",
+});
 
-  const aiText = await wcMatchAnalysis(g);
-
-  return client.replyMessage(event.replyToken, {
+wcMatchAnalysis(g).then((aiText) => {
+  return client.pushMessage(uid, {
     type: "text",
     text: aiText,
     quickReply: quickWorldCup(),
   });
+}).catch((err) => {
+  console.error("WC GPT ERROR:", err);
+
+  return client.pushMessage(uid, {
+    type: "text",
+    text: "⚠️ AI分析暫時失敗，請稍後再試。",
+    quickReply: quickWorldCup(),
+  });
+});
+
+return null;
 }
   if (/^MLB場次:\d+$/.test(text)) {
     const n = Number(text.split(":")[1]);
