@@ -33,20 +33,20 @@ function startAtgSocket() {
     });
   });
 
-  socket.onAny((event, ...args) => {
-  console.log(
-    "📦 EVENT:",
-    event,
-    JSON.stringify(args).slice(0, 300)
-  );
-});
+  socket.on("initial", (data) => {
+    console.log("📦 INITIAL:", JSON.stringify(data).slice(0, 500));
+  });
 
   socket.on("slotTableUpdated", (data) => {
-    console.log("🔥 房態更新：", data);
+    console.log("🔥 房態更新:", JSON.stringify(data));
   });
 
   socket.on("notify", (data) => {
-    console.log("📢 ATG通知：", data?.text || "");
+    console.log("📢 ATG通知:", JSON.stringify(data).slice(0, 300));
+  });
+
+  socket.on("message", (data) => {
+    console.log("📨 MESSAGE:", JSON.stringify(data).slice(0, 300));
   });
 
   socket.on("disconnect", (reason) => {
@@ -55,6 +55,10 @@ function startAtgSocket() {
 
   socket.on("connect_error", (err) => {
     console.error("❌ ATG Socket.IO 連線錯誤：", err.message);
+  });
+
+  socket.on("error", (err) => {
+    console.error("❌ ATG Socket.IO Error:", err);
   });
 }
 
