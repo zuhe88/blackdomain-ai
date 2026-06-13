@@ -33,6 +33,14 @@ function startAtgSocket() {
     });
   });
 
+  socket.onAny((event, ...args) => {
+  console.log(
+    "📦 EVENT:",
+    event,
+    JSON.stringify(args).slice(0, 300)
+  );
+});
+
   socket.on("slotTableUpdated", (data) => {
     console.log("🔥 房態更新：", data);
   });
