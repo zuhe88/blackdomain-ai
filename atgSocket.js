@@ -8,7 +8,6 @@ function saveRoom(table) {
   if (!table || !table.number) return;
 
   const roomNo = String(table.number);
-
   const old = global.atgRooms[roomNo];
 
   global.atgRooms[roomNo] = {
@@ -23,11 +22,13 @@ function saveRoom(table) {
   };
 
   console.log(
-    `🔥 房態更新｜房號:${roomNo}｜狀態:${global.atgRooms[roomNo].status}｜投注:${global.atgRooms[roomNo].bet}｜派彩:${global.atgRooms[roomNo].win}`
+    `🔥 房態更新｜房號:${roomNo}｜roomId:${global.atgRooms[roomNo].roomId}｜狀態:${global.atgRooms[roomNo].status}｜投注:${global.atgRooms[roomNo].bet}｜派彩:${global.atgRooms[roomNo].win}`
   );
 }
 
 function startAtgSocket() {
+  if (socket && socket.connected) return;
+
   socket = io("wss://socket.godeebxp.com", {
     path: "/socket.io",
     transports: ["websocket"],
@@ -43,7 +44,7 @@ function startAtgSocket() {
   socket.on("connect", () => {
     console.log("✅ ATG Socket.IO 已連線");
 
-    socket.emit("initial", {
+    const initData = {
       token: "",
       clientType: "web",
       deviceInfo: {
@@ -55,7 +56,17 @@ function startAtgSocket() {
           name: "windows",
         },
       },
-    });
+    };
+
+    socket.emit("initial", initData);
+    socket.emit("join", { game: "golden-seth" });
+    socket.emit("subscribe", { game: "golden-seth" });
+
+    console.log("📡 ATG 初始化封包已送出");
+  });
+
+  socket.on("initial", (data) => {
+    console.log("📦 INITIAL:", JSON.stringify(data).slice(0, 500));
   });
 
   socket.on("slotTableUpdated", (data) => {
@@ -75,6 +86,18 @@ function startAtgSocket() {
     console.log("📢 ATG通知:", JSON.stringify(data).slice(0, 300));
   });
 
+  socket.on("table", (data) => {
+    console.log("📊 TABLE:", JSON.stringify(data).slice(0, 500));
+  });
+
+  socket.on("room", (data) => {
+    console.log("🏠 ROOM:", JSON.stringify(data).slice(0, 500));
+  });
+
+  socket.on("message", (data) => {
+    console.log("📨 MESSAGE:", JSON.stringify(data).slice(0, 500));
+  });
+
   socket.on("disconnect", (reason) => {
     console.log("⚠️ ATG Socket.IO 斷線：", reason);
   });
@@ -82,13 +105,25 @@ function startAtgSocket() {
   socket.on("connect_error", (err) => {
     console.error("❌ ATG Socket.IO 連線錯誤：", err.message);
   });
+
+  socket.on("error", (err) => {
+    console.error("❌ ATG Socket.IO Error:", err);
+  });
 }
 
 function getHotRooms(limit = 10) {
   return Object.values(global.atgRooms)
     .sort((a, b) => {
-      const scoreA = (a.updateCount || 0) + (a.bet || 0) / 10000 + (a.win || 0) / 10000;
-      const scoreB = (b.updateCount || 0) + (b.bet || 0) / 10000 + (b.win || 0) / 10000;
+      const scoreA =
+        (a.updateCount || 0) +
+        (a.bet || 0) / 10000 +
+        (a.win || 0) / 10000;
+
+      const scoreB =
+        (b.updateCount || 0) +
+        (b.bet || 0) / 10000 +
+        (b.win || 0) / 10000;
+
       return scoreB - scoreA;
     })
     .slice(0, limit);
