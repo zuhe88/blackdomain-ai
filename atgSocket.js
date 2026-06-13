@@ -1,30 +1,52 @@
-const WebSocket = require("ws");
+const io = require("socket.io-client");
 
-let ws;
+let socket;
 
 function startAtgSocket() {
-  ws = new WebSocket("wss://socket.godeebxp.com/socket.io/?EIO=3&transport=websocket");
-
-  ws.on("open", () => {
-    console.log("✅ ATG Socket 已連線");
-    ws.send("40");
+  socket = io("wss://socket.godeebxp.com", {
+    path: "/socket.io",
+    transports: ["websocket"],
+    reconnection: true,
+    reconnectionDelay: 5000,
+    timeout: 20000,
+    query: {
+      EIO: 3,
+      transport: "websocket",
+    },
   });
 
-  ws.on("message", (msg) => {
-    const text = msg.toString();
+  socket.on("connect", () => {
+    console.log("✅ ATG Socket.IO 已連線");
 
-    if (text.includes("slotTableUpdated")) {
-      console.log("🔥 房態更新：", text);
-    }
+    socket.emit("initial", {
+      token: "",
+      clientType: "web",
+      deviceInfo: {
+        browser: {
+          name: "chrome",
+          version: "149.0.0.0",
+        },
+        os: {
+          name: "windows",
+        },
+      },
+    });
   });
 
-  ws.on("close", () => {
-    console.log("⚠️ ATG Socket 斷線，5秒後重連");
-    setTimeout(startAtgSocket, 5000);
+  socket.on("slotTableUpdated", (data) => {
+    console.log("🔥 房態更新：", data);
   });
 
-  ws.on("error", (err) => {
-    console.error("ATG Socket Error:", err.message);
+  socket.on("notify", (data) => {
+    console.log("📢 ATG通知：", data?.text || "");
+  });
+
+  socket.on("disconnect", (reason) => {
+    console.log("⚠️ ATG Socket.IO 斷線：", reason);
+  });
+
+  socket.on("connect_error", (err) => {
+    console.error("❌ ATG Socket.IO 連線錯誤：", err.message);
   });
 }
 
