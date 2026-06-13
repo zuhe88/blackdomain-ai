@@ -2052,24 +2052,15 @@ if (text === "世足賽程查詢") {
   }
 
 if (text === "世足AI精選") {
-
-  const now = new Date();
-
+  const dates = Object.keys(worldCupSchedule || {}).sort();
   let g = null;
 
-  for (const date of Object.keys(worldCupSchedule || {}).sort()) {
+  for (const date of dates) {
     const games = worldCupSchedule[date] || [];
-
-    for (const game of games) {
-      const gameTime = new Date(game.time || date);
-
-      if (gameTime > now) {
-        g = game;
-        break;
-      }
+    if (games.length > 0) {
+      g = games[0];
+      break;
     }
-
-    if (g) break;
   }
 
   if (!g) {
@@ -2079,6 +2070,15 @@ if (text === "世足AI精選") {
       quickReply: quickWorldCup(),
     });
   }
+
+  return wcMatchAnalysis(g).then((aiText) => {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: aiText,
+      quickReply: quickWorldCup(),
+    });
+  });
+}
 
   const aiText = await wcMatchAnalysis(g);
 
