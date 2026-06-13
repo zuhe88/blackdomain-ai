@@ -2,6 +2,31 @@ const io = require("socket.io-client");
 
 let socket;
 
+global.atgRooms = global.atgRooms || {};
+
+function saveRoom(table) {
+  if (!table || !table.number) return;
+
+  const roomNo = String(table.number);
+
+  const old = global.atgRooms[roomNo];
+
+  global.atgRooms[roomNo] = {
+    number: roomNo,
+    roomId: table.roomId || "",
+    status: table.status || "Unknown",
+    bet: Number(table.bet || 0),
+    win: Number(table.win || 0),
+    lastStatus: old?.status || "",
+    updateCount: (old?.updateCount || 0) + 1,
+    lastUpdate: Date.now(),
+  };
+
+  console.log(
+    `🔥 房態更新｜房號:${roomNo}｜狀態:${global.atgRooms[roomNo].status}｜投注:${global.atgRooms[roomNo].bet}｜派彩:${global.atgRooms[roomNo].win}`
+  );
+}
+
 function startAtgSocket() {
   socket = io("wss://socket.godeebxp.com", {
     path: "/socket.io",
@@ -33,20 +58,21 @@ function startAtgSocket() {
     });
   });
 
-  socket.on("initial", (data) => {
-    console.log("📦 INITIAL:", JSON.stringify(data).slice(0, 500));
-  });
-
   socket.on("slotTableUpdated", (data) => {
-    console.log("🔥 房態更新:", JSON.stringify(data));
+    if (!data) return;
+
+    if (data.table) {
+      saveRoom(data.table);
+      return;
+    }
+
+    for (const [roomId, status] of Object.entries(data)) {
+      console.log(`📡 內部房態｜roomId:${roomId}｜狀態:${status}`);
+    }
   });
 
   socket.on("notify", (data) => {
     console.log("📢 ATG通知:", JSON.stringify(data).slice(0, 300));
-  });
-
-  socket.on("message", (data) => {
-    console.log("📨 MESSAGE:", JSON.stringify(data).slice(0, 300));
   });
 
   socket.on("disconnect", (reason) => {
@@ -56,12 +82,24 @@ function startAtgSocket() {
   socket.on("connect_error", (err) => {
     console.error("❌ ATG Socket.IO 連線錯誤：", err.message);
   });
+}
 
-  socket.on("error", (err) => {
-    console.error("❌ ATG Socket.IO Error:", err);
-  });
+function getHotRooms(limit = 10) {
+  return Object.values(global.atgRooms)
+    .sort((a, b) => {
+      const scoreA = (a.updateCount || 0) + (a.bet || 0) / 10000 + (a.win || 0) / 10000;
+      const scoreB = (b.updateCount || 0) + (b.bet || 0) / 10000 + (b.win || 0) / 10000;
+      return scoreB - scoreA;
+    })
+    .slice(0, limit);
+}
+
+function getRoom(roomNo) {
+  return global.atgRooms[String(roomNo)] || null;
 }
 
 module.exports = {
   startAtgSocket,
+  getHotRooms,
+  getRoom,
 };
