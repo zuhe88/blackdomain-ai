@@ -96,7 +96,6 @@ function quickWorldCup() {
   return q([
     ["賽程查詢", "世足賽程查詢"],
     ["球隊查詢", "世足球隊查詢"],
-    ["AI精選", "世足AI精選"],
     ["冠軍預測", "世足冠軍預測"],
   ]);
 }
@@ -2007,7 +2006,6 @@ ${nums[0]} / ${nums[2]}
 
 1️⃣ 賽程查詢
 2️⃣ 球隊查詢
-3️⃣ AI精選
 4️⃣ 冠軍預測
 
 ━━━━━━━━━━`,
@@ -2050,36 +2048,7 @@ if (text === "世足賽程查詢") {
 英格蘭`,
     });
   }
-
-if (text === "世足AI精選") {
-  const dates = Object.keys(worldCupSchedule || {}).sort();
-  let g = null;
-
-  for (const date of dates) {
-    const games = worldCupSchedule[date] || [];
-    if (games.length > 0) {
-      g = games[0];
-      break;
-    }
-  }
-
-if (!g) {
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: "目前查無可分析賽事",
-    quickReply: quickWorldCup(),
-  });
-}
-
-return wcMatchAnalysis(g).then((aiText) => {
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: aiText,
-    quickReply: quickWorldCup(),
-  });
-});
-
-}
+  
   if (text === "世足冠軍預測") {
     return client.replyMessage(event.replyToken, {
       type: "text",
