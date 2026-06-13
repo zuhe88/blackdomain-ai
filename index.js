@@ -1,3 +1,4 @@
+const { startAtgSocket } = require("./atgSocket");
 const OpenAI = require("openai");
 
 const openai = new OpenAI({
@@ -2293,8 +2294,6 @@ ${msg || "目前查無賽程"}
     quickReply: quickMain(),
   });
 }
-
-const { startAtgSocket } = require("./atgSocket");
 
 startAtgSocket();
 
