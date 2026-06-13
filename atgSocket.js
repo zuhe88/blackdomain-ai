@@ -4,6 +4,8 @@ let socket;
 
 global.atgRooms = global.atgRooms || {};
 
+const ATG_TOKEN = "4beb75654a914c54bab4e97396382638";
+
 function saveRoom(table) {
   if (!table || !table.number) return;
 
@@ -45,7 +47,7 @@ function startAtgSocket() {
     console.log("✅ ATG Socket.IO 已連線");
 
     const initData = {
-      token: "",
+      token: ATG_TOKEN,
       clientType: "web",
       deviceInfo: {
         browser: {
@@ -53,16 +55,23 @@ function startAtgSocket() {
           version: "149.0.0.0",
         },
         os: {
-          name: "windows",
+          name: "Windows",
+          version: "",
+          versionName: 0,
+        },
+        platform: {
+          type: "DESKTOP_BROWSER",
+        },
+        engine: {
+          name: "cocos creator 3.7.2",
         },
       },
+      locale: "zh-tw",
     };
 
     socket.emit("initial", initData);
-    socket.emit("join", { game: "golden-seth" });
-    socket.emit("subscribe", { game: "golden-seth" });
 
-    console.log("📡 ATG 初始化封包已送出");
+    console.log("🚀 ATG initial token 已送出");
   });
 
   socket.on("initial", (data) => {
@@ -82,16 +91,16 @@ function startAtgSocket() {
     }
   });
 
-  socket.on("notify", (data) => {
-    console.log("📢 ATG通知:", JSON.stringify(data).slice(0, 300));
-  });
-
   socket.on("table", (data) => {
     console.log("📊 TABLE:", JSON.stringify(data).slice(0, 500));
+
+    if (data?.table) {
+      saveRoom(data.table);
+    }
   });
 
-  socket.on("room", (data) => {
-    console.log("🏠 ROOM:", JSON.stringify(data).slice(0, 500));
+  socket.on("notify", (data) => {
+    console.log("📢 ATG通知:", JSON.stringify(data).slice(0, 300));
   });
 
   socket.on("message", (data) => {
