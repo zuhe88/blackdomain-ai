@@ -10,7 +10,6 @@
     "node": ">=20 <21"
   },
   "dependencies": {
-    "socket.io-client": "^2.5.0",
     "@line/bot-sdk": "^9.5.0",
     "@supabase/supabase-js": "^2.49.4",
     "axios": "^1.7.2",
@@ -20,6 +19,7 @@
     "express": "^4.19.2",
     "node-fetch": "^2.7.0",
     "openai": "^5.12.2",
+    "socket.io-client": "^2.5.0",
     "ws": "^8.18.0"
   }
 }
