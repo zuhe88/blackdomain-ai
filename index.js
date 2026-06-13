@@ -2080,14 +2080,14 @@ if (text === "世足AI精選") {
   });
 }
 
-  const aiText = await wcMatchAnalysis(g);
-
+  return wcMatchAnalysis(g).then((aiText) => {
   return client.replyMessage(event.replyToken, {
     type: "text",
     text: aiText,
     quickReply: quickWorldCup(),
   });
-
+});
+  
 }
 
   const aiText = await wcMatchAnalysis(g);
