@@ -1498,8 +1498,10 @@ ${twTime(data.expire_time)}`,
     return client.replyMessage(event.replyToken, { type: "text", text: noVip() });
   }
 
-  if (text.startsWith("申請開通 ")) {
-    const account = text.replace("申請開通 ", "").trim();
+  const applyVipMatch = text.match(/^申請開通[:：]?\s*(.+)$/);
+
+if (applyVipMatch) {
+  const account = applyVipMatch[1].trim();
 
     if (!account) {
       return client.replyMessage(event.replyToken, {
