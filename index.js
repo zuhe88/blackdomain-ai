@@ -101,11 +101,12 @@ function quickWorldCup() {
 }
 
 function quickMLB() {
-  return q([["近日賽程", "MLB近日賽程"], ["AI精選", "MLB AI精選"]]);
-}
-
+return q([
+  ["近日賽程", "MLB近日賽程"]
+]);
 function quickNBA() {
-  return q([["近日賽程", "NBA近日賽程"], ["AI精選", "NBA AI精選"]]);
+  return q([ ["近日賽程", "MLB近日賽程"]
+]);
 }
 
 function clearSessions(uid, keep = "") {
@@ -577,18 +578,44 @@ function quickSlotHotRooms(game) {
     const labels = ["🥇", "🥈", "🥉", "④", "⑤"];
     return [`${labels[i]} ${slotNumber(room)}房`, `電子房:${room}`];
   }));
-}function gen539(mode) {
-  const key = `${tw539Date()}-${mode}`;
+function gen539(mode) {
+
+  const date = tw539Date();
+  const key = `${date}-${mode}`;
 
   if (S.cache539[key]) return S.cache539[key];
 
-  const nums = Array.from({ length: 39 }, (_, i) => i + 1)
-    .sort(() => Math.random() - 0.5)
-    .slice(0, 5)
-    .sort((a, b) => a - b)
-    .map((n) => String(n).padStart(2, "0"));
+  const used = new Set();
+
+  ["stable", "hot", "cold"].forEach((m) => {
+
+    const k = `${date}-${m}`;
+
+    if (S.cache539[k]) {
+      S.cache539[k].forEach((n) => used.add(n));
+    }
+
+  });
+
+  const nums = [];
+
+  while (nums.length < 5) {
+
+    const n = String(
+      Math.floor(Math.random() * 39) + 1
+    ).padStart(2, "0");
+
+    if (!used.has(n) && !nums.includes(n)) {
+      nums.push(n);
+      used.add(n);
+    }
+
+  }
+
+  nums.sort((a, b) => Number(a) - Number(b));
 
   S.cache539[key] = nums;
+
   return nums;
 }
 
@@ -1189,19 +1216,18 @@ async function fetchMlbGames(offset = 0) {
   return { games };
 }
 
-function mlbAnalyze(g) {
-  const hp = mlbPower[g.home] || 70;
-  const ap = mlbPower[g.away] || 70;
-  const homeScore = hp + 3 + Math.random() * 8;
-  const awayScore = ap + Math.random() * 8;
-  const side = homeScore >= awayScore ? g.home : g.away;
-  const diff = Math.abs(homeScore - awayScore);
-  const risk = diff >= 10 ? "中低風險" : diff >= 5 ? "中風險" : "高波動";
-  const spread = diff >= 8 ? `${side} -1.5` : "讓分建議保守";
-  const totalLine = pick(["7.5", "8.5", "9.5"]);
-  const total = hp + ap + Math.random() * 20 >= 160 ? `${totalLine} 大分偏向` : `${totalLine} 小分偏向`;
+async function mlbAnalyze(g) {
+  const prompt = `
+你是黑域AI MLB賽前分析系統。
 
-  return `━━━━━━━━━━
+請用繁體中文分析以下 MLB 賽事：
+
+${g.away} vs ${g.home}
+開賽時間：${g.time}（台灣時間）
+
+請依照以下格式輸出，不要加入多餘說明：
+
+━━━━━━━━━━
 ⚾ 黑域MLB AI分析完成
 ━━━━━━━━━━
 
@@ -1210,41 +1236,78 @@ ${g.away} vs ${g.home}
 開賽時間（台灣）：
 ${g.time}
 
-AI偏向：
-${side} ML
+📊 球隊狀態：
+請分析兩隊近期狀態、打線火力、投手穩定度、牛棚狀況與主客場因素。
 
-讓分偏向：
-${spread}
+📈 AI方向：
+請給出較明確的方向，例如：
+${g.home} 不敗 / ${g.away} 不敗 / 建議觀望
 
-大小分：
-${total}
+🎯 讓分方向：
+請給出讓分方向，例如：
+${g.home} -1.5 / ${g.away} +1.5 / 讓分保守
 
-風險指數：
-${risk}
+📊 大小分：
+請給出大分或小分方向，例如：
+7.5 大分 / 8.5 小分 / 大小分觀望
 
-分析依據：
-• 近期打線火力模型
-• 主客場強度修正
-• 牛棚穩定性權重
+⚠️ 風險提醒：
+請提醒本場主要風險。
 
 ━━━━━━━━━━
+⚠️ 僅供娛樂分析參考
+`;
 
+  try {
+    const response = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: prompt,
+    });
+
+    return response.output_text;
+  } catch (err) {
+    console.log("MLB GPT ERROR:", err.message);
+    return `━━━━━━━━━━
+⚾ 黑域MLB AI分析完成
+━━━━━━━━━━
+
+${g.away} vs ${g.home}
+
+開賽時間（台灣）：
+${g.time}
+
+📊 球隊狀態：
+目前GPT分析暫時無法同步，系統改用基礎模型分析。
+
+📈 AI方向：
+${pick([`${g.home} 不敗`, `${g.away} 不敗`, "建議觀望"])}
+
+🎯 讓分方向：
+${pick([`${g.home} -1.5`, `${g.away} +1.5`, "讓分保守"])}
+
+📊 大小分：
+${pick(["7.5 大分", "8.5 小分", "大小分觀望"])}
+
+⚠️ 風險提醒：
+MLB賽事受先發投手、牛棚輪替與臨場打線影響較大，建議賽前再次確認名單。
+
+━━━━━━━━━━
 ⚠️ 僅供娛樂分析參考`;
+  }
 }
 
-function nbaAnalyze(g) {
-  const hp = nbaPower[g.home] || 78;
-  const ap = nbaPower[g.away] || 78;
-  const homeScore = hp + 3 + Math.random() * 8;
-  const awayScore = ap + Math.random() * 8;
-  const side = homeScore >= awayScore ? g.home : g.away;
-  const diff = Math.abs(homeScore - awayScore);
-  const risk = diff >= 10 ? "中低風險" : diff >= 5 ? "中風險" : "高波動";
-  const spread = diff >= 8 ? `${side} -3.5` : "讓分建議保守";
-  const totalLine = pick(["218.5", "221.5", "224.5", "227.5"]);
-  const total = hp + ap + Math.random() * 20 >= 170 ? `${totalLine} 大分偏向` : `${totalLine} 小分偏向`;
+async function nbaAnalyze(g) {
+  const prompt = `
+你是黑域AI NBA賽前分析系統。
 
-  return `━━━━━━━━━━
+請用繁體中文分析以下 NBA 賽事：
+
+${g.away} vs ${g.home}
+開賽時間：${g.time}（台灣時間）
+
+請依照以下格式輸出，不要加入多餘說明：
+
+━━━━━━━━━━
 🏀 黑域NBA AI分析完成
 ━━━━━━━━━━
 
@@ -1253,65 +1316,77 @@ ${g.away} vs ${g.home}
 開賽時間（台灣）：
 ${g.time}
 
-AI偏向：
-${side} ML
+📊 球隊狀態：
+請分析兩隊近期狀態、進攻效率、防守強度、主客場因素、球星狀態與輪替深度。
 
-讓分偏向：
-${spread}
+📈 AI方向：
+請給出較明確的方向，例如：
+${g.home} 不敗 / ${g.away} 不敗 / 建議觀望
 
-大小分：
-${total}
+🎯 讓分方向：
+請給出讓分方向，例如：
+${g.home} -3.5 / ${g.away} +3.5 / 讓分保守
 
-風險指數：
-${risk}
+📊 大小分：
+請給出大分或小分方向，例如：
+218.5 大分 / 221.5 小分 / 大小分觀望
 
-分析依據：
-• 主客場節奏修正
-• 近期進攻效率模型
-• 替補深度權重
-• 防守強度波動
+⚠️ 風險提醒：
+請提醒本場主要風險。
 
 ━━━━━━━━━━
+⚠️ 僅供娛樂分析參考
+`;
 
+  try {
+    const response = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: prompt,
+    });
+
+    return response.output_text;
+  } catch (err) {
+    console.log("NBA GPT ERROR:", err.message);
+
+    const hp = nbaPower[g.home] || 78;
+    const ap = nbaPower[g.away] || 78;
+    const side = hp + 3 >= ap ? g.home : g.away;
+    const totalLine = pick(["218.5", "221.5", "224.5", "227.5"]);
+
+    return `━━━━━━━━━━
+🏀 黑域NBA AI分析完成
+━━━━━━━━━━
+
+${g.away} vs ${g.home}
+
+開賽時間（台灣）：
+${g.time}
+
+📊 球隊狀態：
+目前GPT分析暫時無法同步，系統改用基礎模型分析。本場主要參考主客場節奏、進攻效率、防守強度與陣容深度。
+
+📈 AI方向：
+${side} 不敗
+
+🎯 讓分方向：
+${pick([`${side} -3.5`, `${side} +3.5`, "讓分保守"])}
+
+📊 大小分：
+${pick([`${totalLine} 大分`, `${totalLine} 小分`, "大小分觀望"])}
+
+⚠️ 風險提醒：
+NBA賽事受傷兵名單、輪休安排、臨場節奏與第四節罰球戰術影響較大，建議賽前再次確認名單。
+
+━━━━━━━━━━
 ⚠️ 僅供娛樂分析參考`;
-}
-
-app.get("/", (req, res) => {
-  res.send("BLACKDOMAIN AI Running");
-});
-
-app.post(
-  "/webhook",
-  line.middleware({
-    channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-    channelSecret: process.env.LINE_CHANNEL_SECRET,
-  }),
-  async (req, res) => {
-    try {
-      await Promise.all(req.body.events.map(handleEvent));
-      res.status(200).end();
-    } catch (e) {
-      console.log(e);
-      res.status(500).end();
-    }
   }
-);
-
-async function handleEvent(event) {
-  if (event.type !== "message" || event.message.type !== "text") return null;
-
-  const uid = event.source.userId;
-  const text = event.message.text.trim();
-  const lower = text.toLowerCase();
-
-  if (!S.baccarat[uid]) S.baccarat[uid] = [];
-  if (!S.result[uid]) S.result[uid] = [];
+}
 
   const needsVip = [
     "百家樂", "電子", "電子AI", "539", "539AI", "539 AI", "莊", "閒", "和",
     "體育", "世足", "MLB", "NBA", "AI配注", "天門五關", "自由配注", "DG", "MT",
-    "MLB近日賽程", "MLB AI精選", "NBA近日賽程", "NBA AI精選",
-    "世足賽程查詢", "世足球隊查詢", "世足AI精選", "世足冠軍預測",
+    "MLB近日賽程", "NBA近日賽程",
+    "世足賽程查詢", "世足球隊查詢", "世足冠軍預測",
   ].includes(text) || /^mt/i.test(text) || /^dg/i.test(text) ||
     /^世足日期:/.test(text) || /^世足場次:/.test(text) ||
     /^MLB場次:/.test(text) || /^NBA場次:/.test(text) ||
@@ -1418,31 +1493,80 @@ return null;
       });
     }
 
+   await client.replyMessage(event.replyToken, {
+  type: "text",
+  text: `━━━━━━━━━━
+⚾ 黑域MLB數據同步中
+━━━━━━━━━━
+
+✓ 賽程資料同步
+✓ 球隊狀態載入
+✓ 打線火力比對
+✓ 投手與牛棚權重運算
+
+請稍候，AI分析中...`,
+});
+
+const result = await mlbAnalyze(g);
+
+await client.pushMessage(uid, {
+  type: "text",
+  text: result
+});
+
+await client.pushMessage(uid, {
+  type: "text",
+  text: "請選擇功能：",
+  quickReply: quickMLB()
+});
+
+return;
+
+if (/^NBA場次:\d+$/.test(text)) {
+  const n = Number(text.split(":")[1]);
+  const g = S.nba[uid]?.games?.[n - 1];
+
+  if (!g) {
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: mlbAnalyze(g),
-      quickReply: quickMLB(),
-    });
-  }
-
-  if (/^NBA場次:\d+$/.test(text)) {
-    const n = Number(text.split(":")[1]);
-    const g = S.nba[uid]?.games?.[n - 1];
-
-    if (!g) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此場次",
-        quickReply: quickNBA(),
-      });
-    }
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: nbaAnalyze(g),
+      text: "查無此場次",
       quickReply: quickNBA(),
     });
   }
+
+  await client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
+🏀 黑域NBA數據同步中
+━━━━━━━━━━
+
+✓ 賽程資料同步
+✓ 球隊戰力分析
+✓ 近期狀態比對
+✓ 攻防數據運算
+
+請稍候，AI分析中...`,
+  });
+
+  const result = await nbaAnalyze(g);
+
+  await client.pushMessage(uid, {
+    type: "text",
+    text: result,
+  });
+
+  await client.pushMessage(uid, {
+    type: "text",
+    text: `━━━━━━━━━━
+🏀 NBA功能選單
+━━━━━━━━━━
+
+請選擇功能：`,
+    quickReply: quickNBA(),
+  });
+
+  return;
+}
 
   if (/^\d{1,6}$/.test(text) && S.slot[uid]?.mode === "custom") {
     const n = Number(text);
@@ -2219,7 +2343,7 @@ if (text === "世足賽程查詢") {
     clearSessions(uid, "mlb");
     S.sport[uid] = "mlb";
     S.mlb[uid] = { mode: "menu", games: [] };
-
+    
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -2229,7 +2353,6 @@ if (text === "世足賽程查詢") {
 請選擇功能：
 
 • 近日賽程
-• AI精選
 
 ━━━━━━━━━━`,
       quickReply: quickMLB(),
@@ -2288,49 +2411,17 @@ ${msg}
     });
   }
 
-  if (text === "MLB AI精選") {
-    S.sport[uid] = "mlb";
-    let games = S.mlb[uid]?.games || [];
-
-    if (!games.length) {
-      for (let i = -1; i < 7; i++) {
-        const data = await fetchMlbGames(i);
-
-        if (data.games?.length) {
-          games = data.games.slice(0, 10);
-          break;
-        }
-      }
-
-      S.mlb[uid] = { mode: "selectGame", games };
-    }
-
-    if (!games.length) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "目前查無MLB賽程，請稍後再試。",
-        quickReply: quickMLB(),
-      });
-    }
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: mlbAnalyze(pick(games)),
-      quickReply: quickMLB(),
-    });
-  }
-
   if (text === "NBA") {
     clearSessions(uid, "nba");
     S.sport[uid] = "nba";
     S.nba[uid] = {
       mode: "selectGame",
       games: [
-        { away: "騎士", home: "尼克", time: "2026/5/22 08:00:00" },
-        { away: "雷霆", home: "馬刺", time: "2026/5/23 08:30:00" },
-      ],
-    };
-
+        S.nba[uid] = {
+  mode: "menu",
+  games: [],
+};
+    
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
@@ -2340,52 +2431,85 @@ ${msg}
 請選擇功能：
 
 • NBA近日賽程
-• NBA AI精選
 
 ━━━━━━━━━━`,
       quickReply: quickNBA(),
     });
   }
 
-  if (text === "NBA近日賽程") {
-    S.sport[uid] = "nba";
-    const games = S.nba[uid]?.games || [];
-    const msg = games.map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`).join("\n\n");
+ if (text === "NBA近日賽程") {
+
+  S.sport[uid] = "nba";
+
+  let games = [];
+
+  try {
+
+    for (let i = 0; i < 7; i++) {
+
+      const data = await fetchNbaGames(i);
+
+      if (data.games?.length) {
+        games = data.games;
+        break;
+      }
+
+    }
+
+  } catch (err) {
+
+    console.log("NBA API ERROR:", err.message);
 
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: `━━━━━━━━━━
+      text: "NBA賽程資料暫時無法同步，請稍後再試。",
+      quickReply: quickNBA(),
+    });
+
+  }
+
+  if (!games.length) {
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "目前查無NBA近日賽程。",
+      quickReply: quickNBA(),
+    });
+
+  }
+
+  const showGames = games.slice(0, 10);
+
+  S.nba[uid] = {
+    mode: "selectGame",
+    games: showGames
+  };
+
+  const msg = showGames
+    .map((g, i) =>
+      `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`
+    )
+    .join("\n\n");
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
 🏀 NBA近日賽程（台灣時間）
 ━━━━━━━━━━
 
-${msg || "目前查無賽程"}
+${msg}
 
 ━━━━━━━━━━
 請選擇場次查看AI分析`,
-      quickReply: q(games.map((_, i) => [`${i + 1}`, `NBA場次:${i + 1}`])),
-    });
-  }
+    quickReply: q(
+      showGames.map((_, i) => [
+        `${i + 1}`,
+        `NBA場次:${i + 1}`
+      ])
+    ),
+  });
 
-  if (text === "NBA AI精選") {
-    S.sport[uid] = "nba";
-    const games = S.nba[uid]?.games || [];
-
-    if (!games.length) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "目前查無NBA賽程，請稍後再試。",
-        quickReply: quickNBA(),
-      });
-    }
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: nbaAnalyze(pick(games)),
-      quickReply: quickNBA(),
-    });
-  }
-
-
+}
   if (text === "GPT測試") {
 
   try {
