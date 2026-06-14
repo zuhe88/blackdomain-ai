@@ -1468,6 +1468,79 @@ return null;
     return client.replyMessage(event.replyToken, { type: "text", text: uid });
   }
 
+  if (text.startsWith("加VIP ")) {
+
+  if (!ADMIN_UIDS.includes(uid)) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "❌ 你沒有管理員權限"
+    });
+  }
+
+  const parts = text.trim().split(/\s+/);
+
+  const account = parts[1];
+  const addDays = Number(parts[2]);
+
+  if (!account || !addDays) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "格式錯誤\n\n範例：\n加VIP tel690723 10"
+    });
+  }
+
+  const { data } = await supabase
+    .from("vip_users")
+    .select("*")
+    .eq("account", account)
+    .single();
+
+  if (!data) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "查無此VIP帳號"
+    });
+  }
+
+  const baseTime =
+    Number(data.expire_time) > Date.now()
+      ? Number(data.expire_time)
+      : Date.now();
+
+  const newExpireTime =
+    baseTime + addDays * 86400000;
+
+  await supabase
+    .from("vip_users")
+    .update({
+      expire_time: newExpireTime
+    })
+    .eq("account", account);
+
+  const remainDays = Math.ceil(
+    (newExpireTime - Date.now()) / 86400000
+  );
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
+✅ VIP時間已增加
+━━━━━━━━━━
+
+3A帳號：
+${account}
+
+增加天數：
+${addDays} 天
+
+目前剩餘：
+${remainDays} 天
+
+到期時間：
+${twTime(newExpireTime)}`
+  });
+}
+  
  if (["VIP查詢","VIP","VIP時間","我的VIP"].includes(text)) {
 
   const data = await getVip(uid);
@@ -1491,9 +1564,6 @@ return null;
 
 3A帳號：
 ${data.account}
-
-開通時間：
-${new Date(data.created_at).toLocaleString("zh-TW")}
 
 剩餘天數：
 ${days} 天
@@ -1545,9 +1615,6 @@ if (text.startsWith("查VIP ")) {
 
 3A帳號：
 ${data.account}
-
-開通時間：
-${new Date(data.created_at).toLocaleString("zh-TW")}
 
 剩餘天數：
 ${days} 天
