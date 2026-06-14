@@ -1636,15 +1636,14 @@ if (/^NBA場次:\d+$/.test(text)) {
     return client.replyMessage(event.replyToken, { type: "text", text: uid });
   }
 
-  if (text.startsWith("加VIP ")) {
+ if (text.startsWith("加VIP ")) {
 
-  if (!ADMIN_UIDS.includes(uid)) {
+  if (uid !== adminId) {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: "❌ 你沒有管理員權限"
     });
   }
-
   const parts = text.trim().split(/\s+/);
 
   const account = parts[1];
@@ -1747,9 +1746,9 @@ ${twTime(data.expire_time)}
 if (text.startsWith("查VIP ")) {
 
   // 改成你的LINE UID
-  const ADMIN_UID = "Uaf293ee976e5170d4e8672d2c12b3f76";
+ const adminId = "Uaf293ee976e5170d4e8672d2c12b3f76";
 
-  if (uid !== ADMIN_UID) {
+  if (uid !== adminId) {
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: "❌ 你沒有管理員權限"
@@ -1799,7 +1798,8 @@ ${days > 0 ? "🟢 VIP有效中" : "🔴 VIP已到期"}`
     return client.replyMessage(event.replyToken, { type: "text", text: noVip() });
   }
 
-  const applyVipMatch = text.match(/^申請開通[:：]?\s*(.+)$/);
+const applyVipMatch =
+  text.match(/^申請開通[:：]?\s*(.+)$/i);
 
 if (applyVipMatch) {
   const account = applyVipMatch[1].trim();
