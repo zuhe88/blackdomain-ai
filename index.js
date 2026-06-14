@@ -1564,6 +1564,7 @@ await client.pushMessage(uid, {
 });
 
 return;
+}
 
 if (/^NBA場次:\d+$/.test(text)) {
   const n = Number(text.split(":")[1]);
