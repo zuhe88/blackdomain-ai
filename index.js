@@ -542,22 +542,34 @@ ${twDateTime()}`;
 }
 
 function slotCustomAnalyzeText(game, room, uid) {
+  const roomNum = Number(room);
   const hotRooms = buildHotRooms(game);
   const aiRooms = S.slot[uid]?.aiRooms || [];
 
-  if (hotRooms.includes(Number(room)) || aiRooms.includes(Number(room))) {
-    return slotAnalyzeText(game, room);
+  // 熱門排行與AI推薦過的房，永遠維持可進場，避免漏線
+  if (hotRooms.includes(roomNum) || aiRooms.includes(roomNum)) {
+    return slotAnalyzeText(game, roomNum);
   }
 
-  const badRate = 0.55;
+  // 建立自選房固定快取：同一遊戲 + 同一房號 + 同一個30分鐘週期，結果固定
+  if (!S.slotCustom) S.slotCustom = {};
 
-  if (Math.random() < badRate) {
+  const key = `${game}-${slotHotKey(game)}-${roomNum}`;
+
+  if (!S.slotCustom[key]) {
+    // 自選房紅燈機率，0.82 = 82% 暫不建議
+    const badRate = 0.82;
+
+    S.slotCustom[key] = Math.random() < badRate ? "bad" : "good";
+  }
+
+  if (S.slotCustom[key] === "bad") {
     return `━━━━━━━━━━━━
 🤖 黑域AI 數據選房
 ━━━━━━━━━━━━
 
 🎰 ${game}
-🏠 ${slotNumber(room)}房
+🏠 ${slotNumber(roomNum)}房
 
 📊 數據分析
 ━━━━━━━━━━━━
@@ -573,7 +585,7 @@ function slotCustomAnalyzeText(game, room, uid) {
 ${twDateTime()}`;
   }
 
-  return slotAnalyzeText(game, room);
+  return slotAnalyzeText(game, roomNum);
 }
 
 function slotHotRankText(game) {
