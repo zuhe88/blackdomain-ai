@@ -1387,6 +1387,55 @@ ${twTime(newExpireTime)}`,
     });
   }
 
+  if (text.startsWith("刪除VIP ")) {
+  if (!ADMIN_UIDS.includes(uid)) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "❌ 你沒有管理員權限",
+    });
+  }
+
+  const account = text.replace("刪除VIP", "").trim();
+
+  if (!account) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "格式錯誤\n\n範例：\n刪除VIP tel690723",
+    });
+  }
+
+  const { data } = await supabase
+    .from("vip_users")
+    .select("*")
+    .eq("account", account)
+    .maybeSingle();
+
+  if (!data) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "查無此VIP帳號",
+    });
+  }
+
+  await supabase
+    .from("vip_users")
+    .delete()
+    .eq("account", account);
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
+🗑 VIP已刪除
+━━━━━━━━━━
+
+3A帳號：
+${account}
+
+狀態：
+🔴 已移除VIP權限`,
+  });
+}
+
   const applyVipMatch = text.match(/^申請開通[:：]?\s*(.+)$/i);
 
   if (applyVipMatch) {
