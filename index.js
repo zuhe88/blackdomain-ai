@@ -1468,32 +1468,98 @@ return null;
     return client.replyMessage(event.replyToken, { type: "text", text: uid });
   }
 
-  if (["VIP查詢", "VIP", "VIP時間"].includes(text)) {
-    const data = await getVip(uid);
+ if (["VIP查詢","VIP","VIP時間","我的VIP"].includes(text)) {
 
-    if (!data || Number(data.expire_time) <= Date.now()) {
-      return client.replyMessage(event.replyToken, { type: "text", text: noVip() });
-    }
+  const data = await getVip(uid);
 
-    const days = Math.ceil((Number(data.expire_time) - Date.now()) / 86400000);
-
+  if (!data || Number(data.expire_time) <= Date.now()) {
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: `━━━━━━━━━━
+      text: noVip()
+    });
+  }
+
+  const days = Math.ceil(
+    (Number(data.expire_time) - Date.now()) / 86400000
+  );
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
 👑 黑域VIP
 ━━━━━━━━━━
 
 3A帳號：
 ${data.account}
 
+開通時間：
+${new Date(data.created_at).toLocaleString("zh-TW")}
+
 剩餘天數：
 ${days} 天
 
 到期時間：
-${twTime(data.expire_time)}`,
+${twTime(data.expire_time)}
+
+狀態：
+🟢 VIP有效中`,
+  });
+}
+
+if (text.startsWith("查VIP ")) {
+
+  // 改成你的LINE UID
+  const ADMIN_UID = "Uaf293ee976e5170d4e8672d2c12b3f76";
+
+  if (uid !== ADMIN_UID) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "❌ 你沒有管理員權限"
     });
   }
 
+  const account = text.replace("查VIP", "").trim();
+
+  const { data } = await supabase
+    .from("vip_users")
+    .select("*")
+    .eq("account", account)
+    .single();
+
+  if (!data) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "查無此VIP帳號"
+    });
+  }
+
+  const days = Math.ceil(
+    (Number(data.expire_time) - Date.now()) / 86400000
+  );
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
+👑 VIP資訊
+━━━━━━━━━━
+
+3A帳號：
+${data.account}
+
+開通時間：
+${new Date(data.created_at).toLocaleString("zh-TW")}
+
+剩餘天數：
+${days} 天
+
+到期時間：
+${twTime(data.expire_time)}
+
+狀態：
+${days > 0 ? "🟢 VIP有效中" : "🔴 VIP已到期"}`
+  });
+}
+  
   if (["開通會員", "我要開通", "開通"].includes(text)) {
     return client.replyMessage(event.replyToken, { type: "text", text: noVip() });
   }
