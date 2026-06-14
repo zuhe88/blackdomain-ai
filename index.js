@@ -1641,25 +1641,34 @@ ${twTime(exp)}`,
     return null;
   }
 
-  if (/^\d{1,6}$/.test(text) && S.slot[uid]?.mode === "custom") {
-    const n = Number(text);
-    const maxRoom = slotMaxRoom(S.slot[uid].game);
+ if (S.slot[uid]?.mode === "custom") {
+  const match = text.match(/\d+/);
+  const n = match ? Number(match[0]) : NaN;
+  const game = S.slot[uid]?.game;
+  const maxRoom = slotMaxRoom(game);
 
-    if (n < 1 || n > maxRoom) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: `房號範圍錯誤，請輸入 1～${maxRoom}。`,
-      });
-    }
-
-    S.slot[uid].mode = null;
-
+  if (!Number.isInteger(n)) {
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: slotCustomAnalyzeText(S.slot[uid].game, n, uid),
-      quickReply: quickSlotMode(),
+      text: `請輸入正確房號，範圍為 1～${maxRoom}。`,
     });
   }
+
+  if (n < 1 || n > maxRoom) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `房號範圍錯誤，請輸入 1～${maxRoom}。`,
+    });
+  }
+
+  S.slot[uid].mode = null;
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: slotCustomAnalyzeText(game, n, uid),
+    quickReply: quickSlotMode(),
+  });
+}
 
   if (text === "百家樂") {
     clearSessions(uid);
