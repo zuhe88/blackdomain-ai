@@ -1436,6 +1436,56 @@ ${account}
   });
 }
 
+  if (text === "VIP列表") {
+
+  if (!ADMIN_UIDS.includes(uid)) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "❌ 你沒有管理員權限",
+    });
+  }
+
+  const { data } = await supabase
+    .from("vip_users")
+    .select("*")
+    .order("expire_time", { ascending: false });
+
+  if (!data?.length) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "目前沒有VIP資料",
+    });
+  }
+
+  const active = data.filter(
+    v => Number(v.expire_time) > Date.now()
+  );
+
+  const msg = active
+    .slice(0, 20)
+    .map((v, i) => {
+
+      const days = Math.ceil(
+        (Number(v.expire_time) - Date.now()) / 86400000
+      );
+
+      return `${i + 1}. ${v.account}
+剩餘：${days}天`;
+    })
+    .join("\n\n");
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `👑 黑域AI VIP列表
+━━━━━━━━━━
+
+${msg}
+
+━━━━━━━━━━
+有效VIP：${active.length}人`,
+  });
+}
+
   const applyVipMatch = text.match(/^申請開通[:：]?\s*(.+)$/i);
 
   if (applyVipMatch) {
