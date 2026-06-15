@@ -63,6 +63,18 @@ function q(items) {
   };
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function safePush(uid, message) {
+  try {
+    await client.pushMessage(uid, message);
+  } catch (err) {
+    console.log("LINE PUSH ERROR:", err.message);
+  }
+}
+
 function quickMain() {
   return q([["百家樂"], ["電子"], ["539"], ["體育"], ["VIP查詢"]]);
 }
@@ -1718,12 +1730,12 @@ ${twTime(exp)}`,
     try {
       const result = await wcMatchAnalysis(g);
 
-      await client.pushMessage(uid, {
+    await safePush(uid, {
         type: "text",
         text: result,
       });
 
-      await client.pushMessage(uid, {
+      await safePush(uid, {
         type: "text",
         text: `━━━━━━━━━━
 ⚽ 世足功能選單
@@ -1735,7 +1747,7 @@ ${twTime(exp)}`,
     } catch (err) {
       console.log("WC GPT ERROR:", err.message);
 
-      await client.pushMessage(uid, {
+    await safePush(uid, {
         type: "text",
         text: "⚠️ AI分析暫時失敗，請稍後再試。",
       });
@@ -1772,12 +1784,14 @@ ${twTime(exp)}`,
 
     const result = await mlbAnalyze(g);
 
-    await client.pushMessage(uid, {
+  await safePush(uid, {
       type: "text",
       text: result,
     });
 
-    await client.pushMessage(uid, {
+    await sleep(1000);
+
+  await safePush(uid, {
       type: "text",
       text: `━━━━━━━━━━
 ⚾ MLB功能選單
@@ -1818,12 +1832,22 @@ ${twTime(exp)}`,
 
     const result = await nbaAnalyze(g);
 
-    await client.pushMessage(uid, {
+    await safePush(uid, {
       type: "text",
       text: result,
     });
 
-    await client.pushMessage(uid, {
+    await sleep(1000);
+
+
+
+
+
+
+
+    
+
+   await safePush(uid, {
       type: "text",
       text: `━━━━━━━━━━
 🏀 NBA功能選單
@@ -2357,12 +2381,14 @@ ${nums.join("　")}
 
   const result = await wcChampionPrediction();
 
-  await client.pushMessage(uid, {
+await safePush(uid, {
     type: "text",
     text: result,
   });
 
-  await client.pushMessage(uid, {
+await sleep(1000);
+    
+await safePush(uid, {
     type: "text",
     text: `━━━━━━━━━━
 ⚽ 世足功能選單
