@@ -599,8 +599,8 @@ function slotHotRankText(game) {
 🥇 ${slotNumber(rooms[0])}房
 🥈 ${slotNumber(rooms[1])}房
 🥉 ${slotNumber(rooms[2])}房
-④ ${slotNumber(rooms[3])}房
-⑤ ${slotNumber(rooms[4])}房
+🏅 ${slotNumber(rooms[3])}房
+🏅 ${slotNumber(rooms[4])}房
 
 🕒 更新時間
 ${twSlotUpdateTime()}
@@ -613,7 +613,7 @@ function quickSlotHotRooms(game) {
 
   return q(
     rooms.map((room, i) => {
-      const labels = ["🥇", "🥈", "🥉", "④", "⑤"];
+      const labels = ["🥇", "🥈", "🥉", "🏅", "🏅"];
       return [`${labels[i]} ${slotNumber(room)}房`, `電子房:${room}`];
     })
   );
@@ -2034,15 +2034,21 @@ ${nums.join("　")}
     return client.replyMessage(event.replyToken, {
       type: "text",
       text: `━━━━━━━━━━
-🏟 黑域體育AI
-━━━━━━━━━━
-
+text: `
+━━━━━━━
+🤖 黑域體育AI
+━━━━━━━
+    
 請選擇項目：
 
-• 世足
-• MLB
-• NBA`,
-      quickReply: quickSports(),
+⚽ 世足
+⚾ MLB
+🏀 NBA
+
+⏳ AI分析採即時運算
+請耐心等待 10~30 秒
+`,
+quickReply: quickSports(),
     });
   }
 
