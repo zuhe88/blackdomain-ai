@@ -2034,9 +2034,7 @@ ${nums.join("　")}
     return client.replyMessage(event.replyToken, {
       type: "text",
  text: `━━━━━━━
-
 🤖 黑域體育AI
-
 ━━━━━━━
 
 請選擇項目：
@@ -2046,7 +2044,7 @@ ${nums.join("　")}
 🏀 NBA
 
 ⏳ AI分析採即時運算
-請耐心等待 3～7 秒`,
+請耐心等待 5～10 秒`,
 quickReply: quickSports(),
     });
   }
