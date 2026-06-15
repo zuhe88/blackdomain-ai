@@ -43,6 +43,7 @@ const S = {
   tianmen: {},
   slot: {},
   slotHot: {},
+  slotCustom: {},
   sport: {},
   wc: {},
   mlb: {},
@@ -61,6 +62,11 @@ function q(items) {
       action: { type: "message", label, text },
     })),
   };
+}
+
+function trimText(text, max = 4500) {
+  const s = String(text || "");
+  return s.length > max ? s.slice(0, max) + "\n\n⚠️ 內容過長，已自動截斷。" : s;
 }
 
 function quickMain() {
@@ -205,6 +211,7 @@ async function isVip(uid) {
 
 async function openVip(uid, account, days) {
   const old = await getVip(uid);
+
   const baseTime =
     old && Number(old.expire_time) > Date.now()
       ? Number(old.expire_time)
@@ -218,7 +225,9 @@ async function openVip(uid, account, days) {
       .update({ account, expire_time })
       .eq("user_id", uid);
   } else {
-    await supabase.from("vip_users").insert({ user_id: uid, account, expire_time });
+    await supabase
+      .from("vip_users")
+      .insert({ user_id: uid, account, expire_time });
   }
 
   return expire_time;
@@ -542,22 +551,28 @@ ${twDateTime()}`;
 }
 
 function slotCustomAnalyzeText(game, room, uid) {
+  const roomNum = Number(room);
   const hotRooms = buildHotRooms(game);
   const aiRooms = S.slot[uid]?.aiRooms || [];
 
-  if (hotRooms.includes(Number(room)) || aiRooms.includes(Number(room))) {
-    return slotAnalyzeText(game, room);
+  if (hotRooms.includes(roomNum) || aiRooms.includes(roomNum)) {
+    return slotAnalyzeText(game, roomNum);
   }
 
-  const badRate = 0.55;
+  const key = `${game}-${slotHotKey(game)}-${roomNum}`;
 
-  if (Math.random() < badRate) {
+  if (!S.slotCustom[key]) {
+    const badRate = 0.82;
+    S.slotCustom[key] = Math.random() < badRate ? "bad" : "good";
+  }
+
+  if (S.slotCustom[key] === "bad") {
     return `━━━━━━━━━━━━
 🤖 黑域AI 數據選房
 ━━━━━━━━━━━━
 
 🎰 ${game}
-🏠 ${slotNumber(room)}房
+🏠 ${slotNumber(roomNum)}房
 
 📊 數據分析
 ━━━━━━━━━━━━
@@ -573,7 +588,7 @@ function slotCustomAnalyzeText(game, room, uid) {
 ${twDateTime()}`;
   }
 
-  return slotAnalyzeText(game, room);
+  return slotAnalyzeText(game, roomNum);
 }
 
 function slotHotRankText(game) {
@@ -614,7 +629,6 @@ function gen539(mode) {
 
   ["stable", "hot", "cold"].forEach((m) => {
     const k = `${date}-${m}`;
-
     if (S.cache539[k]) {
       S.cache539[k].forEach((n) => used.add(n));
     }
@@ -720,89 +734,108 @@ async function wcMatchAnalysis(g) {
 ━━━━━━━━━━━━
 
 📊 球隊狀態
-
 分析雙方近期狀態、進攻能力、防守能力與比賽節奏。
 
 ━━━━━━━━━━━━
 
 ⚔️ 關鍵對位
-
 分析本場最關鍵的勝負因素。
 
 ━━━━━━━━━━━━
 
 🥅 半場波膽推薦
-
 ① 比分（機率）
 ② 比分（機率）
 ③ 比分（機率）
-
-機率請控制於15%~45%。
 
 ━━━━━━━━━━━━
 
 ⚽ 全場波膽推薦
-
 ① 比分（機率）
 ② 比分（機率）
 ③ 比分（機率）
 
-機率請控制於15%~45%。
-
-避免出現不合理比分。
-
 ━━━━━━━━━━━━
 
 🎯 預估總進球
-
-請直接輸出：
-0~1球方向
-或
-2~3球方向
-或
-4球以上方向
+0~1球方向 / 2~3球方向 / 4球以上方向
 
 ━━━━━━━━━━━━
 
 📈 AI大小分
-
-推薦：大2.5 或 小2.5
-
+推薦：
 分析：
-簡短說明原因。
 
 ━━━━━━━━━━━━
 
 📊 AI讓分
-
-推薦：請直接寫出讓分方向。
-
-例如：
-阿根廷 -1
-法國 -0.5
-日本 +1
-
+推薦：
 分析：
-簡短說明原因。
 
 ━━━━━━━━━━━━
 
 🏆 AI預測勝方
 
-直接寫出最看好的獲勝球隊名稱。
-若平手機率較高可寫：平局機率偏高
-
 ━━━━━━━━━━━━
 
 ⚠️ 本分析由黑域AI生成，僅供娛樂參考。
-
 不要輸出Markdown。
 不要輸出程式碼。
-不要輸出額外說明。
 `,
   });
 
-  return response.output_text;
+  return trimText(response.output_text);
+}
+
+async function wcChampionPrediction() {
+  const response = await openai.responses.create({
+    model: "gpt-4.1-mini",
+    input: `
+你是黑域AI世足冠軍預測系統。
+
+請使用繁體中文，依照以下格式輸出：
+
+━━━━━━━━━━
+🏆 黑域AI 世足冠軍預測
+━━━━━━━━━━
+
+🥇 冠軍預測：
+請預測最有機會奪冠球隊
+
+🥈 亞軍預測：
+請預測亞軍球隊
+
+🥉 四強熱門：
+列出2支球隊
+
+━━━━━━━━━━
+
+📊 冠軍熱門分析：
+分析冠軍球隊近期狀態、陣容深度、攻守能力、淘汰賽經驗。
+
+━━━━━━━━━━
+
+⚔️ 主要競爭對手：
+分析2~3支最有威脅的球隊。
+
+━━━━━━━━━━
+
+🚨 爆冷黑馬：
+推薦1~2支黑馬球隊並說明原因。
+
+━━━━━━━━━━
+
+🤖 AI綜合判斷：
+總結本屆冠軍走勢。
+
+━━━━━━━━━━
+⚠️ 僅供娛樂分析參考
+不要輸出Markdown。
+不要輸出程式碼。
+`,
+  });
+
+  return trimText(response.output_text);
 }
 
 const mlbName = {
@@ -939,7 +972,10 @@ async function fetchNbaGames(offset = 0) {
 }
 
 async function mlbAnalyze(g) {
-  const prompt = `
+  try {
+    const response = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: `
 你是黑域AI MLB賽前分析系統。
 
 請用繁體中文分析以下 MLB 賽事：
@@ -947,7 +983,7 @@ async function mlbAnalyze(g) {
 ${g.away} vs ${g.home}
 開賽時間：${g.time}（台灣時間）
 
-請依照以下格式輸出，不要加入多餘說明：
+請依照以下格式輸出：
 
 ━━━━━━━━━━
 ⚾ 黑域MLB AI分析完成
@@ -959,68 +995,39 @@ ${g.away} vs ${g.home}
 ${g.time}
 
 📊 球隊狀態：
-請分析兩隊近期狀態、打線火力、投手穩定度、牛棚狀況與主客場因素。
+分析兩隊近期狀態、打線火力、投手穩定度、牛棚狀況與主客場因素。
 
 📈 AI方向：
-請給出較明確的方向，例如：
-${g.home} 不敗 / ${g.away} 不敗 / 建議觀望
+給出方向。
 
 🎯 讓分方向：
-請給出讓分方向，例如：
-${g.home} -1.5 / ${g.away} +1.5 / 讓分保守
+給出讓分方向。
 
 📊 大小分：
-請給出大分或小分方向，例如：
-7.5 大分 / 8.5 小分 / 大小分觀望
+給出大分或小分方向。
 
 ⚠️ 風險提醒：
-請提醒本場主要風險。
+提醒主要風險。
 
 ━━━━━━━━━━
 ⚠️ 僅供娛樂分析參考
-`;
-
-  try {
-    const response = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      input: prompt,
+不要輸出Markdown。
+不要輸出程式碼。
+`,
     });
 
-    return response.output_text;
+    return trimText(response.output_text);
   } catch (err) {
     console.log("MLB GPT ERROR:", err.message);
-
-    return `━━━━━━━━━━
-⚾ 黑域MLB AI分析完成
-━━━━━━━━━━
-
-${g.away} vs ${g.home}
-
-開賽時間（台灣）：
-${g.time}
-
-📊 球隊狀態：
-目前GPT分析暫時無法同步，系統改用基礎模型分析。
-
-📈 AI方向：
-${pick([`${g.home} 不敗`, `${g.away} 不敗`, "建議觀望"])}
-
-🎯 讓分方向：
-${pick([`${g.home} -1.5`, `${g.away} +1.5`, "讓分保守"])}
-
-📊 大小分：
-${pick(["7.5 大分", "8.5 小分", "大小分觀望"])}
-
-⚠️ 風險提醒：
-MLB賽事受先發投手、牛棚輪替與臨場打線影響較大，建議賽前再次確認名單。
-
-━━━━━━━━━━
-⚠️ 僅供娛樂分析參考`;
+    return "⚠️ MLB AI分析暫時無法同步，請稍後再試。";
   }
 }
 
 async function nbaAnalyze(g) {
-  const prompt = `
+  try {
+    const response = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: `
 你是黑域AI NBA賽前分析系統。
 
 請用繁體中文分析以下 NBA 賽事：
@@ -1028,7 +1035,7 @@ async function nbaAnalyze(g) {
 ${g.away} vs ${g.home}
 開賽時間：${g.time}（台灣時間）
 
-請依照以下格式輸出，不要加入多餘說明：
+請依照以下格式輸出：
 
 ━━━━━━━━━━
 🏀 黑域NBA AI分析完成
@@ -1040,63 +1047,31 @@ ${g.away} vs ${g.home}
 ${g.time}
 
 📊 球隊狀態：
-請分析兩隊近期狀態、進攻效率、防守強度、主客場因素、球星狀態與輪替深度。
+分析兩隊近期狀態、進攻效率、防守強度、主客場因素、球星狀態與輪替深度。
 
 📈 AI方向：
-請給出較明確的方向，例如：
-${g.home} 不敗 / ${g.away} 不敗 / 建議觀望
+給出方向。
 
 🎯 讓分方向：
-請給出讓分方向，例如：
-${g.home} -3.5 / ${g.away} +3.5 / 讓分保守
+給出讓分方向。
 
 📊 大小分：
-請給出大分或小分方向，例如：
-218.5 大分 / 221.5 小分 / 大小分觀望
+給出大分或小分方向。
 
 ⚠️ 風險提醒：
-請提醒本場主要風險。
+提醒主要風險。
 
 ━━━━━━━━━━
 ⚠️ 僅供娛樂分析參考
-`;
-
-  try {
-    const response = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      input: prompt,
+不要輸出Markdown。
+不要輸出程式碼。
+`,
     });
 
-    return response.output_text;
+    return trimText(response.output_text);
   } catch (err) {
     console.log("NBA GPT ERROR:", err.message);
-
-    return `━━━━━━━━━━
-🏀 黑域NBA AI分析完成
-━━━━━━━━━━
-
-${g.away} vs ${g.home}
-
-開賽時間（台灣）：
-${g.time}
-
-📊 球隊狀態：
-目前GPT分析暫時無法同步，系統改用基礎模型分析。本場主要參考主客場節奏、進攻效率、防守強度與陣容深度。
-
-📈 AI方向：
-${pick([`${g.home} 不敗`, `${g.away} 不敗`, "建議觀望"])}
-
-🎯 讓分方向：
-${pick([`${g.home} -3.5`, `${g.away} +3.5`, "讓分保守"])}
-
-📊 大小分：
-${pick(["218.5 大分", "221.5 小分", "大小分觀望"])}
-
-⚠️ 風險提醒：
-NBA賽事受傷兵名單、輪休安排、臨場節奏與第四節罰球戰術影響較大，建議賽前再次確認名單。
-
-━━━━━━━━━━
-⚠️ 僅供娛樂分析參考`;
+    return "⚠️ NBA AI分析暫時無法同步，請稍後再試。";
   }
 }
 
@@ -1215,6 +1190,48 @@ ${days > 0 ? "🟢 VIP有效中" : "🔴 VIP已到期"}`,
     });
   }
 
+  if (text === "VIP列表") {
+    if (!ADMIN_UIDS.includes(uid)) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "❌ 你沒有管理員權限",
+      });
+    }
+
+    const { data } = await supabase
+      .from("vip_users")
+      .select("*")
+      .order("expire_time", { ascending: false });
+
+    if (!data?.length) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "目前沒有VIP資料",
+      });
+    }
+
+    const active = data.filter((v) => Number(v.expire_time) > Date.now());
+
+    const msg = active
+      .slice(0, 20)
+      .map((v, i) => {
+        const days = Math.ceil((Number(v.expire_time) - Date.now()) / 86400000);
+        return `${i + 1}. ${v.account}\n剩餘：${days}天`;
+      })
+      .join("\n\n");
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `👑 黑域AI VIP列表
+━━━━━━━━━━
+
+${msg || "目前沒有有效VIP"}
+
+━━━━━━━━━━
+有效VIP：${active.length}人`,
+    });
+  }
+
   if (text.startsWith("加VIP ")) {
     if (!ADMIN_UIDS.includes(uid)) {
       return client.replyMessage(event.replyToken, {
@@ -1279,17 +1296,56 @@ ${twTime(newExpireTime)}`,
     });
   }
 
-  const applyVipMatch = text.match(/^申請開通[:：]?\s*(.+)$/i);
+  if (text.startsWith("刪除VIP ")) {
+    if (!ADMIN_UIDS.includes(uid)) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "❌ 你沒有管理員權限",
+      });
+    }
 
-  if (applyVipMatch) {
-    const account = applyVipMatch[1].trim();
+    const account = text.replace("刪除VIP", "").trim();
 
     if (!account) {
       return client.replyMessage(event.replyToken, {
         type: "text",
-        text: "請輸入3A帳號\n範例：申請開通 abc123",
+        text: "格式錯誤\n\n範例：\n刪除VIP tel690723",
       });
     }
+
+    const { data } = await supabase
+      .from("vip_users")
+      .select("*")
+      .eq("account", account)
+      .maybeSingle();
+
+    if (!data) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "查無此VIP帳號",
+      });
+    }
+
+    await supabase.from("vip_users").delete().eq("account", account);
+
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `━━━━━━━━━━
+🗑 VIP已刪除
+━━━━━━━━━━
+
+3A帳號：
+${account}
+
+狀態：
+🔴 已移除VIP權限`,
+    });
+  }
+
+  const applyVipMatch = text.match(/^申請開通[:：]?\s*(.+)$/i);
+
+  if (applyVipMatch) {
+    const account = applyVipMatch[1].trim();
 
     await supabase.from("vip_requests").insert({ user_id: uid, account });
 
@@ -1367,29 +1423,11 @@ ${twTime(exp)}`,
 
   const needsVip =
     [
-      "百家樂",
-      "電子",
-      "電子AI",
-      "539",
-      "539AI",
-      "539 AI",
-      "莊",
-      "閒",
-      "和",
-      "體育",
-      "世足",
-      "MLB",
-      "NBA",
-      "AI配注",
-      "天門五關",
-      "自由配注",
-      "DG",
-      "MT",
-      "MLB近日賽程",
-      "NBA近日賽程",
-      "世足賽程查詢",
-      "世足球隊查詢",
-      "世足冠軍預測",
+      "百家樂", "電子", "電子AI", "539", "539AI", "539 AI",
+      "莊", "閒", "和", "體育", "世足", "MLB", "NBA",
+      "AI配注", "天門五關", "自由配注", "DG", "MT",
+      "MLB近日賽程", "NBA近日賽程",
+      "世足賽程查詢", "世足球隊查詢", "世足冠軍預測",
     ].includes(text) ||
     /^mt/i.test(text) ||
     /^dg/i.test(text) ||
@@ -1494,47 +1532,13 @@ ${twTime(exp)}`,
       });
     }
 
-    await client.replyMessage(event.replyToken, {
+    const result = await wcMatchAnalysis(g);
+
+    return client.replyMessage(event.replyToken, {
       type: "text",
-      text: `━━━━━━━━━━
-⚽ 黑域AI數據同步中
-━━━━━━━━━━
-
-✓ 賽程資料同步
-✓ 球隊狀態載入
-✓ 波膽模型運算
-✓ 大小分與讓分比對
-
-請稍候，AI分析中...`,
+      text: result,
+      quickReply: quickWorldCup(),
     });
-
-    try {
-      const result = await wcMatchAnalysis(g);
-
-      await client.pushMessage(uid, {
-        type: "text",
-        text: result,
-      });
-
-      await client.pushMessage(uid, {
-        type: "text",
-        text: `━━━━━━━━━━
-⚽ 世足功能選單
-━━━━━━━━━━
-
-請選擇功能：`,
-        quickReply: quickWorldCup(),
-      });
-    } catch (err) {
-      console.log("WC GPT ERROR:", err.message);
-
-      await client.pushMessage(uid, {
-        type: "text",
-        text: "⚠️ AI分析暫時失敗，請稍後再試。",
-      });
-    }
-
-    return null;
   }
 
   if (/^MLB場次:\d+$/.test(text)) {
@@ -1549,38 +1553,13 @@ ${twTime(exp)}`,
       });
     }
 
-    await client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-⚾ 黑域MLB數據同步中
-━━━━━━━━━━
-
-✓ 賽程資料同步
-✓ 球隊狀態載入
-✓ 打線火力比對
-✓ 投手與牛棚權重運算
-
-請稍候，AI分析中...`,
-    });
-
     const result = await mlbAnalyze(g);
 
-    await client.pushMessage(uid, {
+    return client.replyMessage(event.replyToken, {
       type: "text",
       text: result,
-    });
-
-    await client.pushMessage(uid, {
-      type: "text",
-      text: `━━━━━━━━━━
-⚾ MLB功能選單
-━━━━━━━━━━
-
-請選擇功能：`,
       quickReply: quickMLB(),
     });
-
-    return null;
   }
 
   if (/^NBA場次:\d+$/.test(text)) {
@@ -1595,58 +1574,38 @@ ${twTime(exp)}`,
       });
     }
 
-    await client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-🏀 黑域NBA數據同步中
-━━━━━━━━━━
-
-✓ 賽程資料同步
-✓ 球隊戰力分析
-✓ 近期狀態比對
-✓ 攻防數據運算
-
-請稍候，AI分析中...`,
-    });
-
     const result = await nbaAnalyze(g);
-
-    await client.pushMessage(uid, {
-      type: "text",
-      text: result,
-    });
-
-    await client.pushMessage(uid, {
-      type: "text",
-      text: `━━━━━━━━━━
-🏀 NBA功能選單
-━━━━━━━━━━
-
-請選擇功能：`,
-      quickReply: quickNBA(),
-    });
-
-    return null;
-  }
-
-  if (/^\d{1,6}$/.test(text) && S.slot[uid]?.mode === "custom") {
-    const n = Number(text);
-    const maxRoom = slotMaxRoom(S.slot[uid].game);
-
-    if (n < 1 || n > maxRoom) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: `房號範圍錯誤，請輸入 1～${maxRoom}。`,
-      });
-    }
-
-    S.slot[uid].mode = null;
 
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: slotCustomAnalyzeText(S.slot[uid].game, n, uid),
-      quickReply: quickSlotMode(),
+      text: result,
+      quickReply: quickNBA(),
     });
+  }
+
+  if (S.slot[uid]?.mode === "custom") {
+    if (!/^\d+$/.test(text)) {
+      S.slot[uid].mode = null;
+    } else {
+      const n = Number(text);
+      const game = S.slot[uid].game;
+      const maxRoom = slotMaxRoom(game);
+
+      if (n < 1 || n > maxRoom) {
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text: `房號範圍錯誤，請輸入 1～${maxRoom}。`,
+        });
+      }
+
+      S.slot[uid].mode = null;
+
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: slotCustomAnalyzeText(game, n, uid),
+        quickReply: quickSlotMode(),
+      });
+    }
   }
 
   if (text === "百家樂") {
@@ -1980,7 +1939,13 @@ ${limit}
     }
 
     const maxRoom = slotMaxRoom(game);
-    const room = Math.floor(Math.random() * maxRoom) + 1;
+    const hotRooms = buildHotRooms(game);
+
+    let room;
+
+    do {
+      room = Math.floor(Math.random() * maxRoom) + 1;
+    } while (hotRooms.includes(room));
 
     if (!S.slot[uid].aiRooms) S.slot[uid].aiRooms = [];
     S.slot[uid].aiRooms.push(room);
@@ -2127,21 +2092,11 @@ ${nums.join("　")}
   }
 
   if (text === "世足冠軍預測") {
+    const result = await wcChampionPrediction();
+
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: `━━━━━━━━━━
-🏆 世足冠軍預測
-━━━━━━━━━━
-
-🥇 巴西
-🥈 阿根廷
-🥉 法國
-🏅 英格蘭
-🏅 西班牙
-
-━━━━━━━━━━
-
-⚠️ 僅供娛樂分析參考`,
+      text: result,
       quickReply: quickWorldCup(),
     });
   }
@@ -2243,7 +2198,7 @@ ${msg}
     let games = [];
 
     try {
-      for (let i = 0; i < 7; i++) {
+      for (let i = 0; i < 30; i++) {
         const data = await fetchNbaGames(i);
 
         if (data.games?.length) {
@@ -2264,8 +2219,19 @@ ${msg}
     if (!games.length) {
       return client.replyMessage(event.replyToken, {
         type: "text",
-        text: "目前查無NBA近日賽程。",
-        quickReply: quickNBA(),
+        text: `━━━━━━━━━━
+🏀 NBA近日賽程
+━━━━━━━━━━
+
+目前查無NBA可分析賽事。
+
+可能原因：
+• NBA目前休賽期
+• 近期無正式賽程
+• API暫無更新資料
+
+請改查 MLB 或世足賽程。`,
+        quickReply: quickSports(),
       });
     }
 
