@@ -2033,21 +2033,20 @@ ${nums.join("　")}
 
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: `━━━━━━━━━━
-text: `
-━━━━━━━
+ text: `━━━━━━━
+
 🤖 黑域體育AI
+
 ━━━━━━━
-    
+
 請選擇項目：
 
-⚽ 世足
+🌐 世足
 ⚾ MLB
 🏀 NBA
 
 ⏳ AI分析採即時運算
-請耐心等待 10~30 秒
-`,
+請耐心等待 3～7 秒`,
 quickReply: quickSports(),
     });
   }
