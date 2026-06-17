@@ -670,12 +670,10 @@ function wcGamesText(date, games) {
 `;
 
   games.forEach((g, i) => {
-    const isFinished = g.status === "finished";
-
-    msg += `${i + 1}️⃣ ${g.home} vs ${g.away}
+    msg += `${i + 1}️⃣ ${g.stage || "賽事"}${g.group ? `｜${g.group}組` : ""}
+${g.home} vs ${g.away}
 🕒 ${g.time}（台灣時間）
 📍 ${g.venue || "未公布"}
-${isFinished ? `🔴 已完賽\n比分：${g.homeScore} - ${g.awayScore}` : "🟢 未開賽"}
 
 `;
   });
@@ -938,47 +936,6 @@ async function fetchMlbGames(offset = 0) {
   }));
 
   return { games };
-}
-
-async function fetchFootballGamesByDate(date) {
-  const apiDate = date.replace(/\//g, "-");
-
-  const { data } = await axios.get("https://v3.football.api-sports.io/fixtures", {
-    timeout: 10000,
-    headers: {
-      "x-apisports-key": process.env.APIFOOTBALL_KEY,
-    },
-    params: {
-      date: apiDate,
-      timezone: "Asia/Taipei",
-    },
-  });
-
-  const games = (data.response || []).map((x) => {
-    const statusShort = x.fixture?.status?.short || "";
-    const finished = ["FT", "AET", "PEN"].includes(statusShort);
-
-    return {
-      fixtureId: x.fixture.id,
-      home: x.teams.home.name,
-      away: x.teams.away.name,
-      time: new Date(x.fixture.date).toLocaleString("zh-TW", {
-        timeZone: "Asia/Taipei",
-        hour12: false,
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      venue: x.fixture.venue?.name || "未公布",
-      status: finished ? "finished" : "upcoming",
-      statusText: x.fixture?.status?.long || "",
-      homeScore: x.goals?.home,
-      awayScore: x.goals?.away,
-    };
-  });
-
-  return games;
 }
 
 async function fetchNbaGames(offset = 0) {
@@ -1537,25 +1494,24 @@ ${twTime(exp)}`,
     });
   }
 
-if (/^世足日期:/.test(text)) {
-  const date = text.replace("世足日期:", "");
- const games = await fetchFootballGamesByDate(date);
+  if (/^世足日期:/.test(text)) {
+    const date = text.replace("世足日期:", "");
+    const games = worldCupSchedule[date];
 
-console.log("世足日期:", date);
-console.log("世足資料:", games);
-  if (!games.length) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "查無此日期賽程。",
-      quickReply: wcDates(S.wc[uid]?.page || 0),
-    });
-  }
+    if (!games) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "查無此日期賽程。",
+        quickReply: wcDates(S.wc[uid]?.page || 0),
+      });
+    }
 
-  S.sport[uid] = "wc";
-  S.wc[uid] = {
-    mode: "selectGame",
-    games
-  };
+    S.sport[uid] = "wc";
+    S.wc[uid] = {
+      mode: "selectGame",
+      page: S.wc[uid]?.page || 0,
+      games,
+    };
 
     return client.replyMessage(event.replyToken, {
       type: "text",
