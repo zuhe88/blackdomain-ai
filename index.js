@@ -1539,8 +1539,10 @@ ${twTime(exp)}`,
 
 if (/^世足日期:/.test(text)) {
   const date = text.replace("世足日期:", "");
-  const games = await fetchFootballGamesByDate(date);
+ const games = await fetchFootballGamesByDate(date);
 
+console.log("世足日期:", date);
+console.log("世足資料:", games);
   if (!games.length) {
     return client.replyMessage(event.replyToken, {
       type: "text",
