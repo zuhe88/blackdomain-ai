@@ -41,10 +41,32 @@ module.exports = function (app) {
       return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：hohoho321321");
     }
 
-    if (pendingBind[userId]) {
-      delete pendingBind[userId];
-      return createVipRequest(event.replyToken, userId, text);
-    }
+  if (pendingBind[userId]) {
+  const blockedCommands = [
+    "鑰匙",
+    "🔑鑰匙",
+    "鑰匙中心",
+    "鑰匙查詢",
+    "碎片",
+    "碎片查詢",
+    "獎勵說明",
+    "綁定",
+    "綁定帳號",
+    "綁定3A帳號"
+  ];
+
+  if (blockedCommands.includes(text)) {
+    delete pendingBind[userId];
+
+    return reply(
+      event.replyToken,
+      "已取消綁定流程。\n\n如需綁定3A帳號，請重新點選「綁定3A帳號」，並直接輸入您的3A帳號。"
+    );
+  }
+
+  delete pendingBind[userId];
+  return createVipRequest(event.replyToken, userId, text);
+}
 
     if (text === "鑰匙查詢" || text === "碎片查詢") {
       return handleKeyQuery(event.replyToken, userId);
@@ -211,7 +233,7 @@ module.exports = function (app) {
       "累積儲值：" + (vip.total_recharge || 0) + "\n\n" +
       (keys >= 2
         ? "🎁 可開啟寶箱：" + canOpen + " 次"
-        : "尚差 " + need + " 把🔑鑰匙可開啟寶箱")
+        : "尚差 " + need + " 把🔑可開啟寶箱")
     );
   }
 
@@ -383,11 +405,11 @@ button:disabled{opacity:.75}
 <body>
 <div class="card">
   <div class="marquee-wrap"><div class="marquee" id="marquee"></div></div>
-  <h1>🎁 會員🔑鑰匙寶箱</h1>
+  <h1>🎁 幸運寶箱</h1>
   <div id="loading" class="loading">正在驗證 LINE 身分...</div>
 
   <div id="mainBox" style="display:none;">
-    <div class="desc">儲值1000可獲得1把🔑鑰匙<br>累積2把🔑鑰匙可開啟一次寶箱</div>
+    <div class="desc">儲值1000可獲得1把🔑<br>累積2把🔑可開啟一次寶箱</div>
     <div class="prize"><div class="top">🏆 最大獎</div><div class="money">3888</div></div>
     <div id="chest" class="chest">🎁</div>
     <button id="openBtn">立即開啟寶箱</button>
@@ -457,7 +479,7 @@ async function openBox(){
         return;
       }
       rewardText.innerText=data.reward;
-      leftText.innerText="剩餘🔑鑰匙：" + data.keysLeft + " 把";
+      leftText.innerText="剩餘🔑：" + data.keysLeft + " 把";
       chest.classList.add("opened");
       chest.innerText="✨";
       btn.style.display="none";
