@@ -2,7 +2,6 @@ const express = require("express");
 const { createClient } = require("@supabase/supabase-js");
 
 module.exports = function (app) {
-
   const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_KEY
@@ -18,7 +17,7 @@ module.exports = function (app) {
     res.send(renderBoxPage(LIFF_ID));
   });
 
- app.post("/api/zhouhe/open-box", express.json(), async (req, res) => {
+  app.post("/api/zhouhe/open-box", express.json(), async (req, res) => {
     try {
       const { lineUserId } = req.body;
 
@@ -93,8 +92,9 @@ function renderBoxPage(liffId) {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>3A周賀新會員寶箱</title>
+<title>新會員限定寶箱</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
 <style>
 * { box-sizing: border-box; }
 
@@ -118,16 +118,32 @@ body {
   text-align: center;
   border: 1px solid rgba(255, 215, 120, 0.35);
   border-radius: 24px;
-  padding: 28px 22px;
-  background: rgba(10, 10, 18, 0.9);
+  padding: 24px 20px 28px;
+  background: rgba(10, 10, 18, 0.92);
   box-shadow: 0 0 35px rgba(255, 190, 70, 0.25);
 }
 
-.brand {
-  font-size: 15px;
-  color: #d8b76a;
-  letter-spacing: 2px;
-  margin-bottom: 10px;
+.marquee-wrap {
+  width: 100%;
+  overflow: hidden;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,215,120,0.25);
+}
+
+.marquee {
+  white-space: nowrap;
+  padding: 10px 0;
+  color: #ffd15c;
+  font-weight: bold;
+  font-size: 14px;
+  animation: marquee 38s linear infinite;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
 }
 
 h1 {
@@ -155,7 +171,7 @@ h1 {
 }
 
 .prize .money {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: bold;
   color: #ffd15c;
   margin-top: 4px;
@@ -247,19 +263,23 @@ button:disabled { opacity: 0.75; }
 
 <body>
   <div class="card">
+    <div class="marquee-wrap">
+      <div class="marquee" id="marquee"></div>
+    </div>
+
     <h1>🎁 新會員限定寶箱</h1>
 
     <div id="loading" class="loading">正在驗證 LINE 身分...</div>
 
     <div id="mainBox" style="display:none;">
       <div class="desc">
-        歡迎加入 3A周賀<br>
+        歡迎加入<br>
         每位會員限領一次
       </div>
 
       <div class="prize">
         <div class="top">🏆 最大獎</div>
-        <div class="money">🎁 888</div>
+        <div class="money">888</div>
       </div>
 
       <div id="chest" class="chest">🎁</div>
@@ -267,7 +287,7 @@ button:disabled { opacity: 0.75; }
       <button id="openBtn">立即開啟寶箱</button>
 
       <div id="result" class="result">
-        <h2>🎉 恭喜獲得獎勵</h2>
+        <h2>🎉 恭喜獲得專屬獎勵</h2>
         <div class="reward">🔓 AI權限 1 天</div>
         <div class="notice">
           請截圖保存此畫面<br>
@@ -297,6 +317,84 @@ const errorBox = document.getElementById("errorBox");
 const btn = document.getElementById("openBtn");
 const chest = document.getElementById("chest");
 const result = document.getElementById("result");
+
+function setupMarquee() {
+  const names = [
+    "zhu","long","king","win","boss",
+    "ray","leo","jack","alex","tony",
+    "mark","andy","kevin","tom","nick",
+    "john","max","jason","david","eric",
+    "allen","steven","sam","lucas","mike",
+    "wayne","keith","ben","ryan","ethan",
+    "logan","aaron","bruce","chris","daniel",
+    "frank","gary","henry","ivan","jerry",
+    "ken","louis","mason","neo","oscar",
+    "peter","robin","scott","vincent","walker",
+    "xavier","york","zack","hunter","rocco",
+    "ace","blade","storm","ghost","legend",
+    "phoenix","dragon","tiger","wolf","joker",
+    "apollo","zeus","thor","titan","viper",
+    "hawk","falcon","cobra","spartan","empire"
+  ];
+
+  const nums = [
+    "66","77","88","99",
+    "168","518","668","888",
+    "999","1314","520","521",
+    "886","887","9527","777",
+    "5678","8888","6666","9999",
+    "111","222","333","444",
+    "555","123","321","789",
+    "258","1688","8866","7788",
+    "8899","5566","952","16888",
+    "52016","77752","88688",
+    "99916","66888","51888",
+    "2025","2026","7777","8886",
+    "8889","6868","5858","5252",
+    "101","102","5200","1680",
+    "88888","99999","13145"
+  ];
+
+  const prizes = [
+    188,188,188,188,188,188,188,188,188,188,
+    388,388,388,388,388,
+    588,588,588,
+    888
+  ];
+
+  function randomAccount() {
+    const useNumberOnly = Math.random() < 0.25;
+
+    if (useNumberOnly) {
+      const numberLength = Math.floor(Math.random() * 4) + 5;
+      let account = "";
+
+      for (let i = 0; i < numberLength; i++) {
+        account += Math.floor(Math.random() * 10);
+      }
+
+      return account + "*".repeat(Math.floor(Math.random() * 3) + 3);
+    }
+
+    const name = names[Math.floor(Math.random() * names.length)];
+    const num = nums[Math.floor(Math.random() * nums.length)];
+
+    return name + num + "*".repeat(Math.floor(Math.random() * 3) + 3);
+  }
+
+  const messages = [];
+
+  for (let i = 0; i < 30; i++) {
+    const account = randomAccount();
+    const prize = prizes[Math.floor(Math.random() * prizes.length)];
+    messages.push("🎉 恭喜 " + account + " 抽中 " + prize);
+  }
+
+  const marquee = document.getElementById("marquee");
+  if (marquee) {
+    marquee.innerText = messages.join("　　　");
+  }
+}
 
 async function init() {
   try {
@@ -372,7 +470,11 @@ async function openBox() {
   }
 }
 
-btn.addEventListener("click", openBox);
+if (btn) {
+  btn.addEventListener("click", openBox);
+}
+
+setupMarquee();
 init();
 </script>
 </body>
