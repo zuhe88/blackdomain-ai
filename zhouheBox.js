@@ -160,6 +160,105 @@ module.exports = function (app) {
     });
   }
 
+async function createVipRequest(replyToken, userId, account) {
+
+  account = String(account || "").trim();
+
+  const blockedWords = [
+    "請輸入",
+    "範例",
+    "綁定",
+    "鑰匙",
+    "查詢",
+    "獎勵",
+    "幸運寶箱",
+    "通過",
+    "加鑰匙"
+  ];
+
+  if (blockedWords.some(word => account.includes(word))) {
+    pendingBind[userId] = true;
+
+    return reply(
+      replyToken,
+      "格式不正確，請只輸入您的3A帳號。\n\n範例：kerero777444"
+    );
+  }
+
+  if (account.includes("\n") || account.includes(" ")) {
+    pendingBind[userId] = true;
+
+    return reply(
+      replyToken,
+      "帳號不能包含空格或換行。\n\n請重新輸入您的3A帳號。"
+    );
+  }
+
+  if (account.length < 4 || account.length > 20) {
+    pendingBind[userId] = true;
+
+    return reply(
+      replyToken,
+      "帳號長度不正確。\n\n請重新輸入您的3A帳號。"
+    );
+  }
+
+  const { error } = await supabase
+    .from("vip_requests")
+    .insert({
+      user_id: userId,
+      account,
+      status: "pending"
+    });
+
+  ...
+}
+
+  const { data: alreadyBind } = await supabase
+  .from("vip_users")
+  .select("*")
+  .eq("user_id", userId)
+  .limit(1)
+  .maybeSingle();
+
+if (alreadyBind) {
+  return reply(
+    replyToken,
+    "✅ 你已完成綁定\n\n目前帳號：" +
+      alreadyBind.account +
+      "\n\n如需更換帳號請聯繫管理員。"
+  );
+}
+
+  const { data: sameAccount } = await supabase
+  .from("vip_users")
+  .select("*")
+  .eq("account", account)
+  .limit(1)
+  .maybeSingle();
+
+if (sameAccount) {
+  return reply(
+    replyToken,
+    "此3A帳號已綁定其他LINE帳號。\n\n如有問題請聯繫管理員。"
+  );
+}
+
+  const { data: pendingRequest } = await supabase
+  .from("vip_requests")
+  .select("*")
+  .eq("account", account)
+  .eq("status", "pending")
+  .limit(1)
+  .maybeSingle();
+
+if (pendingRequest) {
+  return reply(
+    replyToken,
+    "此帳號已在審核中。\n\n請等待管理員審核。"
+  );
+}
+  
   async function createVipRequest(replyToken, userId, account) {
     const { error } = await supabase.from("vip_requests").insert({
       user_id: userId,
