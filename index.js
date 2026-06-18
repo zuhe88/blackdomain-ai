@@ -15,6 +15,7 @@ const openai = new OpenAI({
 
 const app = express();
 
+require("./zhouheBox")(app);
 
 const client = new line.Client({
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
