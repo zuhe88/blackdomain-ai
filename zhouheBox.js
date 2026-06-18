@@ -247,7 +247,6 @@ button:disabled { opacity: 0.75; }
 
 <body>
   <div class="card">
-    <div class="brand">3A 周賀官方 LINE</div>
     <h1>🎁 新會員限定寶箱</h1>
 
     <div id="loading" class="loading">正在驗證 LINE 身分...</div>
@@ -260,7 +259,7 @@ button:disabled { opacity: 0.75; }
 
       <div class="prize">
         <div class="top">🏆 最大獎</div>
-        <div class="money">888體驗金</div>
+        <div class="money">🎁 888</div>
       </div>
 
       <div id="chest" class="chest">🎁</div>
