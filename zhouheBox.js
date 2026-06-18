@@ -1,4 +1,5 @@
 const express = require("express");
+const line = require("@line/bot-sdk");
 const { createClient } = require("@supabase/supabase-js");
 
 module.exports = function (app) {
@@ -12,6 +13,148 @@ module.exports = function (app) {
   const ADMIN_UIDS = [
     "U0ac5f4989e00ef3d8a9ab59dc00dca7d"
   ];
+
+  const zhouheConfig = {
+    channelAccessToken: process.env.ZHOUHE_CHANNEL_ACCESS_TOKEN,
+    channelSecret: process.env.ZHOUHE_CHANNEL_SECRET,
+  };
+
+  const zhouheClient = new line.Client(zhouheConfig);
+
+  // 3A-周賀 webhook
+  app.post("/zhouhe/webhook", line.middleware(zhouheConfig), async (req, res) => {
+    try {
+      await Promise.all(req.body.events.map(handleZhouheEvent));
+      res.status(200).end();
+    } catch (err) {
+      console.error("ZHOUHE WEBHOOK ERROR:", err);
+      res.status(500).end();
+    }
+  });
+
+  async function handleZhouheEvent(event) {
+    if (event.type !== "message" || event.message.type !== "text") return;
+
+    const text = event.message.text.trim();
+    const userId = event.source.userId;
+
+    if (text === "碎片查詢") {
+      return handleFragmentQuery(event.replyToken, userId);
+    }
+
+    if (text.startsWith("#加碎片")) {
+      if (!ADMIN_UIDS.includes(userId)) {
+        return zhouheClient.replyMessage(event.replyToken, {
+          type: "text",
+          text: "你沒有管理員權限。",
+        });
+      }
+
+      const parts = text.split(/\s+/);
+      const account = parts[1];
+      const count = Number(parts[2]);
+
+      if (!account || !count || count <= 0) {
+        return zhouheClient.replyMessage(event.replyToken, {
+          type: "text",
+          text: "格式錯誤\n請輸入：#加碎片 3A帳號 數量\n例如：#加碎片 hohoho321321 5",
+        });
+      }
+
+      return handleAddFragments(event.replyToken, userId, account, count);
+    }
+  }
+
+  async function handleFragmentQuery(replyToken, userId) {
+    const { data: vip, error } = await supabase
+      .from("vip_users")
+      .select("*")
+      .eq("user_id", userId)
+      .order("id", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !vip) {
+      return zhouheClient.replyMessage(replyToken, {
+        type: "text",
+        text:
+          "尚未查詢到你的會員資料。\n\n請先提供3A帳號，並等待管理員審核。",
+      });
+    }
+
+    const fragments = vip.fragments || 0;
+    const need = Math.max(10 - fragments, 0);
+
+    return zhouheClient.replyMessage(replyToken, {
+      type: "text",
+      text:
+        "💎 碎片查詢\n\n" +
+        "3A帳號：" + vip.account + "\n" +
+        "目前碎片：" + fragments + " / 10\n" +
+        "累積儲值：" + (vip.total_recharge || 0) + "\n\n" +
+        (fragments >= 10
+          ? "✅ 已可開啟寶箱一次"
+          : "尚差 " + need + " 個碎片可開啟寶箱"),
+    });
+  }
+
+  async function handleAddFragments(replyToken, adminUserId, account, count) {
+    const { data: vip, error } = await supabase
+      .from("vip_users")
+      .select("*")
+      .eq("account", account)
+      .order("id", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !vip) {
+      return zhouheClient.replyMessage(replyToken, {
+        type: "text",
+        text: "查無此3A帳號：" + account,
+      });
+    }
+
+    const oldFragments = vip.fragments || 0;
+    const newFragments = oldFragments + count;
+
+    const oldRecharge = vip.total_recharge || 0;
+    const addRecharge = count * 1000;
+    const newRecharge = oldRecharge + addRecharge;
+
+    const { error: updateError } = await supabase
+      .from("vip_users")
+      .update({
+        fragments: newFragments,
+        total_recharge: newRecharge,
+      })
+      .eq("id", vip.id);
+
+    if (updateError) {
+      console.error("ADD FRAGMENTS ERROR:", updateError);
+      return zhouheClient.replyMessage(replyToken, {
+        type: "text",
+        text: "加碎片失敗，請稍後再試。",
+      });
+    }
+
+    await supabase.from("zhouhe_fragment_logs").insert({
+      line_user_id: vip.user_id,
+      account_3a: account,
+      amount: addRecharge,
+      fragments_added: count,
+      note: "管理員加碎片：" + adminUserId,
+    });
+
+    return zhouheClient.replyMessage(replyToken, {
+      type: "text",
+      text:
+        "✅ 加碎片成功\n\n" +
+        "3A帳號：" + account + "\n" +
+        "新增碎片：" + count + "\n" +
+        "目前碎片：" + newFragments + "\n" +
+        "累積儲值：" + newRecharge,
+    });
+  }
 
   app.get("/box", (req, res) => {
     res.send(renderBoxPage(LIFF_ID));
@@ -29,51 +172,73 @@ module.exports = function (app) {
       }
 
       const isAdmin = ADMIN_UIDS.includes(lineUserId);
-      const rewardName = "AI權限 1 天";
 
-      const { data: existing, error: selectError } = await supabase
-        .from("zhouhe_box_claims")
-        .select("*")
-        .eq("line_user_id", lineUserId)
-        .maybeSingle();
+      const reward = pickReward();
 
-      if (selectError) {
-        console.error("BOX SELECT ERROR:", selectError);
-        return res.status(500).json({
-          ok: false,
-          message: "系統查詢異常，請稍後再試。",
-        });
-      }
-
-      if (existing && !isAdmin) {
+      if (isAdmin) {
         return res.json({
           ok: true,
-          alreadyClaimed: true,
-          reward: existing.reward_name || rewardName,
+          reward,
+          adminTest: true,
         });
       }
 
-      if (!isAdmin && !existing) {
-        const { error: insertError } = await supabase
-          .from("zhouhe_box_claims")
-          .insert({
-            line_user_id: lineUserId,
-            reward_name: rewardName,
-          });
+      const { data: vip, error } = await supabase
+        .from("vip_users")
+        .select("*")
+        .eq("user_id", lineUserId)
+        .order("id", { ascending: false })
+        .limit(1)
+        .single();
 
-        if (insertError) {
-          console.error("BOX INSERT ERROR:", insertError);
-          return res.status(500).json({
-            ok: false,
-            message: "獎勵發放異常，請稍後再試。",
-          });
-        }
+      if (error || !vip) {
+        return res.json({
+          ok: false,
+          notVip: true,
+          message: "尚未完成帳號審核，請先聯繫管理員。",
+        });
       }
+
+      const fragments = vip.fragments || 0;
+
+      if (fragments < 10) {
+        return res.json({
+          ok: false,
+          notEnough: true,
+          fragments,
+          message: "碎片不足，目前碎片：" + fragments + " / 10",
+        });
+      }
+
+      const newFragments = fragments - 10;
+
+      const { error: updateError } = await supabase
+        .from("vip_users")
+        .update({
+          fragments: newFragments,
+        })
+        .eq("id", vip.id);
+
+      if (updateError) {
+        console.error("BOX UPDATE FRAGMENTS ERROR:", updateError);
+        return res.status(500).json({
+          ok: false,
+          message: "扣除碎片失敗，請稍後再試。",
+        });
+      }
+
+      await supabase.from("zhouhe_fragment_logs").insert({
+        line_user_id: lineUserId,
+        account_3a: vip.account,
+        amount: 0,
+        fragments_added: -10,
+        note: "開寶箱抽中：" + reward,
+      });
 
       return res.json({
         ok: true,
-        alreadyClaimed: false,
-        reward: rewardName,
+        reward,
+        fragmentsLeft: newFragments,
       });
     } catch (err) {
       console.error("ZHOUHE BOX ERROR:", err);
@@ -84,6 +249,19 @@ module.exports = function (app) {
     }
   });
 };
+
+function pickReward() {
+  const rewards = [
+    ...Array(800).fill("AI權限 1 天"),
+    ...Array(150).fill("88"),
+    ...Array(30).fill("288"),
+    ...Array(13).fill("588"),
+    ...Array(5).fill("888"),
+    ...Array(2).fill("3888"),
+  ];
+
+  return rewards[Math.floor(Math.random() * rewards.length)];
+}
 
 function renderBoxPage(liffId) {
   return `
@@ -240,13 +418,6 @@ button:disabled { opacity: 0.75; }
   font-size: 15px;
 }
 
-.used {
-  color: #ffcd6a;
-  font-size: 22px;
-  font-weight: bold;
-  margin: 18px 0;
-}
-
 .loading {
   color: #ddd;
   margin: 18px 0;
@@ -267,19 +438,19 @@ button:disabled { opacity: 0.75; }
       <div class="marquee" id="marquee"></div>
     </div>
 
-    <h1>🎁 新會員限定寶箱</h1>
+    <h1>🎁 會員碎片寶箱</h1>
 
     <div id="loading" class="loading">正在驗證 LINE 身分...</div>
 
     <div id="mainBox" style="display:none;">
       <div class="desc">
-        歡迎加入<br>
-        每位會員限領一次
+        儲值 1000 可獲得 1 個碎片<br>
+        累積 10 個碎片可開啟一次寶箱
       </div>
 
       <div class="prize">
         <div class="top">🏆 最大獎</div>
-        <div class="money">888</div>
+        <div class="money">3888</div>
       </div>
 
       <div id="chest" class="chest">🎁</div>
@@ -287,20 +458,12 @@ button:disabled { opacity: 0.75; }
       <button id="openBtn">立即開啟寶箱</button>
 
       <div id="result" class="result">
-        <h2>🎉 恭喜獲得專屬獎勵</h2>
-        <div class="reward">🔓 AI權限 1 天</div>
+        <h2>🎉 恭喜抽中</h2>
+        <div id="rewardText" class="reward">🔓 AI權限 1 天</div>
         <div class="notice">
           請截圖保存此畫面<br>
-          並聯繫管理員開通 AI 權限
+          並聯繫管理員領取
         </div>
-      </div>
-    </div>
-
-    <div id="alreadyBox" style="display:none;">
-      <div class="used">⚠️ 此寶箱已開啟過</div>
-      <div class="notice">
-        每位新會員限領一次<br>
-        你已領取過專屬獎勵
       </div>
     </div>
 
@@ -312,73 +475,53 @@ let currentUserId = "";
 
 const loading = document.getElementById("loading");
 const mainBox = document.getElementById("mainBox");
-const alreadyBox = document.getElementById("alreadyBox");
 const errorBox = document.getElementById("errorBox");
 const btn = document.getElementById("openBtn");
 const chest = document.getElementById("chest");
 const result = document.getElementById("result");
+const rewardText = document.getElementById("rewardText");
 
 function setupMarquee() {
   const names = [
-    "zhu","long","king","win","boss",
-    "ray","leo","jack","alex","tony",
-    "mark","andy","kevin","tom","nick",
-    "john","max","jason","david","eric",
-    "allen","steven","sam","lucas","mike",
-    "wayne","keith","ben","ryan","ethan",
-    "logan","aaron","bruce","chris","daniel",
-    "frank","gary","henry","ivan","jerry",
-    "ken","louis","mason","neo","oscar",
-    "peter","robin","scott","vincent","walker",
-    "xavier","york","zack","hunter","rocco",
-    "ace","blade","storm","ghost","legend",
-    "phoenix","dragon","tiger","wolf","joker",
-    "apollo","zeus","thor","titan","viper",
+    "zhu","long","king","win","boss","ray","leo","jack","alex","tony",
+    "mark","andy","kevin","tom","nick","john","max","jason","david","eric",
+    "allen","steven","sam","lucas","mike","wayne","keith","ben","ryan","ethan",
+    "logan","aaron","bruce","chris","daniel","frank","gary","henry","ivan","jerry",
+    "ken","louis","mason","neo","oscar","peter","robin","scott","vincent","walker",
+    "xavier","york","zack","hunter","rocco","ace","blade","storm","ghost","legend",
+    "phoenix","dragon","tiger","wolf","joker","apollo","zeus","thor","titan","viper",
     "hawk","falcon","cobra","spartan","empire"
   ];
 
   const nums = [
-    "66","77","88","99",
-    "168","518","668","888",
-    "999","1314","520","521",
-    "886","887","9527","777",
-    "5678","8888","6666","9999",
-    "111","222","333","444",
-    "555","123","321","789",
-    "258","1688","8866","7788",
-    "8899","5566","952","16888",
-    "52016","77752","88688",
-    "99916","66888","51888",
-    "2025","2026","7777","8886",
-    "8889","6868","5858","5252",
-    "101","102","5200","1680",
-    "88888","99999","13145"
+    "66","77","88","99","168","518","668","888","999","1314",
+    "520","521","886","887","9527","777","5678","8888","6666","9999",
+    "111","222","333","444","555","123","321","789","258","1688",
+    "8866","7788","8899","5566","952","16888","52016","77752",
+    "88688","99916","66888","51888","2025","2026","7777","8886",
+    "8889","6868","5858","5252","101","102","5200","1680","88888",
+    "99999","13145"
   ];
 
   const prizes = [
-    188,188,188,188,188,188,188,188,188,188,
-    388,388,388,388,388,
-    588,588,588,
-    888
+    "AI權限 1 天","AI權限 1 天","AI權限 1 天","AI權限 1 天",
+    "88","88","288","588","888","3888"
   ];
 
   function randomAccount() {
     const useNumberOnly = Math.random() < 0.25;
 
     if (useNumberOnly) {
-      const numberLength = Math.floor(Math.random() * 4) + 5;
       let account = "";
-
+      const numberLength = Math.floor(Math.random() * 4) + 5;
       for (let i = 0; i < numberLength; i++) {
         account += Math.floor(Math.random() * 10);
       }
-
       return account + "*".repeat(Math.floor(Math.random() * 3) + 3);
     }
 
     const name = names[Math.floor(Math.random() * names.length)];
     const num = nums[Math.floor(Math.random() * nums.length)];
-
     return name + num + "*".repeat(Math.floor(Math.random() * 3) + 3);
   }
 
@@ -390,10 +533,7 @@ function setupMarquee() {
     messages.push("🎉 恭喜 " + account + " 抽中 " + prize);
   }
 
-  const marquee = document.getElementById("marquee");
-  if (marquee) {
-    marquee.innerText = messages.join("　　　");
-  }
+  document.getElementById("marquee").innerText = messages.join("　　　");
 }
 
 async function init() {
@@ -428,6 +568,7 @@ async function openBox() {
   btn.disabled = true;
   btn.innerText = "🎁 開寶箱中...";
   chest.classList.add("shake");
+  errorBox.style.display = "none";
 
   try {
     const res = await fetch("/api/zhouhe/open-box", {
@@ -443,18 +584,13 @@ async function openBox() {
 
       if (!data.ok) {
         btn.disabled = false;
-        btn.innerText = "重新開啟寶箱";
+        btn.innerText = "立即開啟寶箱";
         errorBox.style.display = "block";
         errorBox.innerText = data.message || "寶箱系統異常，請稍後再試。";
         return;
       }
 
-      if (data.alreadyClaimed) {
-        mainBox.style.display = "none";
-        alreadyBox.style.display = "block";
-        return;
-      }
-
+      rewardText.innerText = data.reward;
       chest.classList.add("opened");
       chest.innerText = "✨";
       btn.style.display = "none";
@@ -464,16 +600,13 @@ async function openBox() {
     console.error(err);
     chest.classList.remove("shake");
     btn.disabled = false;
-    btn.innerText = "重新開啟寶箱";
+    btn.innerText = "立即開啟寶箱";
     errorBox.style.display = "block";
     errorBox.innerText = "寶箱系統暫時異常，請稍後再試。";
   }
 }
 
-if (btn) {
-  btn.addEventListener("click", openBox);
-}
-
+btn.addEventListener("click", openBox);
 setupMarquee();
 init();
 </script>
