@@ -77,7 +77,7 @@ module.exports = function (app) {
       } else {
         await supabase.from("zhouhe_box_claims").insert({
           line_user_id: lineUserId,
-          reward_name: "黑域AI體驗權限 1 天",
+          reward_name: "體驗權限 1 天",
         });
       }
 
@@ -238,6 +238,7 @@ button {
 }
 </style>
 </head>
+
 <body>
   <div class="card">
     <div class="brand">3A 周賀官方 LINE</div>
@@ -269,10 +270,10 @@ button {
 
           <div id="result" class="result">
             <h2>🎉 恭喜獲得專屬獎勵</h2>
-            <div class="reward">🔓 黑域AI體驗權限 1 天</div>
+            <div class="reward">🎉 恭喜獲得體驗權限 1 天</div>
             <div class="notice">
-              請保存此畫面<br>
-              並聯繫管理員開通體驗權限
+              請截圖保存此畫面<br>
+              並聯繫管理員領取獎勵
             </div>
           </div>
         `
@@ -287,7 +288,7 @@ const result = document.getElementById("result");
 if (btn) {
   btn.addEventListener("click", () => {
     btn.disabled = true;
-    btn.innerText = "黑域AI驗證中...";
+    btn.innerText = "🎁 開寶箱中...";
     chest.classList.add("shake");
 
     setTimeout(() => {
