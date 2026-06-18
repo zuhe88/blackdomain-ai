@@ -35,24 +35,69 @@ module.exports = function (app) {
     const text = event.message.text.trim();
     const userId = event.source.userId;
 
-    if (text === "幸運寶箱" || text === "🎁幸運寶箱" || text === "鑰匙" || text === "🔑鑰匙" || text === "鑰匙中心") {
+    if (
+      text === "幸運寶箱" ||
+      text === "🎁幸運寶箱" ||
+      text === "鑰匙" ||
+      text === "🔑鑰匙" ||
+      text === "鑰匙中心"
+    ) {
       return sendKeyMenu(event.replyToken);
+    }
+
+    if (text === "管理員" || text === "管理員功能" || text === "後台") {
+      if (!ADMIN_UIDS.includes(userId)) {
+        return reply(event.replyToken, "你沒有管理員權限。");
+      }
+      return sendAdminMenu(event.replyToken);
+    }
+
+    if (text === "管理指令") {
+      if (!ADMIN_UIDS.includes(userId)) {
+        return reply(event.replyToken, "你沒有管理員權限。");
+      }
+      return reply(
+        event.replyToken,
+        "👑 管理員指令表\n\n" +
+          "通過 3A帳號\n" +
+          "加鑰匙 3A帳號 數量\n\n" +
+          "機率查詢\n" +
+          "機率 AI 100\n" +
+          "機率 88 20\n" +
+          "全關\n" +
+          "開獎模式\n\n" +
+          "會員入口：幸運寶箱"
+      );
     }
 
     if (text === "綁定" || text === "綁定帳號" || text === "綁定3A帳號") {
       pendingBind[userId] = true;
-      return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：hohoho321321");
+      return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：kerero777444");
     }
 
     if (pendingBind[userId]) {
       const blocked = [
-        "鑰匙", "🔑鑰匙", "鑰匙中心", "幸運寶箱", "🎁幸運寶箱",
-        "鑰匙查詢", "碎片", "碎片查詢", "獎勵說明",
-        "綁定", "綁定帳號", "綁定3A帳號"
+        "鑰匙",
+        "🔑鑰匙",
+        "鑰匙中心",
+        "幸運寶箱",
+        "🎁幸運寶箱",
+        "鑰匙查詢",
+        "碎片",
+        "碎片查詢",
+        "獎勵說明",
+        "綁定",
+        "綁定帳號",
+        "綁定3A帳號",
+        "管理員",
+        "管理員功能",
+        "後台",
+        "管理指令",
       ];
 
       if (blocked.includes(text)) {
         delete pendingBind[userId];
+
         return reply(
           event.replyToken,
           "已取消綁定流程。\n\n如需綁定3A帳號，請重新點選「綁定3A帳號」，並直接輸入您的3A帳號。"
@@ -71,14 +116,14 @@ module.exports = function (app) {
       return reply(
         event.replyToken,
         "🎁 幸運寶箱獎勵\n\n" +
-        "🔓 AI權限1天\n" +
-        "🎁 88\n" +
-        "🎁 288\n" +
-        "🎁 588\n" +
-        "🎁 888\n" +
-        "🏆 3888\n\n" +
-        "儲值1000 = 1把🔑鑰匙\n" +
-        "累積2把🔑鑰匙即可開啟一次寶箱"
+          "🔓 AI權限1天\n" +
+          "🎁 88\n" +
+          "🎁 288\n" +
+          "🎁 588\n" +
+          "🎁 888\n" +
+          "🏆 3888\n\n" +
+          "儲值1000 = 1把🔑鑰匙\n" +
+          "累積2把🔑鑰匙即可開啟一次寶箱"
       );
     }
 
@@ -130,7 +175,7 @@ module.exports = function (app) {
       if (!account || !count || count <= 0) {
         return reply(
           event.replyToken,
-          "格式錯誤\n請輸入：加鑰匙 3A帳號 數量\n例如：加鑰匙 hohoho321321 5"
+          "格式錯誤\n請輸入：加鑰匙 3A帳號 數量\n例如：加鑰匙 kerero777444 5"
         );
       }
 
@@ -160,106 +205,101 @@ module.exports = function (app) {
     });
   }
 
-async function createVipRequest(replyToken, userId, account) {
-
-  account = String(account || "").trim();
-
-  const blockedWords = [
-    "請輸入",
-    "範例",
-    "綁定",
-    "鑰匙",
-    "查詢",
-    "獎勵",
-    "幸運寶箱",
-    "通過",
-    "加鑰匙"
-  ];
-
-  if (blockedWords.some(word => account.includes(word))) {
-    pendingBind[userId] = true;
-
-    return reply(
-      replyToken,
-      "格式不正確，請只輸入您的3A帳號。\n\n範例：kerero777444"
-    );
-  }
-
-  if (account.includes("\n") || account.includes(" ")) {
-    pendingBind[userId] = true;
-
-    return reply(
-      replyToken,
-      "帳號不能包含空格或換行。\n\n請重新輸入您的3A帳號。"
-    );
-  }
-
-  if (account.length < 4 || account.length > 20) {
-    pendingBind[userId] = true;
-
-    return reply(
-      replyToken,
-      "帳號長度不正確。\n\n請重新輸入您的3A帳號。"
-    );
-  }
-
-  const { error } = await supabase
-    .from("vip_requests")
-    .insert({
-      user_id: userId,
-      account,
-      status: "pending"
+  function sendAdminMenu(replyToken) {
+    return zhouheClient.replyMessage(replyToken, {
+      type: "template",
+      altText: "管理員功能表",
+      template: {
+        type: "buttons",
+        title: "👑 管理員功能表",
+        text: "請選擇常用管理功能",
+        actions: [
+          { type: "message", label: "📋 管理指令", text: "管理指令" },
+          { type: "message", label: "🎯 機率查詢", text: "機率查詢" },
+          { type: "message", label: "🔒 全關模式", text: "全關" },
+          { type: "message", label: "🎁 開獎模式", text: "開獎模式" },
+        ],
+      },
     });
+  }
 
-  ...
-}
-
-  const { data: alreadyBind } = await supabase
-  .from("vip_users")
-  .select("*")
-  .eq("user_id", userId)
-  .limit(1)
-  .maybeSingle();
-
-if (alreadyBind) {
-  return reply(
-    replyToken,
-    "✅ 你已完成綁定\n\n目前帳號：" +
-      alreadyBind.account +
-      "\n\n如需更換帳號請聯繫管理員。"
-  );
-}
-
-  const { data: sameAccount } = await supabase
-  .from("vip_users")
-  .select("*")
-  .eq("account", account)
-  .limit(1)
-  .maybeSingle();
-
-if (sameAccount) {
-  return reply(
-    replyToken,
-    "此3A帳號已綁定其他LINE帳號。\n\n如有問題請聯繫管理員。"
-  );
-}
-
-  const { data: pendingRequest } = await supabase
-  .from("vip_requests")
-  .select("*")
-  .eq("account", account)
-  .eq("status", "pending")
-  .limit(1)
-  .maybeSingle();
-
-if (pendingRequest) {
-  return reply(
-    replyToken,
-    "此帳號已在審核中。\n\n請等待管理員審核。"
-  );
-}
-  
   async function createVipRequest(replyToken, userId, account) {
+    account = String(account || "").trim();
+
+    const blockedWords = [
+      "請輸入",
+      "範例",
+      "綁定",
+      "鑰匙",
+      "查詢",
+      "獎勵",
+      "幸運寶箱",
+      "通過",
+      "加鑰匙",
+      "管理員",
+      "後台",
+      "機率",
+    ];
+
+    if (blockedWords.some(word => account.includes(word))) {
+      pendingBind[userId] = true;
+      return reply(replyToken, "格式不正確，請只輸入您的3A帳號。\n\n範例：kerero777444");
+    }
+
+    if (account.includes("\n") || account.includes(" ")) {
+      pendingBind[userId] = true;
+      return reply(replyToken, "帳號不能包含空格或換行。\n\n請重新輸入您的3A帳號。");
+    }
+
+    if (account.length < 4 || account.length > 24) {
+      pendingBind[userId] = true;
+      return reply(replyToken, "帳號長度不正確。\n\n請重新輸入您的3A帳號。");
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(account)) {
+      pendingBind[userId] = true;
+      return reply(replyToken, "帳號格式不正確。\n\n請只輸入英文、數字或底線。");
+    }
+
+    const { data: alreadyBind } = await supabase
+      .from("vip_users")
+      .select("*")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (alreadyBind) {
+      return reply(
+        replyToken,
+        "✅ 你已完成綁定\n\n目前帳號：" +
+          alreadyBind.account +
+          "\n\n如需更換帳號請聯繫管理員。"
+      );
+    }
+
+    const { data: sameAccount } = await supabase
+      .from("vip_users")
+      .select("*")
+      .eq("account", account)
+      .limit(1)
+      .maybeSingle();
+
+    if (sameAccount) {
+      return reply(replyToken, "此3A帳號已綁定其他LINE帳號。\n\n如有問題請聯繫管理員。");
+    }
+
+    const { data: pendingRequest } = await supabase
+      .from("vip_requests")
+      .select("*")
+      .eq("account", account)
+      .eq("status", "pending")
+      .limit(1)
+      .maybeSingle();
+
+    if (pendingRequest) {
+      return reply(replyToken, "此帳號已在審核中。\n\n請等待管理員審核。");
+    }
+
     const { error } = await supabase.from("vip_requests").insert({
       user_id: userId,
       account,
@@ -348,12 +388,12 @@ if (pendingRequest) {
     return reply(
       replyToken,
       "🔑 鑰匙查詢\n\n" +
-      "3A帳號：" + vip.account + "\n" +
-      "目前鑰匙：" + keys + " 把\n" +
-      "累積儲值：" + (vip.total_recharge || 0) + "\n\n" +
-      (keys >= 2
-        ? "🎁 可開啟寶箱：" + canOpen + " 次"
-        : "尚差 " + need + " 把🔑鑰匙可開啟寶箱")
+        "3A帳號：" + vip.account + "\n" +
+        "目前鑰匙：" + keys + " 把\n" +
+        "累積儲值：" + (vip.total_recharge || 0) + "\n\n" +
+        (keys >= 2
+          ? "🎁 可開啟寶箱：" + canOpen + " 次"
+          : "尚差 " + need + " 把🔑鑰匙可開啟寶箱")
     );
   }
 
@@ -401,11 +441,11 @@ if (pendingRequest) {
     return reply(
       replyToken,
       "✅ 加鑰匙成功\n\n" +
-      "3A帳號：" + account + "\n" +
-      "新增鑰匙：" + count + " 把\n" +
-      "目前鑰匙：" + newKeys + " 把\n" +
-      "累積儲值：" + newRecharge + "\n" +
-      "🎁 可開啟寶箱：" + canOpen + " 次"
+        "3A帳號：" + account + "\n" +
+        "新增鑰匙：" + count + " 把\n" +
+        "目前鑰匙：" + newKeys + " 把\n" +
+        "累積儲值：" + newRecharge + "\n" +
+        "🎁 可開啟寶箱：" + canOpen + " 次"
     );
   }
 
@@ -424,12 +464,12 @@ if (pendingRequest) {
     return reply(
       replyToken,
       "🎁 目前寶箱機率\n\n" +
-      "🔓 AI權限1天：" + (map.AI || 0) + "%\n" +
-      "🎁 88：" + (map["88"] || 0) + "%\n" +
-      "🎁 288：" + (map["288"] || 0) + "%\n" +
-      "🎁 588：" + (map["588"] || 0) + "%\n" +
-      "🎁 888：" + (map["888"] || 0) + "%\n" +
-      "🏆 3888：" + (map["3888"] || 0) + "%"
+        "🔓 AI權限1天：" + (map.AI || 0) + "%\n" +
+        "🎁 88：" + (map["88"] || 0) + "%\n" +
+        "🎁 288：" + (map["288"] || 0) + "%\n" +
+        "🎁 588：" + (map["588"] || 0) + "%\n" +
+        "🎁 888：" + (map["888"] || 0) + "%\n" +
+        "🏆 3888：" + (map["3888"] || 0) + "%"
     );
   }
 
@@ -479,12 +519,12 @@ if (pendingRequest) {
     return reply(
       replyToken,
       "✅ 已切換開獎模式\n\n" +
-      "AI權限1天：45%\n" +
-      "88：38%\n" +
-      "288：12%\n" +
-      "588：3%\n" +
-      "888：1.5%\n" +
-      "3888：0.5%"
+        "AI權限1天：45%\n" +
+        "88：38%\n" +
+        "288：12%\n" +
+        "588：3%\n" +
+        "888：1.5%\n" +
+        "3888：0.5%"
     );
   }
 
@@ -498,9 +538,19 @@ if (pendingRequest) {
         .from("zhouhe_box_logs")
         .select("account_3a,reward")
         .order("created_at", { ascending: false })
-        .limit(30);
+        .limit(50);
 
-      return res.json({ ok: true, logs: data || [] });
+      const logs = data || [];
+
+      for (let i = logs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [logs[i], logs[j]] = [logs[j], logs[i]];
+      }
+
+      return res.json({
+        ok: true,
+        logs: logs.slice(0, 30),
+      });
     } catch (err) {
       console.error("MARQUEE ERROR:", err);
       return res.json({ ok: false, logs: [] });
@@ -515,18 +565,17 @@ if (pendingRequest) {
       }
 
       const isAdmin = ADMIN_UIDS.includes(lineUserId);
-const reward = await pickReward(supabase);
+      const reward = await pickReward(supabase);
 
-if (isAdmin) {
-  return res.json({
-    ok: true,
-    reward,
-    adminTest: true,
-    keysLeft: "管理員測試",
-    canOpenLeft: "管理員測試",
-    message: "管理員測試不列入跑馬燈"
-  });
-}
+      if (isAdmin) {
+        return res.json({
+          ok: true,
+          reward,
+          adminTest: true,
+          keysLeft: "管理員測試",
+          canOpenLeft: "管理員測試",
+        });
+      }
 
       const { data: vip, error } = await supabase
         .from("vip_users")
