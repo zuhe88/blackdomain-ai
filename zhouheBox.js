@@ -41,32 +41,24 @@ module.exports = function (app) {
       return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：hohoho321321");
     }
 
-  if (pendingBind[userId]) {
-  const blockedCommands = [
-    "鑰匙",
-    "🔑鑰匙",
-    "鑰匙中心",
-    "鑰匙查詢",
-    "碎片",
-    "碎片查詢",
-    "獎勵說明",
-    "綁定",
-    "綁定帳號",
-    "綁定3A帳號"
-  ];
+    if (pendingBind[userId]) {
+      const blocked = [
+        "鑰匙", "🔑鑰匙", "鑰匙中心", "鑰匙查詢",
+        "碎片", "碎片查詢", "獎勵說明",
+        "綁定", "綁定帳號", "綁定3A帳號"
+      ];
 
-  if (blockedCommands.includes(text)) {
-    delete pendingBind[userId];
+      if (blocked.includes(text)) {
+        delete pendingBind[userId];
+        return reply(
+          event.replyToken,
+          "已取消綁定流程。\n\n如需綁定3A帳號，請重新點選「綁定3A帳號」，並直接輸入您的3A帳號。"
+        );
+      }
 
-    return reply(
-      event.replyToken,
-      "已取消綁定流程。\n\n如需綁定3A帳號，請重新點選「綁定3A帳號」，並直接輸入您的3A帳號。"
-    );
-  }
-
-  delete pendingBind[userId];
-  return createVipRequest(event.replyToken, userId, text);
-}
+      delete pendingBind[userId];
+      return createVipRequest(event.replyToken, userId, text);
+    }
 
     if (text === "鑰匙查詢" || text === "碎片查詢") {
       return handleKeyQuery(event.replyToken, userId);
@@ -159,10 +151,7 @@ module.exports = function (app) {
       });
     }
 
-    return reply(
-      replyToken,
-      "✅ 申請已送出\n\n3A帳號：" + account + "\n狀態：等待管理員審核"
-    );
+    return reply(replyToken, "✅ 申請已送出\n\n3A帳號：" + account + "\n狀態：等待管理員審核");
   }
 
   async function approveAccount(replyToken, account) {
@@ -233,7 +222,7 @@ module.exports = function (app) {
       "累積儲值：" + (vip.total_recharge || 0) + "\n\n" +
       (keys >= 2
         ? "🎁 可開啟寶箱：" + canOpen + " 次"
-        : "尚差 " + need + " 把🔑可開啟寶箱")
+        : "尚差 " + need + " 把🔑鑰匙可開啟寶箱")
     );
   }
 
@@ -293,6 +282,24 @@ module.exports = function (app) {
     res.send(renderBoxPage(LIFF_ID));
   });
 
+  app.get("/api/zhouhe/marquee", async (req, res) => {
+    try {
+      const { data } = await supabase
+        .from("zhouhe_box_logs")
+        .select("account_3a,reward")
+        .order("created_at", { ascending: false })
+        .limit(30);
+
+      return res.json({
+        ok: true,
+        logs: data || [],
+      });
+    } catch (err) {
+      console.error("MARQUEE ERROR:", err);
+      return res.json({ ok: false, logs: [] });
+    }
+  });
+
   app.post("/api/zhouhe/open-box", express.json(), async (req, res) => {
     try {
       const { lineUserId } = req.body;
@@ -304,7 +311,7 @@ module.exports = function (app) {
       const reward = pickReward();
 
       if (isAdmin) {
-        return res.json({ ok: true, reward, adminTest: true, keysLeft: "管理員測試" });
+        return res.json({ ok: true, reward, adminTest: true, keysLeft: "管理員測試", canOpenLeft: "管理員測試" });
       }
 
       const { data: vip, error } = await supabase
@@ -336,6 +343,12 @@ module.exports = function (app) {
         amount: 0,
         fragments_added: -2,
         note: "開寶箱抽中：" + reward,
+      });
+
+      await supabase.from("zhouhe_box_logs").insert({
+        line_user_id: lineUserId,
+        account_3a: vip.account,
+        reward,
       });
 
       for (const adminId of ADMIN_UIDS) {
@@ -370,6 +383,13 @@ function pickReward() {
   return rewards[Math.floor(Math.random() * rewards.length)];
 }
 
+function maskAccount(account) {
+  if (!account) return "member***";
+  const clean = String(account);
+  if (clean.length <= 3) return clean + "***";
+  return clean.slice(0, Math.min(5, clean.length - 1)) + "***";
+}
+
 function renderBoxPage(liffId) {
   return `
 <!DOCTYPE html>
@@ -377,7 +397,7 @@ function renderBoxPage(liffId) {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>會員鑰匙寶箱</title>
+<title>黑域寶箱</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
 *{box-sizing:border-box}
@@ -386,30 +406,31 @@ body{margin:0;min-height:100vh;background:radial-gradient(circle at top,rgba(255
 .marquee-wrap{width:100%;overflow:hidden;margin-bottom:16px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,215,120,.25)}
 .marquee{white-space:nowrap;padding:10px 0;color:#ffd15c;font-weight:bold;font-size:14px;animation:marquee 38s linear infinite}
 @keyframes marquee{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
-h1{font-size:26px;margin:0 0 12px}
+h1{font-size:28px;margin:0 0 12px}
 .desc{color:#ddd;line-height:1.7;font-size:15px}
 .prize{margin:18px 0;padding:14px;border-radius:16px;background:linear-gradient(135deg,rgba(255,205,80,.2),rgba(255,255,255,.05));border:1px solid rgba(255,215,120,.3)}
 .prize .top{color:#ffe29a;font-size:15px}
-.prize .money{font-size:36px;font-weight:bold;color:#ffd15c;margin-top:4px}
+.prize .money{font-size:38px;font-weight:bold;color:#ffd15c;margin-top:4px}
 .chest{font-size:100px;margin:25px 0 18px;filter:drop-shadow(0 0 18px rgba(255,205,80,.8))}
 .shake{animation:shake .22s infinite}.opened{animation:pop .7s ease forwards}
 @keyframes shake{0%{transform:rotate(-5deg) scale(1)}50%{transform:rotate(5deg) scale(1.05)}100%{transform:rotate(-5deg) scale(1)}}
 @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.28)}100%{transform:scale(1)}}
-button{width:100%;border:none;border-radius:999px;padding:15px 20px;font-size:18px;font-weight:bold;color:#2b1600;background:linear-gradient(135deg,#ffe29a,#ffb52e);box-shadow:0 0 22px rgba(255,196,70,.45);cursor:pointer}
+button{width:100%;border:none;border-radius:999px;padding:15px 20px;font-size:18px;font-weight:bold;color:#2b1600;background:linear-gradient(135deg,#ffe29a,#ffb52e);box-shadow:0 0 22px rgba(255,196,70,.45);cursor:pointer;margin-top:10px}
 button:disabled{opacity:.75}
 .result{display:none;margin-top:22px;padding:20px 14px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,215,120,.28)}
-.result h2{margin:0 0 12px;color:#ffd15c}.reward{font-size:24px;font-weight:bold;margin:14px 0;color:#fff1b8}
+.result h2{margin:0 0 12px;color:#ffd15c}.reward{font-size:26px;font-weight:bold;margin:14px 0;color:#fff1b8}
 .notice{color:#ddd;line-height:1.8;font-size:15px}.loading{color:#ddd;margin:18px 0;font-size:15px}.error{color:#ff9f9f;margin-top:14px;line-height:1.6}
+.secondary{background:linear-gradient(135deg,#fff,#d9d9d9);color:#111;box-shadow:none}
 </style>
 </head>
 <body>
 <div class="card">
-  <div class="marquee-wrap"><div class="marquee" id="marquee"></div></div>
-  <h1>🎁 幸運寶箱</h1>
+  <div class="marquee-wrap"><div class="marquee" id="marquee">載入中...</div></div>
+  <h1>🎁 黑域寶箱</h1>
   <div id="loading" class="loading">正在驗證 LINE 身分...</div>
 
   <div id="mainBox" style="display:none;">
-    <div class="desc">儲值1000可獲得1把🔑<br>累積2把🔑可開啟一次寶箱</div>
+    <div class="desc">儲值1000可獲得1把🔑鑰匙<br>累積2把🔑鑰匙可開啟一次寶箱</div>
     <div class="prize"><div class="top">🏆 最大獎</div><div class="money">3888</div></div>
     <div id="chest" class="chest">🎁</div>
     <button id="openBtn">立即開啟寶箱</button>
@@ -417,6 +438,7 @@ button:disabled{opacity:.75}
       <h2>🎉 恭喜抽中</h2>
       <div id="rewardText" class="reward">🔓 AI權限 1 天</div>
       <div id="leftText" class="notice"></div>
+      <button id="againBtn">🔄 繼續開寶箱</button>
       <div class="notice">請截圖保存此畫面<br>並聯繫管理員領取</div>
     </div>
   </div>
@@ -430,19 +452,44 @@ const loading=document.getElementById("loading");
 const mainBox=document.getElementById("mainBox");
 const errorBox=document.getElementById("errorBox");
 const btn=document.getElementById("openBtn");
+const againBtn=document.getElementById("againBtn");
 const chest=document.getElementById("chest");
 const result=document.getElementById("result");
 const rewardText=document.getElementById("rewardText");
 const leftText=document.getElementById("leftText");
 
-function setupMarquee(){
-  const names=["zhu","long","king","win","boss","ray","leo","jack","alex","tony","mark","andy","kevin","tom","nick","john","max","jason","david","eric","allen","steven","sam","lucas","mike","wayne","keith","ben","ryan","ethan","logan","aaron","bruce","chris","daniel","frank","gary","henry","ivan","jerry","ken","louis","mason","neo","oscar","peter","robin","scott","vincent","walker","xavier","york","zack","hunter","rocco","ace","blade","storm","ghost","legend","phoenix","dragon","tiger","wolf","joker"];
-  const nums=["66","77","88","99","168","518","668","888","999","1314","520","521","886","887","9527","777","5678","8888","6666","9999","111","222","333","444","555","123","321","789","258","1688","8866","7788","8899","5566","952","16888","52016","77752","88688","99916","66888","51888"];
+function maskAccount(account){
+  if(!account) return "member***";
+  account=String(account);
+  if(account.length<=3) return account+"***";
+  return account.slice(0, Math.min(5, account.length-1))+"***";
+}
+
+function fallbackMarquee(){
+  const names=["zhu88","long66","king52","win88","boss77","abc168","ray520","alex88","tony77","mark168","dragon88","tiger66"];
   const prizes=["AI權限 1 天","88","88","88","288","588","888","3888"];
-  function acc(){const n=names[Math.floor(Math.random()*names.length)];const num=nums[Math.floor(Math.random()*nums.length)];return n+num+"*".repeat(Math.floor(Math.random()*3)+3)}
   const msg=[];
-  for(let i=0;i<30;i++){msg.push("🎉 恭喜 "+acc()+" 抽中 "+prizes[Math.floor(Math.random()*prizes.length)])}
+  for(let i=0;i<20;i++){
+    const a=names[Math.floor(Math.random()*names.length)]+"***";
+    const p=prizes[Math.floor(Math.random()*prizes.length)];
+    msg.push("🎉 恭喜 "+a+" 抽中 "+p);
+  }
   document.getElementById("marquee").innerText=msg.join("　　　");
+}
+
+async function setupMarquee(){
+  try{
+    const res=await fetch("/api/zhouhe/marquee");
+    const data=await res.json();
+    if(!data.ok || !data.logs || data.logs.length===0){
+      fallbackMarquee();
+      return;
+    }
+    const messages=data.logs.map(x=>"🎉 恭喜 "+maskAccount(x.account_3a)+" 抽中 "+x.reward);
+    document.getElementById("marquee").innerText=messages.join("　　　");
+  }catch(e){
+    fallbackMarquee();
+  }
 }
 
 async function init(){
@@ -460,6 +507,17 @@ async function init(){
   }
 }
 
+function resetBox(){
+  result.style.display="none";
+  btn.style.display="block";
+  btn.disabled=false;
+  btn.innerText="立即開啟寶箱";
+  chest.innerText="🎁";
+  chest.classList.remove("opened");
+  chest.classList.remove("shake");
+  errorBox.style.display="none";
+}
+
 async function openBox(){
   btn.disabled=true;
   btn.innerText="🎁 開寶箱中...";
@@ -469,7 +527,7 @@ async function openBox(){
   try{
     const res=await fetch("/api/zhouhe/open-box",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({lineUserId:currentUserId})});
     const data=await res.json();
-    setTimeout(()=>{
+    setTimeout(async ()=>{
       chest.classList.remove("shake");
       if(!data.ok){
         btn.disabled=false;
@@ -479,11 +537,17 @@ async function openBox(){
         return;
       }
       rewardText.innerText=data.reward;
-      leftText.innerText="剩餘🔑：" + data.keysLeft + " 把";
+      leftText.innerText="剩餘🔑鑰匙：" + data.keysLeft + " 把，可再開 " + data.canOpenLeft + " 次";
       chest.classList.add("opened");
       chest.innerText="✨";
       btn.style.display="none";
       result.style.display="block";
+      if(Number(data.canOpenLeft) <= 0){
+        againBtn.style.display="none";
+      }else{
+        againBtn.style.display="block";
+      }
+      await setupMarquee();
     },2600);
   }catch(err){
     chest.classList.remove("shake");
@@ -495,6 +559,7 @@ async function openBox(){
 }
 
 btn.addEventListener("click",openBox);
+againBtn.addEventListener("click",()=>{resetBox();openBox();});
 setupMarquee();
 init();
 </script>
