@@ -533,29 +533,96 @@ module.exports = function (app) {
   });
 
   app.get("/api/zhouhe/marquee", async (req, res) => {
-    try {
-      const { data } = await supabase
-        .from("zhouhe_box_logs")
-        .select("account_3a,reward")
-        .order("created_at", { ascending: false })
-        .limit(50);
+  try {
+    const { data } = await supabase
+      .from("zhouhe_box_logs")
+      .select("account_3a,reward")
+      .order("created_at", { ascending: false })
+      .limit(50);
 
-      const logs = data || [];
+    const realLogs = data || [];
 
-      for (let i = logs.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [logs[i], logs[j]] = [logs[j], logs[i]];
-      }
+    const systemAccounts = [
+      "zhu88***",
+      "long66***",
+      "king52***",
+      "win88***",
+      "boss77***",
+      "abc168***",
+      "ray520***",
+      "alex88***",
+      "tony77***",
+      "mark168***",
+      "dragon88***",
+      "tiger66***",
+      "vip168***",
+      "super88***",
+      "kaiser77***",
+      "moon520***",
+      "rich168***",
+      "luck88***",
+      "star777***",
+      "neo168***",
+      "max888***",
+      "ken777***",
+      "sam168***",
+      "ace520***",
+      "hero88***",
+      "zero777***",
+      "gold168***",
+      "black88***",
+      "top520***",
+      "joker77***"
+    ];
 
-      return res.json({
-        ok: true,
-        logs: logs.slice(0, 30),
+    const systemRewards = [
+      "AI權限 1 天",
+      "AI權限 1 天",
+      "AI權限 1 天",
+      "AI權限 1 天",
+      "AI權限 1 天",
+      "88",
+      "88",
+      "88",
+      "88",
+      "88",
+      "288",
+      "288",
+      "588",
+      "888"
+    ];
+
+    const systemLogs = [];
+
+    for (let i = 0; i < 40; i++) {
+      const account =
+        systemAccounts[Math.floor(Math.random() * systemAccounts.length)];
+
+      const reward =
+        systemRewards[Math.floor(Math.random() * systemRewards.length)];
+
+      systemLogs.push({
+        account_3a: account,
+        reward,
       });
-    } catch (err) {
-      console.error("MARQUEE ERROR:", err);
-      return res.json({ ok: false, logs: [] });
     }
-  });
+
+    const mixedLogs = [...realLogs, ...systemLogs];
+
+    for (let i = mixedLogs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [mixedLogs[i], mixedLogs[j]] = [mixedLogs[j], mixedLogs[i]];
+    }
+
+    return res.json({
+      ok: true,
+      logs: mixedLogs.slice(0, 30),
+    });
+  } catch (err) {
+    console.error("MARQUEE ERROR:", err);
+    return res.json({ ok: false, logs: [] });
+  }
+});
 
   app.post("/api/zhouhe/open-box", express.json(), async (req, res) => {
     try {
