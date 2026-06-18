@@ -2,7 +2,6 @@ const express = require("express");
 const { createClient } = require("@supabase/supabase-js");
 
 module.exports = function (app) {
-  app.use(express.json());
 
   const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -19,7 +18,7 @@ module.exports = function (app) {
     res.send(renderBoxPage(LIFF_ID));
   });
 
-  app.post("/api/zhouhe/open-box", async (req, res) => {
+ app.post("/api/zhouhe/open-box", express.json(), async (req, res) => {
     try {
       const { lineUserId } = req.body;
 
