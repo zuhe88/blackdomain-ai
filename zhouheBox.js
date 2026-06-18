@@ -397,7 +397,7 @@ function renderBoxPage(liffId) {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>黑域寶箱</title>
+<title>幸運寶箱</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
 *{box-sizing:border-box}
@@ -426,7 +426,7 @@ button:disabled{opacity:.75}
 <body>
 <div class="card">
   <div class="marquee-wrap"><div class="marquee" id="marquee">載入中...</div></div>
-  <h1>🎁 黑域寶箱</h1>
+  <h1>🎁 幸運寶箱</h1>
   <div id="loading" class="loading">正在驗證 LINE 身分...</div>
 
   <div id="mainBox" style="display:none;">
