@@ -3,7 +3,10 @@ const line = require("@line/bot-sdk");
 const { createClient } = require("@supabase/supabase-js");
 
 module.exports = function (app) {
-  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
+  );
 
   const LIFF_ID = "2010438983-M6Y3y5Y0";
   const ADMIN_UIDS = ["U0ac5f4989e00ef3d8a9ab59dc00dca7d"];
@@ -32,15 +35,10 @@ module.exports = function (app) {
     const text = event.message.text.trim();
     const userId = event.source.userId;
 
-   if (
-  text === "幸運寶箱" ||
-  text === "🎁幸運寶箱" ||
-  text === "鑰匙" ||
-  text === "🔑鑰匙" ||
-  text === "鑰匙中心"
-) {
-  return sendKeyMenu(event.replyToken);
-}
+    if (text === "幸運寶箱" || text === "🎁幸運寶箱" || text === "鑰匙" || text === "🔑鑰匙" || text === "鑰匙中心") {
+      return sendKeyMenu(event.replyToken);
+    }
+
     if (text === "綁定" || text === "綁定帳號" || text === "綁定3A帳號") {
       pendingBind[userId] = true;
       return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：hohoho321321");
@@ -48,8 +46,8 @@ module.exports = function (app) {
 
     if (pendingBind[userId]) {
       const blocked = [
-        "鑰匙", "🔑鑰匙", "鑰匙中心", "鑰匙查詢",
-        "碎片", "碎片查詢", "獎勵說明",
+        "鑰匙", "🔑鑰匙", "鑰匙中心", "幸運寶箱", "🎁幸運寶箱",
+        "鑰匙查詢", "碎片", "碎片查詢", "獎勵說明",
         "綁定", "綁定帳號", "綁定3A帳號"
       ];
 
@@ -72,7 +70,7 @@ module.exports = function (app) {
     if (text === "獎勵說明") {
       return reply(
         event.replyToken,
-        "🎁 寶箱獎勵\n\n" +
+        "🎁 幸運寶箱獎勵\n\n" +
         "🔓 AI權限1天\n" +
         "🎁 88\n" +
         "🎁 288\n" +
@@ -82,6 +80,35 @@ module.exports = function (app) {
         "儲值1000 = 1把🔑鑰匙\n" +
         "累積2把🔑鑰匙即可開啟一次寶箱"
       );
+    }
+
+    if (text === "機率查詢") {
+      if (!ADMIN_UIDS.includes(userId)) return reply(event.replyToken, "你沒有管理員權限。");
+      return handleRateQuery(event.replyToken);
+    }
+
+    if (text.startsWith("機率 ")) {
+      if (!ADMIN_UIDS.includes(userId)) return reply(event.replyToken, "你沒有管理員權限。");
+
+      const parts = text.split(/\s+/);
+      const key = parts[1];
+      const value = Number(parts[2]);
+
+      if (!key || isNaN(value)) {
+        return reply(event.replyToken, "格式錯誤\n例如：機率 AI 100\n例如：機率 88 20");
+      }
+
+      return handleRateUpdate(event.replyToken, key, value);
+    }
+
+    if (text === "全關") {
+      if (!ADMIN_UIDS.includes(userId)) return reply(event.replyToken, "你沒有管理員權限。");
+      return handleCloseAllReward(event.replyToken);
+    }
+
+    if (text === "開獎模式") {
+      if (!ADMIN_UIDS.includes(userId)) return reply(event.replyToken, "你沒有管理員權限。");
+      return handleOpenRewardMode(event.replyToken);
     }
 
     if (text.startsWith("通過 ")) {
@@ -118,7 +145,7 @@ module.exports = function (app) {
   function sendKeyMenu(replyToken) {
     return zhouheClient.replyMessage(replyToken, {
       type: "template",
-      altText: "🎁 幸運寶箱",
+      altText: "🎁幸運寶箱",
       template: {
         type: "buttons",
         title: "🎁 幸運寶箱",
@@ -196,7 +223,7 @@ module.exports = function (app) {
         "✅ 帳號審核通過\n\n" +
         "3A帳號：" + account + "\n\n" +
         "已開通🔑鑰匙系統\n" +
-        "可至【🔑鑰匙】查看目前鑰匙數量",
+        "可至【🎁幸運寶箱】查看目前鑰匙數量",
     });
 
     return reply(replyToken, "✅ 審核通過\n\n3A帳號：" + account + "\n已加入🔑鑰匙系統");
@@ -212,7 +239,7 @@ module.exports = function (app) {
       .single();
 
     if (error || !vip) {
-      return reply(replyToken, "尚未查詢到你的會員資料。\n\n請先至【🔑鑰匙】選擇綁定3A帳號，並等待管理員審核。");
+      return reply(replyToken, "尚未查詢到你的會員資料。\n\n請先至【🎁幸運寶箱】選擇綁定3A帳號，並等待管理員審核。");
     }
 
     const keys = vip.fragments || 0;
@@ -283,6 +310,85 @@ module.exports = function (app) {
     );
   }
 
+  async function handleRateQuery(replyToken) {
+    const { data, error } = await supabase
+      .from("zhouhe_box_settings")
+      .select("key,value");
+
+    if (error || !data) return reply(replyToken, "查詢機率失敗。");
+
+    const map = {};
+    data.forEach(row => {
+      map[row.key] = row.value;
+    });
+
+    return reply(
+      replyToken,
+      "🎁 目前寶箱機率\n\n" +
+      "🔓 AI權限1天：" + (map.AI || 0) + "%\n" +
+      "🎁 88：" + (map["88"] || 0) + "%\n" +
+      "🎁 288：" + (map["288"] || 0) + "%\n" +
+      "🎁 588：" + (map["588"] || 0) + "%\n" +
+      "🎁 888：" + (map["888"] || 0) + "%\n" +
+      "🏆 3888：" + (map["3888"] || 0) + "%"
+    );
+  }
+
+  async function handleRateUpdate(replyToken, key, value) {
+    const allowKeys = ["AI", "88", "288", "588", "888", "3888"];
+
+    if (!allowKeys.includes(key)) {
+      return reply(replyToken, "獎項錯誤，只能輸入：AI、88、288、588、888、3888");
+    }
+
+    const { error } = await supabase
+      .from("zhouhe_box_settings")
+      .upsert({ key, value: String(value) });
+
+    if (error) return reply(replyToken, "更新機率失敗。");
+
+    return reply(replyToken, "✅ 機率已更新\n\n" + key + "：" + value + "%");
+  }
+
+  async function handleCloseAllReward(replyToken) {
+    const rows = [
+      { key: "AI", value: "100" },
+      { key: "88", value: "0" },
+      { key: "288", value: "0" },
+      { key: "588", value: "0" },
+      { key: "888", value: "0" },
+      { key: "3888", value: "0" },
+    ];
+
+    await supabase.from("zhouhe_box_settings").upsert(rows);
+
+    return reply(replyToken, "✅ 已切換全關模式\n\n目前只會抽中：AI權限1天");
+  }
+
+  async function handleOpenRewardMode(replyToken) {
+    const rows = [
+      { key: "AI", value: "45" },
+      { key: "88", value: "38" },
+      { key: "288", value: "12" },
+      { key: "588", value: "3" },
+      { key: "888", value: "1.5" },
+      { key: "3888", value: "0.5" },
+    ];
+
+    await supabase.from("zhouhe_box_settings").upsert(rows);
+
+    return reply(
+      replyToken,
+      "✅ 已切換開獎模式\n\n" +
+      "AI權限1天：45%\n" +
+      "88：38%\n" +
+      "288：12%\n" +
+      "588：3%\n" +
+      "888：1.5%\n" +
+      "3888：0.5%"
+    );
+  }
+
   app.get("/box", (req, res) => {
     res.send(renderBoxPage(LIFF_ID));
   });
@@ -295,10 +401,7 @@ module.exports = function (app) {
         .order("created_at", { ascending: false })
         .limit(30);
 
-      return res.json({
-        ok: true,
-        logs: data || [],
-      });
+      return res.json({ ok: true, logs: data || [] });
     } catch (err) {
       console.error("MARQUEE ERROR:", err);
       return res.json({ ok: false, logs: [] });
@@ -313,10 +416,16 @@ module.exports = function (app) {
       }
 
       const isAdmin = ADMIN_UIDS.includes(lineUserId);
-      const reward = pickReward();
+      const reward = await pickReward(supabase);
 
       if (isAdmin) {
-        return res.json({ ok: true, reward, adminTest: true, keysLeft: "管理員測試", canOpenLeft: "管理員測試" });
+        return res.json({
+          ok: true,
+          reward,
+          adminTest: true,
+          keysLeft: "管理員測試",
+          canOpenLeft: "管理員測試",
+        });
       }
 
       const { data: vip, error } = await supabase
@@ -327,10 +436,14 @@ module.exports = function (app) {
         .limit(1)
         .single();
 
-      if (error || !vip) return res.json({ ok: false, message: "尚未完成帳號審核，請先聯繫管理員。" });
+      if (error || !vip) {
+        return res.json({ ok: false, message: "尚未完成帳號審核，請先聯繫管理員。" });
+      }
 
       const keys = vip.fragments || 0;
-      if (keys < 2) return res.json({ ok: false, message: "鑰匙不足，目前鑰匙：" + keys + " / 2" });
+      if (keys < 2) {
+        return res.json({ ok: false, message: "鑰匙不足，目前鑰匙：" + keys + " / 2" });
+      }
 
       const newKeys = keys - 2;
       const canOpenLeft = Math.floor(newKeys / 2);
@@ -340,7 +453,9 @@ module.exports = function (app) {
         .update({ fragments: newKeys })
         .eq("id", vip.id);
 
-      if (updateError) return res.status(500).json({ ok: false, message: "扣除鑰匙失敗，請稍後再試。" });
+      if (updateError) {
+        return res.status(500).json({ ok: false, message: "扣除鑰匙失敗，請稍後再試。" });
+      }
 
       await supabase.from("zhouhe_fragment_logs").insert({
         line_user_id: lineUserId,
@@ -376,37 +491,38 @@ module.exports = function (app) {
   });
 };
 
-function pickReward() {
-  const rand = Math.random() * 100;
+async function pickReward(supabase) {
+  const { data, error } = await supabase
+    .from("zhouhe_box_settings")
+    .select("key,value");
 
-  if (rand < 90) {
+  if (error || !data || data.length === 0) {
     return "AI權限 1 天";
   }
 
-  if (rand < 99.3) {
-    return "88";
+  const map = {};
+  data.forEach(row => {
+    map[row.key] = Number(row.value);
+  });
+
+  const rand = Math.random() * 100;
+  let current = 0;
+
+  const rewards = [
+    ["AI", "AI權限 1 天"],
+    ["88", "88"],
+    ["288", "288"],
+    ["588", "588"],
+    ["888", "888"],
+    ["3888", "3888"],
+  ];
+
+  for (const [key, reward] of rewards) {
+    current += map[key] || 0;
+    if (rand < current) return reward;
   }
 
-  if (rand < 99.4) {
-    return "288";
-  }
-
-  if (rand < 99.6) {
-    return "588";
-  }
-
-  if (rand < 99.9) {
-    return "888";
-  }
-
-  return "3888";
-}
-
-function maskAccount(account) {
-  if (!account) return "member***";
-  const clean = String(account);
-  if (clean.length <= 3) return clean + "***";
-  return clean.slice(0, Math.min(5, clean.length - 1)) + "***";
+  return "AI權限 1 天";
 }
 
 function renderBoxPage(liffId) {
@@ -416,7 +532,7 @@ function renderBoxPage(liffId) {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>幸運寶箱</title>
+<title>黑域寶箱</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
 *{box-sizing:border-box}
@@ -439,13 +555,12 @@ button:disabled{opacity:.75}
 .result{display:none;margin-top:22px;padding:20px 14px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,215,120,.28)}
 .result h2{margin:0 0 12px;color:#ffd15c}.reward{font-size:26px;font-weight:bold;margin:14px 0;color:#fff1b8}
 .notice{color:#ddd;line-height:1.8;font-size:15px}.loading{color:#ddd;margin:18px 0;font-size:15px}.error{color:#ff9f9f;margin-top:14px;line-height:1.6}
-.secondary{background:linear-gradient(135deg,#fff,#d9d9d9);color:#111;box-shadow:none}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="marquee-wrap"><div class="marquee" id="marquee">載入中...</div></div>
-  <h1>🎁 幸運寶箱</h1>
+  <h1>🎁 黑域寶箱</h1>
   <div id="loading" class="loading">正在驗證 LINE 身分...</div>
 
   <div id="mainBox" style="display:none;">
@@ -453,6 +568,7 @@ button:disabled{opacity:.75}
     <div class="prize"><div class="top">🏆 最大獎</div><div class="money">3888</div></div>
     <div id="chest" class="chest">🎁</div>
     <button id="openBtn">立即開啟寶箱</button>
+
     <div id="result" class="result">
       <h2>🎉 恭喜抽中</h2>
       <div id="rewardText" class="reward">🔓 AI權限 1 天</div>
@@ -544,10 +660,17 @@ async function openBox(){
   errorBox.style.display="none";
 
   try{
-    const res=await fetch("/api/zhouhe/open-box",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({lineUserId:currentUserId})});
+    const res=await fetch("/api/zhouhe/open-box",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({lineUserId:currentUserId})
+    });
+
     const data=await res.json();
+
     setTimeout(async ()=>{
       chest.classList.remove("shake");
+
       if(!data.ok){
         btn.disabled=false;
         btn.innerText="立即開啟寶箱";
@@ -555,17 +678,21 @@ async function openBox(){
         errorBox.innerText=data.message || "寶箱系統異常，請稍後再試。";
         return;
       }
+
       rewardText.innerText=data.reward;
       leftText.innerText="剩餘🔑鑰匙：" + data.keysLeft + " 把，可再開 " + data.canOpenLeft + " 次";
+
       chest.classList.add("opened");
       chest.innerText="✨";
       btn.style.display="none";
       result.style.display="block";
+
       if(Number(data.canOpenLeft) <= 0){
         againBtn.style.display="none";
       }else{
         againBtn.style.display="block";
       }
+
       await setupMarquee();
     },2600);
   }catch(err){
