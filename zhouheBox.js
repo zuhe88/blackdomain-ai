@@ -416,17 +416,18 @@ module.exports = function (app) {
       }
 
       const isAdmin = ADMIN_UIDS.includes(lineUserId);
-      const reward = await pickReward(supabase);
+const reward = await pickReward(supabase);
 
-      if (isAdmin) {
-        return res.json({
-          ok: true,
-          reward,
-          adminTest: true,
-          keysLeft: "管理員測試",
-          canOpenLeft: "管理員測試",
-        });
-      }
+if (isAdmin) {
+  return res.json({
+    ok: true,
+    reward,
+    adminTest: true,
+    keysLeft: "管理員測試",
+    canOpenLeft: "管理員測試",
+    message: "管理員測試不列入跑馬燈"
+  });
+}
 
       const { data: vip, error } = await supabase
         .from("vip_users")
