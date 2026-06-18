@@ -11,6 +11,10 @@ module.exports = function (app) {
 
   const LIFF_ID = "2010438983-M6Y3y5Y0";
 
+  const ADMIN_UIDS = [
+    "U0ac5f4989e00ef3d8a9ab59dc00dca7d"
+  ];
+
   app.get("/box", (req, res) => {
     res.send(renderBoxPage(LIFF_ID));
   });
@@ -26,6 +30,9 @@ module.exports = function (app) {
         });
       }
 
+      const isAdmin = ADMIN_UIDS.includes(lineUserId);
+      const rewardName = "AI權限 1 天";
+
       const { data: existing, error: selectError } = await supabase
         .from("zhouhe_box_claims")
         .select("*")
@@ -40,29 +47,29 @@ module.exports = function (app) {
         });
       }
 
-      if (existing) {
+      if (existing && !isAdmin) {
         return res.json({
           ok: true,
           alreadyClaimed: true,
-          reward: existing.reward_name || "AI權限 1 天",
+          reward: existing.reward_name || rewardName,
         });
       }
 
-      const rewardName = "AI權限 1 天";
+      if (!isAdmin && !existing) {
+        const { error: insertError } = await supabase
+          .from("zhouhe_box_claims")
+          .insert({
+            line_user_id: lineUserId,
+            reward_name: rewardName,
+          });
 
-      const { error: insertError } = await supabase
-        .from("zhouhe_box_claims")
-        .insert({
-          line_user_id: lineUserId,
-          reward_name: rewardName,
-        });
-
-      if (insertError) {
-        console.error("BOX INSERT ERROR:", insertError);
-        return res.status(500).json({
-          ok: false,
-          message: "獎勵發放異常，請稍後再試。",
-        });
+        if (insertError) {
+          console.error("BOX INSERT ERROR:", insertError);
+          return res.status(500).json({
+            ok: false,
+            message: "獎勵發放異常，請稍後再試。",
+          });
+        }
       }
 
       return res.json({
@@ -89,11 +96,8 @@ function renderBoxPage(liffId) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>3A周賀新會員寶箱</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
 <style>
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -164,13 +168,8 @@ h1 {
   filter: drop-shadow(0 0 18px rgba(255, 205, 80, 0.8));
 }
 
-.shake {
-  animation: shake 0.22s infinite;
-}
-
-.opened {
-  animation: pop 0.7s ease forwards;
-}
+.shake { animation: shake 0.22s infinite; }
+.opened { animation: pop 0.7s ease forwards; }
 
 @keyframes shake {
   0% { transform: rotate(-5deg) scale(1); }
@@ -197,9 +196,7 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
-  opacity: 0.75;
-}
+button:disabled { opacity: 0.75; }
 
 .result {
   display: none;
@@ -272,7 +269,7 @@ button:disabled {
       <button id="openBtn">立即開啟寶箱</button>
 
       <div id="result" class="result">
-        <h2>🎉 恭喜獲得專屬獎勵</h2>
+        <h2>🎉 恭喜獲得獎勵</h2>
         <div class="reward">🔓 AI權限 1 天</div>
         <div class="notice">
           請截圖保存此畫面<br>
@@ -305,9 +302,7 @@ const result = document.getElementById("result");
 
 async function init() {
   try {
-    await liff.init({
-      liffId: "${liffId}"
-    });
+    await liff.init({ liffId: "${liffId}" });
 
     if (!liff.isLoggedIn()) {
       liff.login();
@@ -315,10 +310,7 @@ async function init() {
     }
 
     const profile = await liff.getProfile();
-currentUserId = profile.userId;
-
-alert("你的UID：" + currentUserId);
-console.log("LIFF UID:", currentUserId);
+    currentUserId = profile.userId;
 
     loading.style.display = "none";
     mainBox.style.display = "block";
@@ -344,12 +336,8 @@ async function openBox() {
   try {
     const res = await fetch("/api/zhouhe/open-box", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        lineUserId: currentUserId
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lineUserId: currentUserId })
     });
 
     const data = await res.json();
@@ -386,10 +374,7 @@ async function openBox() {
   }
 }
 
-if (btn) {
-  btn.addEventListener("click", openBox);
-}
-
+btn.addEventListener("click", openBox);
 init();
 </script>
 </body>
