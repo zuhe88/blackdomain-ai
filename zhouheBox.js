@@ -755,7 +755,7 @@ function renderBoxPage(liffId) {
 body{margin:0;min-height:100vh;background:radial-gradient(circle at top,rgba(255,205,80,.26),transparent 35%),linear-gradient(180deg,#050505,#160b24 60%,#050505);color:#fff;font-family:Arial,"Microsoft JhengHei",sans-serif;display:flex;justify-content:center;align-items:center;padding:24px}
 .card{width:100%;max-width:420px;text-align:center;border:1px solid rgba(255,215,120,.35);border-radius:24px;padding:24px 20px 28px;background:rgba(10,10,18,.92);box-shadow:0 0 35px rgba(255,190,70,.25)}
 .marquee-wrap{width:100%;overflow:hidden;margin-bottom:16px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,215,120,.25)}
-.marquee{white-space:nowrap;padding:10px 0;color:#ffd15c;font-weight:bold;font-size:14px;animation:marquee 95s linear infinite}
+.marquee{white-space:nowrap;padding:10px 0;color:#ffd15c;font-weight:bold;font-size:14px;animation:marquee 45s linear infinite}
 @keyframes marquee{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
 h1{font-size:28px;margin:0 0 12px}
 .desc{color:#ddd;line-height:1.7;font-size:15px}
