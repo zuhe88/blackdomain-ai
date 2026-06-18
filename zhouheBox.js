@@ -32,10 +32,15 @@ module.exports = function (app) {
     const text = event.message.text.trim();
     const userId = event.source.userId;
 
-    if (text === "🔑鑰匙" || text === "鑰匙" || text === "鑰匙中心") {
-      return sendKeyMenu(event.replyToken);
-    }
-
+   if (
+  text === "幸運寶箱" ||
+  text === "🎁幸運寶箱" ||
+  text === "鑰匙" ||
+  text === "🔑鑰匙" ||
+  text === "鑰匙中心"
+) {
+  return sendKeyMenu(event.replyToken);
+}
     if (text === "綁定" || text === "綁定帳號" || text === "綁定3A帳號") {
       pendingBind[userId] = true;
       return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：hohoho321321");
@@ -113,10 +118,10 @@ module.exports = function (app) {
   function sendKeyMenu(replyToken) {
     return zhouheClient.replyMessage(replyToken, {
       type: "template",
-      altText: "🔑鑰匙中心",
+      altText: "🎁 幸運寶箱",
       template: {
         type: "buttons",
-        title: "🔑 鑰匙中心",
+        title: "🎁 幸運寶箱",
         text: "儲值1000可獲得1把🔑鑰匙，累積2把即可開啟一次寶箱",
         actions: [
           { type: "message", label: "🔗 綁定3A帳號", text: "綁定" },
