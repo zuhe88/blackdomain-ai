@@ -377,15 +377,29 @@ module.exports = function (app) {
 };
 
 function pickReward() {
-  const rewards = [
-    ...Array(450).fill("AI權限 1 天"),
-    ...Array(380).fill("88"),
-    ...Array(120).fill("288"),
-    ...Array(30).fill("588"),
-    ...Array(15).fill("888"),
-    ...Array(5).fill("3888"),
-  ];
-  return rewards[Math.floor(Math.random() * rewards.length)];
+  const rand = Math.random() * 100;
+
+  if (rand < 90) {
+    return "AI權限 1 天";
+  }
+
+  if (rand < 99.3) {
+    return "88";
+  }
+
+  if (rand < 99.4) {
+    return "288";
+  }
+
+  if (rand < 99.6) {
+    return "588";
+  }
+
+  if (rand < 99.9) {
+    return "888";
+  }
+
+  return "3888";
 }
 
 function maskAccount(account) {
