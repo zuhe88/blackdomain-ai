@@ -14,6 +14,8 @@ module.exports = function (app) {
     "U0ac5f4989e00ef3d8a9ab59dc00dca7d"
   ];
 
+  const pendingBind = {};
+
   const zhouheConfig = {
     channelAccessToken: process.env.ZHOUHE_CHANNEL_ACCESS_TOKEN,
     channelSecret: process.env.ZHOUHE_CHANNEL_SECRET,
@@ -21,7 +23,6 @@ module.exports = function (app) {
 
   const zhouheClient = new line.Client(zhouheConfig);
 
-  // 3A-周賀 webhook
   app.post("/zhouhe/webhook", line.middleware(zhouheConfig), async (req, res) => {
     try {
       await Promise.all(req.body.events.map(handleZhouheEvent));
@@ -38,16 +39,38 @@ module.exports = function (app) {
     const text = event.message.text.trim();
     const userId = event.source.userId;
 
+    if (text === "綁定" || text === "綁定帳號") {
+      pendingBind[userId] = true;
+      return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：hohoho321321");
+    }
+
+    if (pendingBind[userId]) {
+      delete pendingBind[userId];
+      return createVipRequest(event.replyToken, userId, text);
+    }
+
     if (text === "碎片查詢") {
       return handleFragmentQuery(event.replyToken, userId);
     }
 
+    if (text.startsWith("#通過")) {
+      if (!ADMIN_UIDS.includes(userId)) {
+        return reply(event.replyToken, "你沒有管理員權限。");
+      }
+
+      const parts = text.split(/\s+/);
+      const account = parts[1];
+
+      if (!account) {
+        return reply(event.replyToken, "格式錯誤\n請輸入：#通過 3A帳號");
+      }
+
+      return approveAccount(event.replyToken, account);
+    }
+
     if (text.startsWith("#加碎片")) {
       if (!ADMIN_UIDS.includes(userId)) {
-        return zhouheClient.replyMessage(event.replyToken, {
-          type: "text",
-          text: "你沒有管理員權限。",
-        });
+        return reply(event.replyToken, "你沒有管理員權限。");
       }
 
       const parts = text.split(/\s+/);
@@ -55,14 +78,98 @@ module.exports = function (app) {
       const count = Number(parts[2]);
 
       if (!account || !count || count <= 0) {
-        return zhouheClient.replyMessage(event.replyToken, {
-          type: "text",
-          text: "格式錯誤\n請輸入：#加碎片 3A帳號 數量\n例如：#加碎片 hohoho321321 5",
-        });
+        return reply(
+          event.replyToken,
+          "格式錯誤\n請輸入：#加碎片 3A帳號 數量\n例如：#加碎片 hohoho321321 5"
+        );
       }
 
       return handleAddFragments(event.replyToken, userId, account, count);
     }
+  }
+
+  function reply(replyToken, text) {
+    return zhouheClient.replyMessage(replyToken, {
+      type: "text",
+      text,
+    });
+  }
+
+  async function createVipRequest(replyToken, userId, account) {
+    const { error } = await supabase.from("vip_requests").insert({
+      user_id: userId,
+      account,
+      status: "pending",
+    });
+
+    if (error) {
+      console.error("VIP REQUEST ERROR:", error);
+      return reply(replyToken, "送出失敗，請稍後再試或聯繫管理員。");
+    }
+
+    return reply(
+      replyToken,
+      "✅ 申請已送出\n\n3A帳號：" +
+        account +
+        "\n狀態：等待管理員審核\n\n審核通過後可使用碎片系統。"
+    );
+  }
+
+  async function approveAccount(replyToken, account) {
+    const { data: reqData, error: reqError } = await supabase
+      .from("vip_requests")
+      .select("*")
+      .eq("account", account)
+      .order("id", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (reqError || !reqData) {
+      return reply(replyToken, "查無待審核帳號：" + account);
+    }
+
+    const { data: existing } = await supabase
+      .from("vip_users")
+      .select("*")
+      .eq("user_id", reqData.user_id)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase
+        .from("vip_users")
+        .update({
+          account,
+        })
+        .eq("id", existing.id);
+    } else {
+      await supabase.from("vip_users").insert({
+        user_id: reqData.user_id,
+        account,
+        fragments: 0,
+        total_recharge: 0,
+      });
+    }
+
+    await supabase
+      .from("vip_requests")
+      .update({
+        status: "approved",
+      })
+      .eq("id", reqData.id);
+
+    await zhouheClient.pushMessage(reqData.user_id, {
+      type: "text",
+      text:
+        "✅ 帳號審核通過\n\n3A帳號：" +
+        account +
+        "\n\n已開通碎片系統。\n可輸入「碎片查詢」查看目前碎片。",
+    });
+
+    return reply(
+      replyToken,
+      "✅ 審核通過\n\n3A帳號：" + account + "\n已加入會員碎片系統。"
+    );
   }
 
   async function handleFragmentQuery(replyToken, userId) {
@@ -75,27 +182,31 @@ module.exports = function (app) {
       .single();
 
     if (error || !vip) {
-      return zhouheClient.replyMessage(replyToken, {
-        type: "text",
-        text:
-          "尚未查詢到你的會員資料。\n\n請先提供3A帳號，並等待管理員審核。",
-      });
+      return reply(
+        replyToken,
+        "尚未查詢到你的會員資料。\n\n請先輸入「綁定」提交3A帳號，並等待管理員審核。"
+      );
     }
 
     const fragments = vip.fragments || 0;
     const need = Math.max(10 - fragments, 0);
 
-    return zhouheClient.replyMessage(replyToken, {
-      type: "text",
-      text:
-        "💎 碎片查詢\n\n" +
-        "3A帳號：" + vip.account + "\n" +
-        "目前碎片：" + fragments + " / 10\n" +
-        "累積儲值：" + (vip.total_recharge || 0) + "\n\n" +
+    return reply(
+      replyToken,
+      "💎 碎片查詢\n\n" +
+        "3A帳號：" +
+        vip.account +
+        "\n" +
+        "目前碎片：" +
+        fragments +
+        " / 10\n" +
+        "累積儲值：" +
+        (vip.total_recharge || 0) +
+        "\n\n" +
         (fragments >= 10
           ? "✅ 已可開啟寶箱一次"
-          : "尚差 " + need + " 個碎片可開啟寶箱"),
-    });
+          : "尚差 " + need + " 個碎片可開啟寶箱")
+    );
   }
 
   async function handleAddFragments(replyToken, adminUserId, account, count) {
@@ -108,18 +219,12 @@ module.exports = function (app) {
       .single();
 
     if (error || !vip) {
-      return zhouheClient.replyMessage(replyToken, {
-        type: "text",
-        text: "查無此3A帳號：" + account,
-      });
+      return reply(replyToken, "查無此3A帳號：" + account);
     }
 
-    const oldFragments = vip.fragments || 0;
-    const newFragments = oldFragments + count;
-
-    const oldRecharge = vip.total_recharge || 0;
+    const newFragments = (vip.fragments || 0) + count;
     const addRecharge = count * 1000;
-    const newRecharge = oldRecharge + addRecharge;
+    const newRecharge = (vip.total_recharge || 0) + addRecharge;
 
     const { error: updateError } = await supabase
       .from("vip_users")
@@ -131,10 +236,7 @@ module.exports = function (app) {
 
     if (updateError) {
       console.error("ADD FRAGMENTS ERROR:", updateError);
-      return zhouheClient.replyMessage(replyToken, {
-        type: "text",
-        text: "加碎片失敗，請稍後再試。",
-      });
+      return reply(replyToken, "加碎片失敗，請稍後再試。");
     }
 
     await supabase.from("zhouhe_fragment_logs").insert({
@@ -145,15 +247,21 @@ module.exports = function (app) {
       note: "管理員加碎片：" + adminUserId,
     });
 
-    return zhouheClient.replyMessage(replyToken, {
-      type: "text",
-      text:
-        "✅ 加碎片成功\n\n" +
-        "3A帳號：" + account + "\n" +
-        "新增碎片：" + count + "\n" +
-        "目前碎片：" + newFragments + "\n" +
-        "累積儲值：" + newRecharge,
-    });
+    return reply(
+      replyToken,
+      "✅ 加碎片成功\n\n" +
+        "3A帳號：" +
+        account +
+        "\n" +
+        "新增碎片：" +
+        count +
+        "\n" +
+        "目前碎片：" +
+        newFragments +
+        "\n" +
+        "累積儲值：" +
+        newRecharge
+    );
   }
 
   app.get("/box", (req, res) => {
@@ -172,7 +280,6 @@ module.exports = function (app) {
       }
 
       const isAdmin = ADMIN_UIDS.includes(lineUserId);
-
       const reward = pickReward();
 
       if (isAdmin) {
@@ -194,7 +301,6 @@ module.exports = function (app) {
       if (error || !vip) {
         return res.json({
           ok: false,
-          notVip: true,
           message: "尚未完成帳號審核，請先聯繫管理員。",
         });
       }
@@ -204,8 +310,6 @@ module.exports = function (app) {
       if (fragments < 10) {
         return res.json({
           ok: false,
-          notEnough: true,
-          fragments,
           message: "碎片不足，目前碎片：" + fragments + " / 10",
         });
       }
@@ -270,7 +374,7 @@ function renderBoxPage(liffId) {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>新會員限定寶箱</title>
+<title>會員碎片寶箱</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
 <style>
