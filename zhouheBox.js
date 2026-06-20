@@ -760,7 +760,9 @@ module.exports = function (app) {
 };
 
 async function pickReward(supabase) {
-  const { data, error } = await supabase.from("zhouhe_box_settings").select("key,value");
+  const { data, error } = await supabase
+    .from("zhouhe_box_settings")
+    .select("key,value");
 
   if (error || !data || data.length === 0) {
     return "AI權限 1 天";
@@ -768,24 +770,27 @@ async function pickReward(supabase) {
 
   const map = {};
   data.forEach(row => {
-    map[row.key] = Number(row.value);
+    map[String(row.key).trim()] = Number(row.value);
   });
 
   const rand = Math.random() * 100;
   let current = 0;
 
-  const rewards = [
-    ["AI", "AI權限 1 天"],
-    ["88", "88"],
-    ["288", "288"],
-    ["588", "588"],
-    ["888", "888"],
-    ["3888", "3888"],
+  const rewardTable = [
+    { key: "AI", reward: "AI權限 1 天" },
+    { key: "88", reward: "88" },
+    { key: "288", reward: "288" },
+    { key: "588", reward: "588" },
+    { key: "888", reward: "888" },
+    { key: "3888", reward: "3888" },
   ];
 
-  for (const [key, reward] of rewards) {
-    current += map[key] || 0;
-    if (rand < current) return reward;
+  for (const item of rewardTable) {
+    current += Number(map[item.key] || 0);
+
+    if (rand < current) {
+      return item.reward;
+    }
   }
 
   return "AI權限 1 天";
