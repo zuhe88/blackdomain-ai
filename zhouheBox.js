@@ -937,36 +937,36 @@ async function openBox(){
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({lineUserId:currentUserId})
     });
+const data = await res.json();
 
-    const data=await res.json();
+setTimeout(async () => {
+  chest.classList.remove("shake");
 
-    setTimeout(async ()=>{
-      chest.classList.remove("shake");
+  if (!data.ok) {
+    btn.disabled = false;
+    btn.innerText = "立即開啟寶箱";
+    errorBox.style.display = "block";
+    errorBox.innerText = data.message || "寶箱系統異常，請稍後再試。";
+    return;
+  }
 
-      if(!data.ok){
-        btn.disabled=false;
-        btn.innerText="立即開啟寶箱";
-        errorBox.style.display="block";
-        errorBox.innerText=data.message || "寶箱系統異常，請稍後再試。";
-        return;
-      }
+  rewardText.innerText = data.reward;
+  leftText.innerText =
+    "剩餘🔑鑰匙：" + data.keysLeft + " 把，可再開 " + data.canOpenLeft + " 次";
 
-      rewardText.innerText=data.reward;
-      leftText.innerText="剩餘🔑鑰匙：" + data.keysLeft + " 把，可再開 " + data.canOpenLeft + " 次";
+  chest.classList.add("opened");
+  chest.innerText = "✨";
+  btn.style.display = "none";
+  result.style.display = "block";
 
-      chest.classList.add("opened");
-      chest.innerText="✨";
-      btn.style.display="none";
-      result.style.display="block";
+  if (Number(data.canOpenLeft) <= 0) {
+    againBtn.style.display = "none";
+  } else {
+    againBtn.style.display = "block";
+  }
 
-      if(Number(data.canOpenLeft) <= 0){
-        againBtn.style.display="none";
-      }else{
-        againBtn.style.display="block";
-      }
-
-      await setupMarquee();
-    },800);
+  await setupMarquee();
+}, 800);
   }catch(err){
     chest.classList.remove("shake");
     btn.disabled=false;
