@@ -99,7 +99,7 @@ module.exports = function (app) {
       }
 
       pendingBind[userId] = true;
-      return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：kerero777444");
+      return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：abc123");
     }
 
     if (pendingBind[userId]) {
@@ -182,7 +182,7 @@ module.exports = function (app) {
       const count = Number(parts[2]);
 
       if (!account || !count || count <= 0) {
-        return reply(event.replyToken, "格式錯誤\n請輸入：加鑰匙 3A帳號 數量\n例如：加鑰匙 kerero777444 5");
+        return reply(event.replyToken, "格式錯誤\n請輸入：加鑰匙 3A帳號 數量\n例如：加鑰匙 abc123 5");
       }
 
       return handleAddKeys(event.replyToken, userId, account, count);
@@ -236,7 +236,7 @@ module.exports = function (app) {
 
     if (blockedWords.some(word => account.includes(word))) {
       pendingBind[userId] = true;
-      return reply(replyToken, "格式不正確，請只輸入您的3A帳號。\n\n範例：kerero777444");
+      return reply(replyToken, "格式不正確，請只輸入您的3A帳號。\n\n範例：abc123");
     }
 
     if (account.includes("\n") || account.includes(" ")) {
