@@ -508,12 +508,34 @@ module.exports = function (app) {
         reward,
       });
 
-      for (const adminId of ADMIN_UIDS) {
-        await zhouheClient.pushMessage(adminId, {
-          type: "text",
-          text: "🎁 寶箱中獎通知\n\n3A帳號：" + vip.account + "\n抽中獎勵：" + reward + "\n剩餘🔑鑰匙：" + newKeys + " 把\n可開啟寶箱：" + canOpenLeft + " 次",
-        });
-      }
+   try {
+  await zhouheClient.pushMessage(lineUserId, {
+    type: "text",
+    text:
+      "🎁 幸運寶箱開啟成功\n\n" +
+      "恭喜抽中：" + reward + "\n\n" +
+      "剩餘🔑鑰匙：" + newKeys + " 把\n" +
+      "可開啟寶箱：" + canOpenLeft + " 次"
+  });
+} catch (pushErr) {
+  console.error("USER PUSH MESSAGE ERROR:", pushErr.message);
+}
+
+     for (const adminId of ADMIN_UIDS) {
+  try {
+    await zhouheClient.pushMessage(adminId, {
+      type: "text",
+      text:
+        "🎁 寶箱中獎通知\n\n" +
+        "3A帳號：" + vip.account +
+        "\n抽中獎勵：" + reward +
+        "\n剩餘🔑鑰匙：" + newKeys + " 把" +
+        "\n可開啟寶箱：" + canOpenLeft + " 次",
+    });
+  } catch (err) {
+    console.error("ADMIN PUSH ERROR:", err.message);
+  }
+}
 
       return res.json({ ok: true, reward, keysLeft: newKeys, canOpenLeft });
     } catch (err) {
