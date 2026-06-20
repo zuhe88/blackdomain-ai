@@ -66,10 +66,44 @@ module.exports = function (app) {
       );
     }
 
-    if (["綁定", "綁定帳號", "綁定3A帳號"].includes(text)) {
-      pendingBind[userId] = true;
-      return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：kerero777444");
-    }
+   if (["綁定", "綁定帳號", "綁定3A帳號"].includes(text)) {
+  const { data: alreadyBind } = await supabase
+    .from("vip_users")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("source", "zhouhe")
+    .limit(1)
+    .maybeSingle();
+
+  if (alreadyBind) {
+    return reply(
+      event.replyToken,
+      "✅ 你已完成綁定\n\n" +
+      "目前帳號：" + alreadyBind.account + "\n\n" +
+      "如需更換帳號請聯繫管理員。"
+    );
+  }
+
+  const { data: pendingRequest } = await supabase
+    .from("vip_requests")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .limit(1)
+    .maybeSingle();
+
+  if (pendingRequest) {
+    return reply(
+      event.replyToken,
+      "你已有帳號正在審核中。\n\n" +
+      "3A帳號：" + pendingRequest.account + "\n\n" +
+      "請等待管理員審核。"
+    );
+  }
+
+  pendingBind[userId] = true;
+  return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：aaa123");
+}
 
     if (pendingBind[userId]) {
       const blocked = [
