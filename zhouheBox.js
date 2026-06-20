@@ -377,13 +377,18 @@ module.exports = function (app) {
 
     await supabase.from("vip_requests").update({ status: "approved" }).eq("id", reqData.id);
 
-    zhouheClient.pushMessage(reqData.user_id, {
-      type: "text",
-      text:
-        "✅ 帳號審核通過\n\n" +
-        "3A帳號：" + account +
-        "\n\n已開通🔑鑰匙系統\n可至【🎁幸運寶箱】查看目前鑰匙數量",
-    }).catch(err => console.error("APPROVE PUSH ERROR:", err.message));
+    try {
+  await zhouheClient.pushMessage(reqData.user_id, {
+    type: "text",
+    text:
+      "✅ 帳號審核通過\n\n" +
+      "3A帳號：" + account +
+      "\n\n已開通🔑鑰匙系統\n" +
+      "可至【🎁幸運寶箱】查看目前鑰匙數量",
+  });
+} catch (err) {
+  console.error("APPROVE PUSH ERROR:", err.message);
+}
 
     return reply(replyToken, "✅ 審核通過\n\n3A帳號：" + account + "\n已加入🔑鑰匙系統");
   }
@@ -495,16 +500,19 @@ module.exports = function (app) {
       note: "管理員加鑰匙：" + adminUserId,
     });
 
-    zhouheClient.pushMessage(vip.user_id, {
-      type: "text",
-      text:
-        "🔑 鑰匙已增加\n\n" +
-        "3A帳號：" + account +
-        "\n新增鑰匙：" + count + " 把" +
-        "\n目前鑰匙：" + newKeys + " 把" +
-        "\n🎁 可開啟寶箱：" + canOpen + " 次",
-    }).catch(err => console.error("ADD KEY PUSH ERROR:", err.message));
-
+    try {
+  await zhouheClient.pushMessage(vip.user_id, {
+    type: "text",
+    text:
+      "🔑 鑰匙已增加\n\n" +
+      "3A帳號：" + account +
+      "\n新增鑰匙：" + count + " 把" +
+      "\n目前鑰匙：" + newKeys + " 把" +
+      "\n🎁 可開啟寶箱：" + canOpen + " 次",
+  });
+} catch (err) {
+  console.error("ADD KEY PUSH ERROR:", err.message);
+}
     return reply(
       replyToken,
       "✅ 加鑰匙成功\n\n" +
