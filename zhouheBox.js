@@ -966,7 +966,7 @@ async function openBox(){
       }
 
       await setupMarquee();
-    },2600);
+    },1200);
   }catch(err){
     chest.classList.remove("shake");
     btn.disabled=false;
