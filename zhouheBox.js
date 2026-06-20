@@ -966,7 +966,7 @@ setTimeout(async () => {
   }
 
   await setupMarquee();
-}, 800);
+}, 1200);
   }catch(err){
     chest.classList.remove("shake");
     btn.disabled=false;
