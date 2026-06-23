@@ -99,7 +99,7 @@ module.exports = function (app) {
       }
 
       pendingBind[userId] = true;
-      return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：abc123");
+      return reply(event.replyToken, "請輸入您的3A帳號\n\n範例：kerero777444");
     }
 
     if (pendingBind[userId]) {
@@ -132,7 +132,8 @@ module.exports = function (app) {
         event.replyToken,
         "🎁 幸運寶箱獎勵\n\n" +
           "🔓 AI權限1天\n🎁 88\n🎁 288\n🎁 588\n🎁 888\n🏆 3888\n\n" +
-          "儲值1000 = 1把🔑鑰匙\n累積2把🔑鑰匙即可開啟一次寶箱"
+          "儲值1000 = 1把🔑鑰匙\n累積2把🔑鑰匙即可開啟一次寶箱\n\n" +
+          "首次開啟寶箱必定獲得：AI權限1天"
       );
     }
 
@@ -182,7 +183,7 @@ module.exports = function (app) {
       const count = Number(parts[2]);
 
       if (!account || !count || count <= 0) {
-        return reply(event.replyToken, "格式錯誤\n請輸入：加鑰匙 3A帳號 數量\n例如：加鑰匙 abc123 5");
+        return reply(event.replyToken, "格式錯誤\n請輸入：加鑰匙 3A帳號 數量\n例如：加鑰匙 kerero777444 5");
       }
 
       return handleAddKeys(event.replyToken, userId, account, count);
@@ -236,7 +237,7 @@ module.exports = function (app) {
 
     if (blockedWords.some(word => account.includes(word))) {
       pendingBind[userId] = true;
-      return reply(replyToken, "格式不正確，請只輸入您的3A帳號。\n\n範例：abc123");
+      return reply(replyToken, "格式不正確，請只輸入您的3A帳號。\n\n範例：kerero777444");
     }
 
     if (account.includes("\n") || account.includes(" ")) {
@@ -378,17 +379,16 @@ module.exports = function (app) {
     await supabase.from("vip_requests").update({ status: "approved" }).eq("id", reqData.id);
 
     try {
-  await zhouheClient.pushMessage(reqData.user_id, {
-    type: "text",
-    text:
-      "✅ 帳號審核通過\n\n" +
-      "3A帳號：" + account +
-      "\n\n已開通🔑鑰匙系統\n" +
-      "可至【🎁幸運寶箱】查看目前鑰匙數量",
-  });
-} catch (err) {
-  console.error("APPROVE PUSH ERROR:", err.message);
-}
+      await zhouheClient.pushMessage(reqData.user_id, {
+        type: "text",
+        text:
+          "✅ 帳號審核通過\n\n" +
+          "3A帳號：" + account +
+          "\n\n已開通🔑鑰匙系統\n可至【🎁幸運寶箱】查看目前鑰匙數量",
+      });
+    } catch (err) {
+      console.error("APPROVE PUSH ERROR:", err.message);
+    }
 
     return reply(replyToken, "✅ 審核通過\n\n3A帳號：" + account + "\n已加入🔑鑰匙系統");
   }
@@ -501,18 +501,19 @@ module.exports = function (app) {
     });
 
     try {
-  await zhouheClient.pushMessage(vip.user_id, {
-    type: "text",
-    text:
-      "🔑 鑰匙已增加\n\n" +
-      "3A帳號：" + account +
-      "\n新增鑰匙：" + count + " 把" +
-      "\n目前鑰匙：" + newKeys + " 把" +
-      "\n🎁 可開啟寶箱：" + canOpen + " 次",
-  });
-} catch (err) {
-  console.error("ADD KEY PUSH ERROR:", err.message);
-}
+      await zhouheClient.pushMessage(vip.user_id, {
+        type: "text",
+        text:
+          "🔑 鑰匙已增加\n\n" +
+          "3A帳號：" + account +
+          "\n新增鑰匙：" + count + " 把" +
+          "\n目前鑰匙：" + newKeys + " 把" +
+          "\n🎁 可開啟寶箱：" + canOpen + " 次",
+      });
+    } catch (err) {
+      console.error("ADD KEY PUSH ERROR:", err.message);
+    }
+
     return reply(
       replyToken,
       "✅ 加鑰匙成功\n\n" +
@@ -625,9 +626,9 @@ module.exports = function (app) {
       if (!lineUserId) return res.status(400).json({ ok: false, message: "無法取得 LINE 身分，請重新開啟寶箱。" });
 
       const isAdmin = ADMIN_UIDS.includes(lineUserId);
-      const reward = await pickReward(supabase);
 
       if (isAdmin) {
+        const reward = await pickReward(supabase);
         return res.json({ ok: true, reward, adminTest: true, keysLeft: "管理員測試", canOpenLeft: "管理員測試" });
       }
 
@@ -644,6 +645,19 @@ module.exports = function (app) {
 
       const keys = vip.fragments || 0;
       if (keys < 2) return res.json({ ok: false, message: "鑰匙不足，目前鑰匙：" + keys + " / 2" });
+
+      const { count: openCount } = await supabase
+        .from("zhouhe_box_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("line_user_id", lineUserId);
+
+      let reward;
+
+      if ((openCount || 0) === 0) {
+        reward = "AI權限 1 天";
+      } else {
+        reward = await pickReward(supabase);
+      }
 
       const newKeys = keys - 2;
       const canOpenLeft = Math.floor(newKeys / 2);
@@ -677,7 +691,8 @@ module.exports = function (app) {
             "3A帳號：" + vip.account +
             "\n抽中獎勵：" + reward +
             "\n剩餘🔑鑰匙：" + newKeys + " 把" +
-            "\n可開啟寶箱：" + canOpenLeft + " 次",
+            "\n可開啟寶箱：" + canOpenLeft + " 次" +
+            "\n\n首次開箱：" + ((openCount || 0) === 0 ? "是" : "否"),
         }).catch(err => console.error("ADMIN PUSH ERROR:", err.message));
       }
 
