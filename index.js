@@ -488,10 +488,19 @@ function startAnalyze(uid) {
 }
 
 function slotMaxRoom(game) {
-  if (game === "戰神賽特1") return 2500;
-  if (game === "戰神賽特2") return 3500;
-  if (game === "古神巴風特") return 1500;
-  return 3500;
+  switch (game) {
+    case "戰神賽特1":
+      return 1300;
+
+    case "戰神賽特2":
+      return 4213;
+
+    case "古神巴風特":
+      return 1000;
+
+    default:
+      return 1000;
+  }
 }
 
 function slotNumber(room) {
