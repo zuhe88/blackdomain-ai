@@ -132,24 +132,24 @@ const worldCupSchedule = {
     { stage: "32強", group: "", home: "F組第1", away: "C組第2", time: "09:00", venue: "蒙特雷" },
   ],
 
-  "7/1": [
-    { stage: "32強", group: "", home: "E組第2", away: "I組第2", time: "01:00", venue: "阿靈頓" },
-    { stage: "32強", group: "", home: "I組第1", away: "C/D/F/G/H組第三", time: "05:00", venue: "紐約/紐澤西" },
-    { stage: "32強", group: "", home: "A組第1", away: "C/E/F/H/I組第三", time: "09:00", venue: "墨西哥城" },
-  ],
+ "7/1": [
+  { stage: "32強", group: "", home: "英格蘭", away: "剛果民主共和國", time: "00:00", venue: "亞特蘭大" },
+  { stage: "32強", group: "", home: "比利時", away: "塞內加爾", time: "04:00", venue: "西雅圖" },
+  { stage: "32強", group: "", home: "美國", away: "波士尼亞與赫塞哥維納", time: "08:00", venue: "聖塔克拉拉" },
+],
+  
+"7/2": [
+  { stage: "32強", group: "", home: "西班牙", away: "奧地利", time: "03:00", venue: "洛杉磯" },
+  { stage: "32強", group: "", home: "葡萄牙", away: "克羅埃西亞", time: "07:00", venue: "多倫多" },
+  { stage: "32強", group: "", home: "瑞士", away: "阿爾及利亞", time: "11:00", venue: "溫哥華" },
+],
 
-  "7/2": [
-    { stage: "32強", group: "", home: "L組第1", away: "E/H/I/J/K組第三", time: "00:00", venue: "亞特蘭大" },
-    { stage: "32強", group: "", home: "G組第1", away: "A/E/H/I/J組第三", time: "04:00", venue: "西雅圖" },
-    { stage: "32強", group: "", home: "D組第1", away: "B/E/F/I/J組第三", time: "08:00", venue: "聖塔克拉拉" },
-  ],
-
-  "7/3": [
-    { stage: "32強", group: "", home: "H組第1", away: "J組第2", time: "03:00", venue: "洛杉磯" },
-    { stage: "32強", group: "", home: "K組第2", away: "L組第2", time: "07:00", venue: "多倫多" },
-    { stage: "32強", group: "", home: "B組第1", away: "E/F/G/I/J組第三", time: "11:00", venue: "溫哥華" },
-  ],
-
+ "7/3": [
+  { stage: "32強", group: "", home: "澳洲", away: "埃及", time: "02:00", venue: "阿靈頓" },
+  { stage: "32強", group: "", home: "阿根廷", away: "維德角", time: "06:00", venue: "邁阿密" },
+  { stage: "32強", group: "", home: "哥倫比亞", away: "迦納", time: "09:30", venue: "堪薩斯城" },
+],
+  
   "7/4": [
     { stage: "32強", group: "", home: "D組第2", away: "G組第2", time: "02:00", venue: "阿靈頓" },
     { stage: "32強", group: "", home: "J組第1", away: "H組第2", time: "06:00", venue: "邁阿密" },
