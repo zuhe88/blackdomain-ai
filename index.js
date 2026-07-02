@@ -1619,6 +1619,36 @@ return client.replyMessage(event.replyToken, {
     const n = Number(text.split(":")[1]);
     const g = S.wc[uid]?.games?.[n - 1];
 
+    const notReady =
+  g.home.includes("勝方") ||
+  g.away.includes("勝方") ||
+  g.home.includes("敗方") ||
+  g.away.includes("敗方") ||
+  g.home.includes("組第") ||
+  g.away.includes("組第") ||
+  g.home.includes("組第三") ||
+  g.away.includes("組第三");
+
+if (notReady) {
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
+⚽ 對戰尚未確定
+━━━━━━━━━━
+
+${g.home} VS ${g.away}
+
+此場目前尚未確定實際對戰隊伍。
+
+待官方對戰出爐後，
+黑域AI將開放賽前分析。
+
+━━━━━━━━━━
+請選擇其他已確定場次。`,
+    quickReply: quickWorldCup(),
+  });
+}
+
     if (!g) {
       return client.replyMessage(event.replyToken, {
         type: "text",
