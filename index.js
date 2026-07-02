@@ -1128,7 +1128,7 @@ app.post(
     }
   }
 );
-
+console.log("收到訊息：", text);
 async function handleEvent(event) {
   if (event.type !== "message" || event.message.type !== "text") return null;
 
