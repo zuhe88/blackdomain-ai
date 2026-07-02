@@ -1,2420 +1,260 @@
-const { startAtgSocket } = require("./atgSocket");
-const OpenAI = require("openai");
-const WebSocket = require("ws");
-global.WebSocket = WebSocket;
+require("dotenv").config();
 
 const express = require("express");
-const line = require("@line/bot-sdk");
-const { createClient } = require("@supabase/supabase-js");
-const axios = require("axios");
-const worldCupSchedule = require("./worldcupSchedule");
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const {
+  line,
+  config,
+  client
+} = require("./services/line");
+
+const logger = require("./services/logger");
 
 const app = express();
 
-require("./zhouheBox")(app);
-
-const client = new line.Client({
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.LINE_CHANNEL_SECRET,
-});
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
-
-const adminId = "Uaf293ee976e5170d4e8672d2c12b3f76";
-const ADMIN_UIDS = [adminId];
-
-const S = {
-  baccarat: {},
-  result: {},
-  lastPred: {},
-  lastBet: {},
-  bankroll: {},
-  startBankroll: {},
-  mode: {},
-  pendingMoney: {},
-  pendingRoom: {},
-  betLimit: {},
-  flow: {},
-  tianmen: {},
-  slot: {},
-  slotHot: {},
-  slotCustom: {},
-  sport: {},
-  wc: {},
-  mlb: {},
-  nba: {},
-  cache539: {},
-};
-
-function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function q(items) {
-  return {
-    items: items.map(([label, text = label]) => ({
-      type: "action",
-      action: { type: "message", label, text },
-    })),
-  };
-}
-
-function trimText(text, max = 4500) {
-  const s = String(text || "");
-  return s.length > max ? s.slice(0, max) + "\n\n⚠️ 內容過長，已自動截斷。" : s;
-}
-
-function quickMain() {
-  return q([["百家樂"], ["電子"], ["539"], ["體育"], ["VIP查詢"]]);
-}
-
-function quickBaccarat() {
-  return q([["莊"], ["閒"], ["和"]]);
-}
-
-function quickMoney() {
-  return q([["AI配注"], ["天門五關"], ["自由配注"]]);
-}
-
-function quickSlotGame() {
-  return q([
-    ["🎰 戰神賽特1", "戰神賽特1"],
-    ["🎰 戰神賽特2", "戰神賽特2"],
-    ["👹 古神巴風特", "古神巴風特"],
-  ]);
-}
-
-function quickSlotMode() {
-  return q([
-    ["🎲 AI推薦房", "AI推薦房"],
-    ["🔥 熱門房排行", "熱門房排行"],
-    ["🔢 自選房號分析", "自選房號分析"],
-  ]);
-}
-
-function quick539(exclude) {
-  return q(
-    [["本期推薦"], ["539熱號"], ["539冷號"]].filter(([x]) => x !== exclude)
-  );
-}
-
-function quickSports() {
-  return q([["世足"], ["MLB"], ["NBA"]]);
-}
-
-function quickWorldCup() {
-  return q([
-    ["賽程查詢", "世足賽程查詢"],
-    ["球隊查詢", "世足球隊查詢"],
-    ["冠軍預測", "世足冠軍預測"],
-  ]);
-}
-
-function quickMLB() {
-  return q([["近日賽程", "MLB近日賽程"]]);
-}
-
-function quickNBA() {
-  return q([["近日賽程", "NBA近日賽程"]]);
-}
-
-function clearSessions(uid, keep = "") {
-  if (keep !== "slot") S.slot[uid] = null;
-  if (keep !== "wc") S.wc[uid] = null;
-  if (keep !== "mlb") S.mlb[uid] = null;
-  if (keep !== "nba") S.nba[uid] = null;
-  if (!keep) S.sport[uid] = null;
-}
-
-function twNow() {
-  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
-}
-
-function twDateTime() {
-  const now = twNow();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const h = String(now.getHours()).padStart(2, "0");
-  const min = String(now.getMinutes()).padStart(2, "0");
-  return `${y}/${m}/${d} ${h}:${min}`;
-}
-
-function isUpcomingWorldCupGame(dateKey, game) {
-  const [m, d] = dateKey.split("/");
-  const gameTime = new Date(`2026-${m.padStart(2, "0")}-${d.padStart(2, "0")}T${game.time}:00+08:00`);
-
-  return gameTime.getTime() > Date.now();
-}
-
-function twTime(ts) {
-  return new Date(Number(ts)).toLocaleString("zh-TW", {
-    timeZone: "Asia/Taipei",
-    hour12: false,
-  });
-}
-
-function twSlotUpdateTime() {
-  const now = twNow();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const h = String(now.getHours()).padStart(2, "0");
-  const min = now.getMinutes() >= 30 ? "30" : "00";
-  return `${y}/${m}/${d} ${h}:${min}`;
-}
-
-function tw539Date() {
-  const now = twNow();
-
-  if (now.getHours() > 20 || (now.getHours() === 20 && now.getMinutes() >= 30)) {
-    now.setDate(now.getDate() + 1);
-  }
-
-  if (now.getDay() === 0) {
-    now.setDate(now.getDate() + 1);
-  }
-
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-
-  return `${y}/${m}/${d}`;
-}
-
-function noVip() {
-  return `━━━━━━━━━━
-🔐 黑域AI權限尚未開通
-━━━━━━━━━━
-
-請提供3A帳號申請開通。
-
-輸入範例：
-申請開通 abc123
-
-📲 開通請私訊
-LINE：zu88.8`;
-}
-
-async function getVip(uid) {
-  const { data } = await supabase
-    .from("vip_users")
-    .select("*")
-    .eq("user_id", uid)
-    .maybeSingle();
-
-  return data;
-}
-
-async function isVip(uid) {
-  const data = await getVip(uid);
-  return !!data && Number(data.expire_time) > Date.now();
-}
-
-async function openVip(uid, account, days) {
-  const old = await getVip(uid);
-
-  const baseTime =
-    old && Number(old.expire_time) > Date.now()
-      ? Number(old.expire_time)
-      : Date.now();
-
-  const expire_time = baseTime + days * 86400000;
-
-  if (old) {
-    await supabase
-      .from("vip_users")
-      .update({ account, expire_time })
-      .eq("user_id", uid);
-  } else {
-    await supabase
-      .from("vip_users")
-      .insert({ user_id: uid, account, expire_time });
-  }
-
-  return expire_time;
-}
-
-function roomName(room) {
-  const t = String(room).toUpperCase().replace(/\s+/g, "");
-
-  if (t.startsWith("MT")) {
-    const v = t.replace("MT", "");
-    return v === "3A" || v === "13A" ? `MT ${v}` : `MT ${v.padStart(2, "0")}`;
-  }
-
-  if (t.startsWith("DG")) {
-    const v = t.replace("DG", "");
-    if (v.startsWith("RB")) return `DG RB${v.replace("RB", "").padStart(2, "0")}`;
-    if (v.startsWith("S")) return `DG S${v.replace("S", "").padStart(2, "0")}`;
-    return `DG ${v.padStart(2, "0")}`;
-  }
-
-  return String(room).toUpperCase();
-}
-
-function resetMoney(uid, money) {
-  S.startBankroll[uid] = money;
-  S.bankroll[uid] = money;
-  S.result[uid] = [];
-  S.lastPred[uid] = null;
-  S.lastBet[uid] = null;
-  S.mode[uid] = null;
-  S.tianmen[uid] = null;
-}
-
-function profit(uid) {
-  return (S.bankroll[uid] || 0) - (S.startBankroll[uid] || 0);
-}
-
-function betUnit(bankroll) {
-  if (bankroll >= 500000) return 10000;
-  if (bankroll >= 10000) return 1000;
-  return 100;
-}
-
-function roundBet(amount, bankroll) {
-  const unit = betUnit(bankroll);
-  return Math.max(unit, Math.floor(amount / unit) * unit);
-}
-
-function aiBet(uid) {
-  const b = S.bankroll[uid] || S.startBankroll[uid] || 1000;
-  const limit = S.betLimit[uid] || b;
-  const p = profit(uid);
-
-  let minRate = 0.08;
-  let maxRate = 0.18;
-
-  if (b >= 10000) {
-    minRate = 0.12;
-    maxRate = 0.35;
-  }
-
-  if (b >= 100000) {
-    minRate = 0.08;
-    maxRate = 0.28;
-  }
-
-  if (p > 0) maxRate += 0.03;
-
-  const style = Math.random();
-  let rate;
-
-  if (style < 0.25) rate = minRate;
-  else if (style < 0.75) rate = minRate + Math.random() * (maxRate - minRate);
-  else rate = maxRate;
-
-  const bet = Math.min(b * rate, limit);
-  return Math.max(betUnit(b), roundBet(bet, b));
-}
-
-function makeTianmen(money) {
-  const base = Math.max(100, Math.floor(money / 60 / 100) * 100);
-  const levels = [1, 3, 7, 15, 31].map((x) => base * x);
-  return { base, levels, total: levels.reduce((a, b) => a + b, 0) };
-}
-
-function currentBet(uid) {
-  if (S.mode[uid] === "free") return 0;
-
-  if (S.mode[uid] === "tianmen" && S.tianmen[uid]) {
-    return S.tianmen[uid].levels[(S.tianmen[uid].level || 1) - 1];
-  }
-
-  return aiBet(uid);
-}
-
-function baccaratPick(history) {
-  const h = history.filter((x) => x !== "和");
-
-  if (h.length < 2) return pick(["莊", "閒"]);
-
-  const banker = h.filter((x) => x === "莊").length;
-  const player = h.filter((x) => x === "閒").length;
-  const last = h[h.length - 1];
-  const last2 = h.slice(-2);
-
-  if (last2.length === 2 && last2[0] !== last2[1]) {
-    return last === "莊" ? "閒" : "莊";
-  }
-
-  if (banker > player) return "莊";
-  if (player > banker) return "閒";
-
-  return pick(["莊", "閒"]);
-}
-
-function baccaratWarning(history) {
-  const h = history.filter((x) => x !== "和");
-  const recent = h.slice(-5);
-
-  if (history.slice(-6).filter((x) => x === "和").length >= 2) {
-    return "⚠️ 和局波動偏高";
-  }
-
-  if (recent.length >= 5 && recent.every((x) => x === recent[0])) {
-    return "⚠️ 偵測長龍波動";
-  }
-
-  if (
-    recent.length >= 5 &&
-    recent.every((v, i, arr) => i === 0 || v !== arr[i - 1])
-  ) {
-    return "⚠️ 偵測震盪波動";
-  }
-
-  return "";
-}
-
-function baccaratSpecial(history) {
-  const h = history.filter((x) => x !== "和");
-  const recent = h.slice(-5);
-  const roll = Math.random();
-
-  if (roll < 0.02 && recent.filter((x) => x === "莊").length >= 3) {
-    return "⚠️ 高倍率區同步完成\n\n可留意：\n莊龍寶";
-  }
-
-  if (roll < 0.04 && recent.filter((x) => x === "閒").length >= 3) {
-    return "⚠️ 高倍率區同步完成\n\n可留意：\n閒龍寶";
-  }
-
-  if (roll < 0.1) return "⚠️ 可留意：\n和局";
-  if (roll < 0.16) return `⚠️ 可留意：\n${pick(["莊對", "閒對"])}`;
-
-  return "";
-}
-
-function applyResult(uid, opened) {
-  const last = S.lastPred[uid];
-  const bet = S.lastBet[uid] || currentBet(uid);
-
-  if (!last || !S.mode[uid]) return;
-  if (!S.result[uid]) S.result[uid] = [];
-
-  if (opened === "和") {
-    S.result[uid].push("和");
-  } else if (last === opened) {
-    S.result[uid].push("過");
-
-    if (S.mode[uid] !== "free") {
-      S.bankroll[uid] += opened === "莊" ? Math.floor(bet * 0.95) : bet;
-    }
-
-    if (S.mode[uid] === "tianmen" && S.tianmen[uid]) {
-      S.tianmen[uid].level = 1;
-    }
-  } else {
-    S.result[uid].push("倒");
-
-    if (S.mode[uid] !== "free") {
-      S.bankroll[uid] -= bet;
-    }
-
-    if (S.mode[uid] === "tianmen" && S.tianmen[uid]) {
-      S.tianmen[uid].level = Math.min(5, (S.tianmen[uid].level || 1) + 1);
-    }
-  }
-
-  if (S.result[uid].length > 50) S.result[uid].shift();
-}
-
-function baccaratReply(uid, pred, bet, extra = "") {
-  const records = S.result[uid] || [];
-  const stat = `過：${records.filter((x) => x === "過").length} 把
-倒：${records.filter((x) => x === "倒").length} 把
-和：${records.filter((x) => x === "和").length} 把`;
-
-  if (S.mode[uid] === "free") {
-    return `━━━━━━━━━━
-🤖 黑域AI運算完成
-━━━━━━━━━━
-
-目前建議：
-${pred}${extra}
-
-━━━━━━━━━━
-
-${stat}
-
-━━━━━━━━━━
-
-請輸入目前開出：
-莊 / 閒 / 和`;
-  }
-
-  let money = `目前本金：
-${S.bankroll[uid]}
-
-目前獲利：
-${profit(uid) >= 0 ? "+" : ""}${profit(uid)}`;
-
-  if (S.mode[uid] === "tianmen" && S.tianmen[uid]) {
-    money += `
-
-目前階段：
-天門${S.tianmen[uid].level}`;
-  }
-
-  return `━━━━━━━━━━
-🤖 黑域AI運算完成
-━━━━━━━━━━
-
-目前建議：
-${pred}｜下注：${bet}${extra}
-
-━━━━━━━━━━
-
-${stat}
-
-${money}
-
-━━━━━━━━━━
-
-請輸入目前開出：
-莊 / 閒 / 和`;
-}
-
-function startAnalyze(uid) {
-  const pred = pick(["莊", "閒"]);
-  const bet = currentBet(uid);
-
-  S.lastPred[uid] = pred;
-  S.lastBet[uid] = bet;
-  S.flow[uid] = "playing";
-
-  return baccaratReply(uid, pred, bet);
-}
-
-function slotMaxRoom(game) {
-  switch (game) {
-    case "戰神賽特1":
-      return 1300;
-
-    case "戰神賽特2":
-      return 4213;
-
-    case "古神巴風特":
-      return 1000;
-
-    default:
-      return 1000;
-  }
-}
-
-function slotNumber(room) {
-  return String(room).padStart(4, "0");
-}
-
-function slotHotKey(game) {
-  return `${game}-${twSlotUpdateTime()}`;
-}
-
-function buildHotRooms(game) {
-  const key = slotHotKey(game);
-
-  if (S.slotHot[key]) return S.slotHot[key];
-
-  const max = slotMaxRoom(game);
-  const rooms = [];
-
-  while (rooms.length < 5) {
-    const n = Math.floor(Math.random() * max) + 1;
-    if (!rooms.includes(n)) rooms.push(n);
-  }
-
-  S.slotHot[key] = rooms;
-  return rooms;
-}
-
-function slotDataLines() {
-  return pick([
-    ["🔥 活躍度提升", "📈 波動增強", "⚡ AI監控中"],
-    ["🔥 熱度上升", "📈 波動活躍", "⚡ AI監控中"],
-    ["🔥 活躍區同步", "📈 波動提升", "⚡ AI監控中"],
-    ["🔥 數據升溫", "📈 活躍增強", "⚡ AI監控中"],
-  ]);
-}
-
-function slotAnalyzeText(game, room) {
-  const lines = slotDataLines();
-
-  return `━━━━━━━━━━━━
-🤖 黑域AI 數據選房
-━━━━━━━━━━━━
-
-🎰 ${game}
-🏠 ${slotNumber(room)}房
-
-📊 數據分析
-━━━━━━━━━━━━
-${lines[0]}
-${lines[1]}
-${lines[2]}
-
-🎯 黑域評級
-━━━━━━━━━━━━
-🟢 可進場
-
-🕒 AI分析時間
-${twDateTime()}`;
-}
-
-function slotCustomAnalyzeText(game, room, uid) {
-  const roomNum = Number(room);
-  const hotRooms = buildHotRooms(game);
-  const aiRooms = S.slot[uid]?.aiRooms || [];
-
-  if (hotRooms.includes(roomNum) || aiRooms.includes(roomNum)) {
-    return slotAnalyzeText(game, roomNum);
-  }
-
-  const key = `${game}-${slotHotKey(game)}-${roomNum}`;
-
-  if (!S.slotCustom[key]) {
-    const badRate = 0.82;
-    S.slotCustom[key] = Math.random() < badRate ? "bad" : "good";
-  }
-
-  if (S.slotCustom[key] === "bad") {
-    return `━━━━━━━━━━━━
-🤖 黑域AI 數據選房
-━━━━━━━━━━━━
-
-🎰 ${game}
-🏠 ${slotNumber(roomNum)}房
-
-📊 數據分析
-━━━━━━━━━━━━
-⚠️ 數據未同步
-📉 波動不足
-🔴 數據不足
-
-🎯 黑域評級
-━━━━━━━━━━━━
-🔴 暫不建議
-
-🕒 AI分析時間
-${twDateTime()}`;
-  }
-
-  return slotAnalyzeText(game, roomNum);
-}
-
-function slotHotRankText(game) {
-  const rooms = buildHotRooms(game);
-
-  return `🔥 ${game} 熱門房排行
-
-🥇 ${slotNumber(rooms[0])}房
-🥈 ${slotNumber(rooms[1])}房
-🥉 ${slotNumber(rooms[2])}房
-🏅 ${slotNumber(rooms[3])}房
-🏅 ${slotNumber(rooms[4])}房
-
-🕒 更新時間
-${twSlotUpdateTime()}
-
-點擊房號後直接分析`;
-}
-
-function quickSlotHotRooms(game) {
-  const rooms = buildHotRooms(game);
-
-  return q(
-    rooms.map((room, i) => {
-      const labels = ["🥇", "🥈", "🥉", "🏅", "🏅"];
-      return [`${labels[i]} ${slotNumber(room)}房`, `電子房:${room}`];
-    })
-  );
-}
-
-function gen539(mode) {
-  const date = tw539Date();
-  const key = `${date}-${mode}`;
-
-  if (S.cache539[key]) return S.cache539[key];
-
-  const used = new Set();
-
-  ["stable", "hot", "cold"].forEach((m) => {
-    const k = `${date}-${m}`;
-    if (S.cache539[k]) {
-      S.cache539[k].forEach((n) => used.add(n));
-    }
-  });
-
-  const nums = [];
-
-  while (nums.length < 5) {
-    const n = String(Math.floor(Math.random() * 39) + 1).padStart(2, "0");
-
-    if (!used.has(n) && !nums.includes(n)) {
-      nums.push(n);
-      used.add(n);
-    }
-  }
-
-  nums.sort((a, b) => Number(a) - Number(b));
-  S.cache539[key] = nums;
-  return nums;
-}
-
-function wcDates(page = 0) {
-  const dates = Object.keys(worldCupSchedule || {}).filter((dateKey) => {
-    const games = worldCupSchedule[dateKey] || [];
-    return games.some((g) => isUpcomingWorldCupGame(dateKey, g));
-  });
-
-  const start = page * 10;
-
-  const items = dates
-    .slice(start, start + 10)
-    .map((d) => [d, `世足日期:${d}`]);
-
-  if (page > 0) items.push(["上一頁", "世足日期上一頁"]);
-  if (start + 10 < dates.length) items.push(["下一頁", "世足日期下一頁"]);
-
-  return q(items);
-}
-
-function wcGamesText(date, games) {
-  let msg = `━━━━━━━━━━
-⚽ ${date} 世足賽程
-🕒 台灣時間
-━━━━━━━━━━
-
-`;
-
-  games.forEach((g, i) => {
-    msg += `${i + 1}️⃣ ${g.stage || "賽事"}${g.group ? `｜${g.group}組` : ""}
-${g.home} vs ${g.away}
-🕒 ${g.time}（台灣時間）
-📍 ${g.venue || "未公布"}
-
-`;
-  });
-
-  return `${msg}━━━━━━━━━━
-請選擇場次查看AI分析`;
-}
-
-function wcTeamAnalysis(team) {
-  return `━━━━━━━━━━
-⚽ ${team} AI球隊分析
-━━━━━━━━━━
-
-球隊定位：
-${pick(["平衡型球隊", "防守反擊型", "進攻型球隊", "快速轉換型", "控球型球隊"])}
-
-AI評級：
-${pick(["B", "B+", "A-", "A"])}
-
-進攻能力：
-${pick(["★★★☆☆", "★★★★☆", "★★★★★"])}
-
-防守穩定：
-${pick(["★★★☆☆", "★★★★☆", "★★★★★"])}
-
-AI建議：
-${pick(["不敗方向", "大球方向", "小球方向", "角球方向", "雙方進球"])}
-
-分析方向：
-• 近期狀態波動分析
-• 進攻效率模型
-• 防守穩定度修正
-• 節奏風險預測
-
-━━━━━━━━━━
-
-⚠️ 僅供娛樂分析參考`;
-}
-
-async function wcMatchAnalysis(g) {
-  const response = await openai.responses.create({
-    model: "gpt-4.1-mini",
-    input: `
-你是黑域AI世足賽前分析系統。
-
-請使用繁體中文分析以下比賽：
-
-時間：${g.time || "未提供"}
-主隊：${g.home || "主隊"}
-客隊：${g.away || "客隊"}
-
-請嚴格依照以下格式輸出：
-
-⚽ 黑域AI 賽前分析
-
-🏆 ${g.home || "主隊"} VS ${g.away || "客隊"}
-
-━━━━━━━━━━━━
-
-📊 球隊狀態
-分析雙方近期狀態、進攻能力、防守能力與比賽節奏。
-
-━━━━━━━━━━━━
-
-⚔️ 關鍵對位
-分析本場最關鍵的勝負因素。
-
-━━━━━━━━━━━━
-
-🥅 半場波膽推薦
-① 比分（機率）
-② 比分（機率）
-③ 比分（機率）
-
-━━━━━━━━━━━━
-
-⚽ 全場波膽推薦
-① 比分（機率）
-② 比分（機率）
-③ 比分（機率）
-
-━━━━━━━━━━━━
-
-🎯 預估總進球
-0~1球方向 / 2~3球方向 / 4球以上方向
-
-━━━━━━━━━━━━
-
-📈 AI大小分
-推薦：
-分析：
-
-━━━━━━━━━━━━
-
-📊 AI讓分
-推薦：
-分析：
-
-━━━━━━━━━━━━
-
-🏆 AI預測勝方
-
-━━━━━━━━━━━━
-
-⚠️ 本分析由黑域AI生成，僅供娛樂參考。
-不要輸出Markdown。
-不要輸出程式碼。
-`,
-  });
-
-  return trimText(response.output_text);
-}
-
-async function wcChampionPrediction() {
-  const response = await openai.responses.create({
-    model: "gpt-4.1-mini",
-    input: `
-你是黑域AI世足冠軍預測系統。
-
-請使用繁體中文。
-這是賽前冠軍預測，不要寫成已經發生。
-不要過度複雜，內容要專業、乾淨、適合LINE訊息閱讀。
-
-請依照以下格式輸出：
-
-━━━━━━━━━━
-🏆 黑域AI 冠軍模型
-━━━━━━━━━━
-
-🥇 第一梯隊｜奪冠熱門
-列出3支最有冠軍相的球隊
-
-🥈 第二梯隊｜爭冠候選
-列出3支具備爭冠能力的球隊
-
-⚡ 黑馬觀察
-列出2支可能爆冷走遠的球隊
-
-━━━━━━━━━━
-
-📊 AI判斷依據
-• 陣容深度
-• 淘汰賽經驗
-• 攻守平衡
-• 關鍵球星狀態
-• 賽程路徑難度
-
-━━━━━━━━━━
-
-🎯 最終預測
-冠軍：
-亞軍：
-決賽組合：
-黑馬：
-
-━━━━━━━━━━
-
-🤖 綜合分析
-用4到6句說明冠軍預測邏輯。
-語氣要像專業賽前分析，不要太誇張。
-
-━━━━━━━━━━
-⚠️ 僅供娛樂分析參考
-
-不要輸出Markdown。
-不要輸出程式碼。
-`,
-  });
-
-  return trimText(response.output_text);
-}
-
-const mlbName = {
-  "Arizona Diamondbacks": "響尾蛇",
-  "Atlanta Braves": "勇士",
-  "Baltimore Orioles": "金鶯",
-  "Boston Red Sox": "紅襪",
-  "Chicago Cubs": "小熊",
-  "Chicago White Sox": "白襪",
-  "Cincinnati Reds": "紅人",
-  "Cleveland Guardians": "守護者",
-  "Colorado Rockies": "洛磯",
-  "Detroit Tigers": "老虎",
-  "Houston Astros": "太空人",
-  "Kansas City Royals": "皇家",
-  "Los Angeles Angels": "天使",
-  "Los Angeles Dodgers": "道奇",
-  "Miami Marlins": "馬林魚",
-  "Milwaukee Brewers": "釀酒人",
-  "Minnesota Twins": "雙城",
-  "New York Mets": "大都會",
-  "New York Yankees": "洋基",
-  "Athletics": "運動家",
-  "Philadelphia Phillies": "費城人",
-  "Pittsburgh Pirates": "海盜",
-  "San Diego Padres": "教士",
-  "San Francisco Giants": "巨人",
-  "Seattle Mariners": "水手",
-  "St. Louis Cardinals": "紅雀",
-  "Tampa Bay Rays": "光芒",
-  "Texas Rangers": "遊騎兵",
-  "Toronto Blue Jays": "藍鳥",
-  "Washington Nationals": "國民",
-};
-
-const nbaName = {
-  "Atlanta Hawks": "老鷹",
-  "Boston Celtics": "塞爾提克",
-  "Brooklyn Nets": "籃網",
-  "Charlotte Hornets": "黃蜂",
-  "Chicago Bulls": "公牛",
-  "Cleveland Cavaliers": "騎士",
-  "Dallas Mavericks": "獨行俠",
-  "Denver Nuggets": "金塊",
-  "Detroit Pistons": "活塞",
-  "Golden State Warriors": "勇士",
-  "Houston Rockets": "火箭",
-  "Indiana Pacers": "溜馬",
-  "LA Clippers": "快艇",
-  "Los Angeles Clippers": "快艇",
-  "Los Angeles Lakers": "湖人",
-  "Memphis Grizzlies": "灰熊",
-  "Miami Heat": "熱火",
-  "Milwaukee Bucks": "公鹿",
-  "Minnesota Timberwolves": "灰狼",
-  "New Orleans Pelicans": "鵜鶘",
-  "New York Knicks": "尼克",
-  "Oklahoma City Thunder": "雷霆",
-  "Orlando Magic": "魔術",
-  "Philadelphia 76ers": "76人",
-  "Phoenix Suns": "太陽",
-  "Portland Trail Blazers": "拓荒者",
-  "Sacramento Kings": "國王",
-  "San Antonio Spurs": "馬刺",
-  "Toronto Raptors": "暴龍",
-  "Utah Jazz": "爵士",
-  "Washington Wizards": "巫師",
-};
-
-function teamZh(name) {
-  return mlbName[name] || name;
-}
-
-function nbaZh(name) {
-  return nbaName[name] || name;
-}
-
-async function fetchMlbGames(offset = 0) {
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-  now.setDate(now.getDate() + offset);
-
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const date = `${y}-${m}-${d}`;
-
-  const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}`;
-  const { data } = await axios.get(url, { timeout: 10000 });
-
-  const games = (data.dates?.[0]?.games || []).map((g) => ({
-    id: g.gamePk,
-    away: teamZh(g.teams.away.team.name),
-    home: teamZh(g.teams.home.team.name),
-    time: new Date(g.gameDate).toLocaleString("zh-TW", {
-      timeZone: "Asia/Taipei",
-      hour12: false,
-    }),
-  }));
-
-  return { games };
-}
-
-async function fetchNbaGames(offset = 0) {
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-  now.setDate(now.getDate() + offset);
-
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const date = `${y}${m}${d}`;
-
-  const url = `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${date}`;
-  const { data } = await axios.get(url, { timeout: 10000 });
-
-  const games = (data.events || [])
-    .map((e) => {
-      const comps = e.competitions?.[0]?.competitors || [];
-      const home = comps.find((c) => c.homeAway === "home");
-      const away = comps.find((c) => c.homeAway === "away");
-
-      return {
-        id: e.id,
-        away: nbaZh(away?.team?.displayName || ""),
-        home: nbaZh(home?.team?.displayName || ""),
-        time: new Date(e.date).toLocaleString("zh-TW", {
-          timeZone: "Asia/Taipei",
-          hour12: false,
-        }),
-      };
-    })
-    .filter((g) => g.away && g.home);
-
-  return { games };
-}
-
-async function mlbAnalyze(g) {
-  try {
-    const response = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      input: `
-你是黑域AI MLB賽前分析系統。
-
-請用繁體中文分析以下 MLB 賽事：
-
-${g.away} vs ${g.home}
-開賽時間：${g.time}（台灣時間）
-
-請依照以下格式輸出：
-
-━━━━━━━━━━
-⚾ 黑域MLB AI分析完成
-━━━━━━━━━━
-
-${g.away} vs ${g.home}
-
-開賽時間（台灣）：
-${g.time}
-
-📊 球隊狀態：
-分析兩隊近期狀態、打線火力、投手穩定度、牛棚狀況與主客場因素。
-
-📈 AI方向：
-給出方向。
-
-🎯 讓分方向：
-給出讓分方向。
-
-📊 大小分：
-給出大分或小分方向。
-
-⚠️ 風險提醒：
-提醒主要風險。
-
-━━━━━━━━━━
-⚠️ 僅供娛樂分析參考
-不要輸出Markdown。
-不要輸出程式碼。
-`,
-    });
-
-    return trimText(response.output_text);
-  } catch (err) {
-    console.log("MLB GPT ERROR:", err.message);
-    return "⚠️ MLB AI分析暫時無法同步，請稍後再試。";
-  }
-}
-
-async function nbaAnalyze(g) {
-  try {
-    const response = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      input: `
-你是黑域AI NBA賽前分析系統。
-
-請用繁體中文分析以下 NBA 賽事：
-
-${g.away} vs ${g.home}
-開賽時間：${g.time}（台灣時間）
-
-請依照以下格式輸出：
-
-━━━━━━━━━━
-🏀 黑域NBA AI分析完成
-━━━━━━━━━━
-
-${g.away} vs ${g.home}
-
-開賽時間（台灣）：
-${g.time}
-
-📊 球隊狀態：
-分析兩隊近期狀態、進攻效率、防守強度、主客場因素、球星狀態與輪替深度。
-
-📈 AI方向：
-給出方向。
-
-🎯 讓分方向：
-給出讓分方向。
-
-📊 大小分：
-給出大分或小分方向。
-
-⚠️ 風險提醒：
-提醒主要風險。
-
-━━━━━━━━━━
-⚠️ 僅供娛樂分析參考
-不要輸出Markdown。
-不要輸出程式碼。
-`,
-    });
-
-    return trimText(response.output_text);
-  } catch (err) {
-    console.log("NBA GPT ERROR:", err.message);
-    return "⚠️ NBA AI分析暫時無法同步，請稍後再試。";
-  }
-}
-
+const PORT = process.env.PORT || 3000;
 app.get("/", (req, res) => {
-  res.send("BLACKDOMAIN AI Running");
-});
 
+    res.json({
+        success: true,
+        project: "BLACKDOMAIN AI V3",
+        status: "ONLINE",
+        version: "3.0.0"
+    });
+
+});
 app.post(
-  "/webhook",
-  line.middleware({
-    channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-    channelSecret: process.env.LINE_CHANNEL_SECRET,
-  }),
-  async (req, res) => {
-    try {
-      await Promise.all(req.body.events.map(handleEvent));
-      res.status(200).end();
-    } catch (e) {
-      console.log(e);
-      res.status(500).end();
+
+    "/webhook",
+
+    line.middleware(config),
+
+    async (req, res) => {
+
+        try {
+
+            const events = req.body.events;
+
+            await Promise.all(
+
+                events.map(handleEvent)
+
+            );
+
+            res.sendStatus(200);
+
+        }
+
+        catch (err) {
+
+            logger.error(err);
+
+            res.sendStatus(500);
+
+        }
+
     }
-  }
+
 );
+app.listen(
+
+    PORT,
+
+    () => {
+
+        logger.info(
+
+            `BLACKDOMAIN AI 已啟動 ${PORT}`
+
+        );
+
+    }
+
+);
+async function handleEvent(event){
+
+    if(event.type !== "message") return;
+
+    if(event.message.type !== "text") return;
+
+    const userId = event.source.userId;
+
+    const text = event.message.text.trim();
+
+
+
+}
+// ===============================
+// handleEvent()
+// ===============================
 
 async function handleEvent(event) {
-  if (event.type !== "message" || event.message.type !== "text") return null;
-  
-  const uid = event.source.userId;
-  const text = event.message.text.trim();
-  console.log("收到訊息：", text);
-  const lower = text.toLowerCase();
 
-  if (!S.baccarat[uid]) S.baccarat[uid] = [];
-  if (!S.result[uid]) S.result[uid] = [];
+    if (event.type !== "message") return;
 
-  if (text === "我的ID") {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: uid,
-    });
-  }
+    if (event.message.type !== "text") return;
 
-  if (["VIP查詢", "VIP", "VIP時間", "我的VIP"].includes(text)) {
-    const data = await getVip(uid);
+    const userId = event.source.userId;
+    const replyToken = event.replyToken;
 
-    if (!data || Number(data.expire_time) <= Date.now()) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: noVip(),
-      });
-    }
+    const text = event.message.text.trim();
 
-    const days = Math.ceil((Number(data.expire_time) - Date.now()) / 86400000);
+    logger.info(`${userId} -> ${text}`);
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-👑 黑域VIP
-━━━━━━━━━━
+    // ========= 首頁 =========
 
-3A帳號：
-${data.account}
+    if (
+        text === "黑域AI" ||
+        text === "首頁" ||
+        text === "menu"
+    ) {
 
-剩餘天數：
-${days} 天
+        const flex = require("./ui/flex/flexMain");
 
-到期時間：
-${twTime(data.expire_time)}
-
-狀態：
-🟢 VIP有效中`,
-    });
-  }
-
-  if (text.startsWith("查VIP ")) {
-    if (!ADMIN_UIDS.includes(uid)) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "❌ 你沒有管理員權限",
-      });
-    }
-
-    const account = text.replace("查VIP", "").trim();
-
-    const { data } = await supabase
-      .from("vip_users")
-      .select("*")
-      .eq("account", account)
-      .maybeSingle();
-
-    if (!data) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此VIP帳號",
-      });
-    }
-
-    const days = Math.ceil((Number(data.expire_time) - Date.now()) / 86400000);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-👑 VIP資訊
-━━━━━━━━━━
-
-3A帳號：
-${data.account}
-
-剩餘天數：
-${days} 天
-
-到期時間：
-${twTime(data.expire_time)}
-
-狀態：
-${days > 0 ? "🟢 VIP有效中" : "🔴 VIP已到期"}`,
-    });
-  }
-
-  if (text === "VIP列表") {
-    if (!ADMIN_UIDS.includes(uid)) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "❌ 你沒有管理員權限",
-      });
-    }
-
-    const { data } = await supabase
-      .from("vip_users")
-      .select("*")
-      .order("expire_time", { ascending: false });
-
-    if (!data?.length) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "目前沒有VIP資料",
-      });
-    }
-
-    const active = data.filter((v) => Number(v.expire_time) > Date.now());
-
-    const msg = active
-      .slice(0, 20)
-      .map((v, i) => {
-        const days = Math.ceil((Number(v.expire_time) - Date.now()) / 86400000);
-        return `${i + 1}. ${v.account}\n剩餘：${days}天`;
-      })
-      .join("\n\n");
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `👑 黑域AI VIP列表
-━━━━━━━━━━
-
-${msg || "目前沒有有效VIP"}
-
-━━━━━━━━━━
-有效VIP：${active.length}人`,
-    });
-  }
-
-  if (text.startsWith("加VIP ")) {
-    if (!ADMIN_UIDS.includes(uid)) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "❌ 你沒有管理員權限",
-      });
-    }
-
-    const parts = text.trim().split(/\s+/);
-    const account = parts[1];
-    const addDays = Number(parts[2]);
-
-    if (!account || !addDays) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "格式錯誤\n\n範例：\n加VIP tel690723 10",
-      });
-    }
-
-    const { data } = await supabase
-      .from("vip_users")
-      .select("*")
-      .eq("account", account)
-      .maybeSingle();
-
-    if (!data) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此VIP帳號",
-      });
-    }
-
-    const baseTime =
-      Number(data.expire_time) > Date.now() ? Number(data.expire_time) : Date.now();
-
-    const newExpireTime = baseTime + addDays * 86400000;
-
-    await supabase
-      .from("vip_users")
-      .update({ expire_time: newExpireTime })
-      .eq("account", account);
-
-    const remainDays = Math.ceil((newExpireTime - Date.now()) / 86400000);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-✅ VIP時間已增加
-━━━━━━━━━━
-
-3A帳號：
-${account}
-
-增加天數：
-${addDays} 天
-
-目前剩餘：
-${remainDays} 天
-
-到期時間：
-${twTime(newExpireTime)}`,
-    });
-  }
-
-  if (text.startsWith("減VIP ")) {
-  if (!ADMIN_UIDS.includes(uid)) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "❌ 你沒有管理員權限",
-    });
-  }
-
-  const parts = text.trim().split(/\s+/);
-  const account = parts[1];
-  const minusDays = Number(parts[2]);
-
-  if (!account || !minusDays) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "格式錯誤\n\n範例：\n減VIP tel690723 7",
-    });
-  }
-
-  const { data } = await supabase
-    .from("vip_users")
-    .select("*")
-    .eq("account", account)
-    .maybeSingle();
-
-  if (!data) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "查無此VIP帳號",
-    });
-  }
-
-  const newExpireTime = Number(data.expire_time) - minusDays * 86400000;
-
-  await supabase
-    .from("vip_users")
-    .update({
-      expire_time: newExpireTime,
-    })
-    .eq("account", account);
-
-  const remainDays = Math.max(
-    0,
-    Math.ceil((newExpireTime - Date.now()) / 86400000)
-  );
-
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: `━━━━━━━━━━
-➖ VIP時間已扣除
-━━━━━━━━━━
-
-3A帳號：
-${account}
-
-扣除：
-${minusDays} 天
-
-目前剩餘：
-${remainDays} 天
-
-到期時間：
-${twTime(newExpireTime)}`,
-  });
-}
-
-  if (text.startsWith("刪除VIP ")) {
-    if (!ADMIN_UIDS.includes(uid)) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "❌ 你沒有管理員權限",
-      });
-    }
-
-    const account = text.replace("刪除VIP", "").trim();
-
-    if (!account) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "格式錯誤\n\n範例：\n刪除VIP tel690723",
-      });
-    }
-
-    const { data } = await supabase
-      .from("vip_users")
-      .select("*")
-      .eq("account", account)
-      .maybeSingle();
-
-    if (!data) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此VIP帳號",
-      });
-    }
-
-    await supabase.from("vip_users").delete().eq("account", account);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-🗑 VIP已刪除
-━━━━━━━━━━
-
-3A帳號：
-${account}
-
-狀態：
-🔴 已移除VIP權限`,
-    });
-  }
-
-  const applyVipMatch = text.match(/^申請開通[:：]?\s*(.+)$/i);
-
-  if (applyVipMatch) {
-    const account = applyVipMatch[1].trim();
-
-    await supabase.from("vip_requests").insert({ user_id: uid, account });
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-📝 已收到開通申請
-━━━━━━━━━━
-
-3A帳號：
-${account}
-
-請等待管理員審核。`,
-    });
-  }
-
-  if (["開通會員", "我要開通", "開通"].includes(text)) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: noVip(),
-    });
-  }
-
-  if (text.startsWith("開通 ")) {
-    if (!ADMIN_UIDS.includes(uid)) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "你沒有管理員權限",
-      });
-    }
-
-    const [, account, dayText] = text.split(/\s+/);
-    const days = parseInt(dayText, 10);
-
-    if (!account || !days) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "格式錯誤\n範例：開通 abc123 2",
-      });
-    }
-
-    const { data } = await supabase
-      .from("vip_requests")
-      .select("*")
-      .eq("account", account)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!data?.user_id) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此申請帳號",
-      });
-    }
-
-    const exp = await openVip(data.user_id, account, days);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-✅ 黑域AI開通成功
-━━━━━━━━━━
-
-3A帳號：
-${account}
-
-開通天數：
-${days}天
-
-到期時間：
-${twTime(exp)}`,
-    });
-  }
-
-  const needsVip =
-    [
-      "百家樂", "電子", "電子AI", "539", "539AI", "539 AI",
-      "莊", "閒", "和", "體育", "世足", "MLB", "NBA",
-      "AI配注", "天門五關", "自由配注", "DG", "MT",
-      "MLB近日賽程", "NBA近日賽程",
-      "世足賽程查詢", "世足球隊查詢", "世足冠軍預測",
-    ].includes(text) ||
-    /^mt/i.test(text) ||
-    /^dg/i.test(text) ||
-    /^世足日期:/.test(text) ||
-    /^世足場次:/.test(text) ||
-    /^MLB場次:/.test(text) ||
-    /^NBA場次:/.test(text) ||
-    /^電子房:\d+$/.test(text) ||
-    (/^\d{1,6}$/.test(text) &&
-      ["awaitMoney", "awaitBetLimit", "custom"].includes(
-        S.flow[uid] || S.slot[uid]?.mode
-      ));
-
-  if (needsVip && !ADMIN_UIDS.includes(uid)) {
-    const vipOk = await isVip(uid);
-
-    if (!vipOk) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: noVip(),
-      });
-    }
-  }
-
-  if (S.sport[uid] === "wc" && S.wc[uid]?.mode === "teamSearch") {
-    S.wc[uid].mode = "menu";
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: wcTeamAnalysis(text),
-      quickReply: quickWorldCup(),
-    });
-  }
-
-  if (/^電子房:\d+$/.test(text)) {
-    const room = Number(text.split(":")[1]);
-    const game = S.slot[uid]?.game;
-
-    if (!game) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "請先選擇遊戲。",
-        quickReply: quickSlotGame(),
-      });
-    }
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: slotAnalyzeText(game, room),
-      quickReply: quickSlotMode(),
-    });
-  }
-
-  if (/^世足日期上一頁$/.test(text) || /^世足日期下一頁$/.test(text)) {
-    const page = S.wc[uid]?.page || 0;
-    const nextPage = text.includes("下一頁") ? page + 1 : Math.max(0, page - 1);
-
-    S.wc[uid] = { ...(S.wc[uid] || {}), page: nextPage };
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "請選擇日期：",
-      quickReply: wcDates(nextPage),
-    });
-  }
-
-  if (/^世足日期:/.test(text)) {
-    const date = text.replace("世足日期:", "");
-   const games = worldCupSchedule[date];
-
-const upcomingGames = (games || []).filter((g) =>
-  isUpcomingWorldCupGame(date, g)
-);
-
-if (!upcomingGames.length) {
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: "此日期目前沒有未開賽場次。",
-    quickReply: wcDates(S.wc[uid]?.page || 0),
-  });
-}
-
-S.sport[uid] = "wc";
-S.wc[uid] = {
-  mode: "selectGame",
-  page: S.wc[uid]?.page || 0,
-  games: upcomingGames,
-};
-
-return client.replyMessage(event.replyToken, {
-  type: "text",
-  text: wcGamesText(date, upcomingGames),
-  quickReply: q(upcomingGames.map((_, i) => [`${i + 1}`, `世足場次:${i + 1}`])),
-});
-  }
-
-  if (/^世足場次:\d+$/.test(text)) {
-    const n = Number(text.split(":")[1]);
-    const g = S.wc[uid]?.games?.[n - 1];
-
-    const notReady =
-  g.home.includes("勝方") ||
-  g.away.includes("勝方") ||
-  g.home.includes("敗方") ||
-  g.away.includes("敗方") ||
-  g.home.includes("組第") ||
-  g.away.includes("組第") ||
-  g.home.includes("組第三") ||
-  g.away.includes("組第三");
-
-if (notReady) {
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: `━━━━━━━━━━
-⚽ 對戰尚未確定
-━━━━━━━━━━
-
-${g.home} VS ${g.away}
-
-此場目前尚未確定實際對戰隊伍。
-
-待官方對戰出爐後，
-黑域AI將開放賽前分析。
-
-━━━━━━━━━━
-請選擇其他已確定場次。`,
-    quickReply: quickWorldCup(),
-  });
-}
-
-    if (!g) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此場次",
-        quickReply: quickWorldCup(),
-      });
-    }
-
-    const result = await wcMatchAnalysis(g);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: result,
-      quickReply: quickWorldCup(),
-    });
-  }
-
-  if (/^MLB場次:\d+$/.test(text)) {
-    const n = Number(text.split(":")[1]);
-    const g = S.mlb[uid]?.games?.[n - 1];
-
-    if (!g) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此場次",
-        quickReply: quickMLB(),
-      });
-    }
-
-    const result = await mlbAnalyze(g);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: result,
-      quickReply: quickMLB(),
-    });
-  }
-
-  if (/^NBA場次:\d+$/.test(text)) {
-    const n = Number(text.split(":")[1]);
-    const g = S.nba[uid]?.games?.[n - 1];
-
-    if (!g) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此場次",
-        quickReply: quickNBA(),
-      });
-    }
-
-    const result = await nbaAnalyze(g);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: result,
-      quickReply: quickNBA(),
-    });
-  }
-
-  if (S.slot[uid]?.mode === "custom") {
-    if (!/^\d+$/.test(text)) {
-      S.slot[uid].mode = null;
-    } else {
-      const n = Number(text);
-      const game = S.slot[uid].game;
-      const maxRoom = slotMaxRoom(game);
-
-      if (n < 1 || n > maxRoom) {
-        return client.replyMessage(event.replyToken, {
-          type: "text",
-          text: `房號範圍錯誤，請輸入 1～${maxRoom}。`,
+        return client.replyMessage({
+            replyToken,
+            messages: [flex()]
         });
-      }
 
-      S.slot[uid].mode = null;
-
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: slotCustomAnalyzeText(game, n, uid),
-        quickReply: quickSlotMode(),
-      });
-    }
-  }
-
-  if (text === "百家樂") {
-    clearSessions(uid);
-    S.flow[uid] = "awaitPlatform";
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-⚡ 黑域AI已啟動
-━━━━━━━━━━
-
-請選擇平台：
-
-• DG
-• MT`,
-      quickReply: q([["DG"], ["MT"]]),
-    });
-  }
-
-  if ((lower === "dg" || lower === "mt") && S.flow[uid] === "awaitPlatform") {
-    S.flow[uid] = "awaitRoom";
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-🤖 黑域AI已啟動
-━━━━━━━━━━
-
-請輸入房間號碼
-
-範例：
-DG RB01
-MT 01`,
-    });
-  }
-
-  const validMT = /^mt\s*(?:0?[1-9]|1[0-3]|3a|13a)$/i.test(text);
-  const validDG = /^dg\s*(?:0?[1-7]|rb\s*0?[1-7]|s\s*0?[1-7])$/i.test(text);
-
-  if (validMT || validDG) {
-    S.pendingRoom[uid] = roomName(text);
-    S.flow[uid] = "awaitMoney";
-    S.baccarat[uid] = [];
-    S.result[uid] = [];
-    S.lastPred[uid] = null;
-    S.lastBet[uid] = null;
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-🤖 黑域AI數據同步成功
-━━━━━━━━━━
-
-同步房間：
-${S.pendingRoom[uid]}
-
-✓ 房間同步完成
-✓ 牌路資料載入
-✓ 模型運算啟動
-
-━━━━━━━━━━
-
-請輸入本金：
-
-例如：
-1000
-5000
-10000`,
-    });
-  }
-
-  if (/^mt/i.test(text) || /^dg/i.test(text)) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "查無此房間",
-    });
-  }
-
-  if (/^\d+$/.test(text) && S.flow[uid] === "awaitMoney") {
-    const money = Number(text);
-
-    if (money < 100) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "本金金額過低，請重新輸入。",
-      });
     }
 
-    resetMoney(uid, money);
-    S.pendingMoney[uid] = money;
-    S.flow[uid] = "awaitBetLimit";
+    // ========= 百家樂 =========
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-💰 黑域AI資金配置
-━━━━━━━━━━
+    if (text === "百家樂") {
 
-目前本金：
-${money}
+        const flex = require("./ui/flex/flexBaccarat");
 
-請輸入單柱上限：
+        return client.replyMessage({
+            replyToken,
+            messages: [flex()]
+        });
 
-例如：
-1000
-3000
-5000
-
-━━━━━━━━━━`,
-    });
-  }
-
-  if (/^\d+$/.test(text) && S.flow[uid] === "awaitBetLimit") {
-    const limit = Number(text);
-    const money = S.pendingMoney[uid];
-
-    if (!money) {
-      S.flow[uid] = "awaitMoney";
-
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "請先輸入本金。",
-      });
     }
 
-    if (limit < betUnit(money)) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: `單柱上限太低，至少需 ${betUnit(money)} 以上。`,
-      });
+    // ========= 電子 =========
+
+    if (text === "電子") {
+
+        const flex = require("./ui/flex/flexElectronic");
+
+        return client.replyMessage({
+            replyToken,
+            messages: [flex()]
+        });
+
     }
 
-    if (limit > money) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "單柱上限不能超過本金，請重新輸入。",
-      });
+    // ========= 體育 =========
+
+    if (text === "體育") {
+
+        const flex = require("./ui/flex/flexSports");
+
+        return client.replyMessage({
+            replyToken,
+            messages: [flex()]
+        });
+
     }
 
-    S.betLimit[uid] = limit;
-    S.flow[uid] = "awaitMode";
+    // ========= 539 =========
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-💰 黑域AI資金配置完成
-━━━━━━━━━━
+    if (text === "539") {
 
-目前本金：
-${money}
+        const lotto = require("./modules/lotto539");
 
-單柱上限：
-${limit}
+        return lotto(event);
 
-請選擇模式：
-
-1️⃣ AI配注
-2️⃣ 天門五關
-3️⃣ 自由配注
-
-━━━━━━━━━━`,
-      quickReply: quickMoney(),
-    });
-  }
-
-  if (text === "AI配注" || (text === "1" && S.flow[uid] === "awaitMode")) {
-    S.mode[uid] = "ai";
-    S.flow[uid] = "playing";
-    S.bankroll[uid] = S.pendingMoney[uid];
-    S.startBankroll[uid] = S.pendingMoney[uid];
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: startAnalyze(uid),
-      quickReply: quickBaccarat(),
-    });
-  }
-
-  if (text === "天門五關" || (text === "2" && S.flow[uid] === "awaitMode")) {
-    const money = S.pendingMoney[uid] || 1000;
-    const plan = makeTianmen(money);
-
-    resetMoney(uid, money);
-    S.mode[uid] = "tianmen";
-    S.flow[uid] = "playing";
-    S.tianmen[uid] = { level: 1, ...plan };
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: startAnalyze(uid),
-      quickReply: quickBaccarat(),
-    });
-  }
-
-  if (text === "自由配注" || (text === "3" && S.flow[uid] === "awaitMode")) {
-    S.mode[uid] = "free";
-    S.flow[uid] = "playing";
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: startAnalyze(uid),
-      quickReply: quickBaccarat(),
-    });
-  }
-
-  if (text === "重新設定本金") {
-    resetMoney(uid, 0);
-    S.flow[uid] = "awaitMoney";
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-💰 黑域AI資金重置
-━━━━━━━━━━
-
-請重新輸入本金：
-
-例如：
-1000
-5000
-10000`,
-    });
-  }
-
-  if (["莊", "閒", "和"].includes(text)) {
-    applyResult(uid, text);
-
-    if (S.mode[uid] !== "free" && (S.bankroll[uid] || 0) <= 0) {
-      S.bankroll[uid] = 0;
-
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: `━━━━━━━━━━
-⚠️ 黑域AI已停止分析
-━━━━━━━━━━
-
-目前本金：
-0
-
-狀態：
-資金已歸零
-
-建議：
-請重新設定本金後再啟動
-
-━━━━━━━━━━`,
-        quickReply: q([["重新設定本金"]]),
-      });
     }
 
-    S.baccarat[uid].push(text);
-    if (S.baccarat[uid].length > 20) S.baccarat[uid].shift();
+    // ========= VIP =========
 
-    const pred = baccaratPick(S.baccarat[uid]);
-    const bet = currentBet(uid);
-    S.lastPred[uid] = pred;
-    S.lastBet[uid] = bet;
+    if (text === "VIP查詢") {
 
-    const extra = [baccaratWarning(S.baccarat[uid]), baccaratSpecial(S.baccarat[uid])]
-      .filter(Boolean)
-      .map((x) => `\n\n${x}`)
-      .join("");
+        const vip = require("./modules/vip");
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: baccaratReply(uid, pred, bet, extra),
-      quickReply: quickBaccarat(),
-    });
-  }
+        return vip(event);
 
-  if (text === "電子" || text === "電子AI") {
-    clearSessions(uid, "slot");
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `⚡ 黑域電子AI
-
-請選擇遊戲：
-
-🎰 戰神賽特1
-🎰 戰神賽特2
-👹 古神巴風特`,
-      quickReply: quickSlotGame(),
-    });
-  }
-
-  if (["戰神賽特1", "戰神賽特2", "古神巴風特"].includes(text)) {
-    S.slot[uid] = { game: text, mode: null };
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `🎰 ${text}
-
-請選擇功能：
-
-🎲 AI推薦房
-🔥 熱門房排行
-🔢 自選房號分析`,
-      quickReply: quickSlotMode(),
-    });
-  }
-
-  if (text === "熱門房排行") {
-    const game = S.slot[uid]?.game;
-
-    if (!game) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "請先選擇遊戲。",
-        quickReply: quickSlotGame(),
-      });
     }
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: slotHotRankText(game),
-      quickReply: quickSlotHotRooms(game),
-    });
-  }
+    // ========= DG =========
 
-  if (text === "AI推薦房") {
-    const game = S.slot[uid]?.game;
+    if (text === "DG") {
 
-    if (!game) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "請先選擇遊戲。",
-        quickReply: quickSlotGame(),
-      });
+        const baccarat = require("./modules/baccarat");
+
+        return baccarat.startDG(event);
+
     }
 
-    const maxRoom = slotMaxRoom(game);
-    const hotRooms = buildHotRooms(game);
+    // ========= MT =========
 
-    let room;
+    if (text === "MT") {
 
-    do {
-      room = Math.floor(Math.random() * maxRoom) + 1;
-    } while (hotRooms.includes(room));
+        const baccarat = require("./modules/baccarat");
 
-    if (!S.slot[uid].aiRooms) S.slot[uid].aiRooms = [];
-    S.slot[uid].aiRooms.push(room);
+        return baccarat.startMT(event);
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: slotAnalyzeText(game, room),
-      quickReply: quickSlotMode(),
-    });
-  }
-
-  if (text === "自選房號分析") {
-    const game = S.slot[uid]?.game;
-
-    if (!game) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "請先選擇遊戲。",
-        quickReply: quickSlotGame(),
-      });
     }
 
-    S.slot[uid].mode = "custom";
-    const maxRoom = slotMaxRoom(game);
+    // ========= 戰神賽特1 =========
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `🔢 自選房號分析
+    if (text === "戰神賽特1") {
 
-🎰 ${game}
-房號範圍：1～${maxRoom}
+        const electronic = require("./modules/electronic");
 
-請輸入房號：`,
-    });
-  }
+        return electronic.slot1(event);
 
-  if (["539", "539AI", "539 AI"].includes(text)) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-📊 黑域539AI已啟動
-━━━━━━━━━━
-
-請選擇模式：
-
-• 本期推薦
-• 539熱號
-• 539冷號`,
-      quickReply: quick539(),
-    });
-  }
-
-  const mode539 = {
-    本期推薦: "stable",
-    "539熱號": "hot",
-    "539冷號": "cold",
-  }[text];
-
-  if (mode539) {
-    const nums = gen539(mode539);
-    const date = tw539Date();
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-📊 ${text}
-━━━━━━━━━━
-
-預測日期：
-${date}
-
-AI建議號碼：
-
-${nums.join("　")}
-
-━━━━━━━━━━
-
-⚠️ 僅供娛樂參考`,
-      quickReply: quick539(text),
-    });
-  }
-
-  if (text === "體育") {
-    clearSessions(uid);
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
- text: `━━━━━━━
-🤖 黑域體育AI
-━━━━━━━
-
-請選擇項目：
-
-⚽ 世足
-⚾ MLB
-🏀 NBA
-
-⏳ AI分析採即時運算
-請耐心等待 5～10 秒`,
-quickReply: quickSports(),
-    });
-  }
-
-  if (text === "世足") {
-    clearSessions(uid, "wc");
-    S.sport[uid] = "wc";
-    S.wc[uid] = { mode: "menu", page: 0 };
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-⚽ 黑域世足AI
-━━━━━━━━━━
-
-請選擇功能：
-
-• 賽程查詢
-• 球隊查詢
-• 冠軍預測`,
-      quickReply: quickWorldCup(),
-    });
-  }
-
-  if (text === "世足賽程查詢") {
-    S.sport[uid] = "wc";
-    S.wc[uid] = { mode: "dateSelect", page: 0 };
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-⚽ 世足賽程查詢
-━━━━━━━━━━
-
-請選擇日期：`,
-      quickReply: wcDates(0),
-    });
-  }
-
-  if (text === "世足球隊查詢") {
-    S.sport[uid] = "wc";
-    S.wc[uid] = { mode: "teamSearch" };
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "請輸入要查詢的球隊名稱，例如：巴西、阿根廷、日本",
-    });
-  }
-
-  if (text === "世足冠軍預測") {
-    const result = await wcChampionPrediction();
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: result,
-      quickReply: quickWorldCup(),
-    });
-  }
-
-  if (text === "MLB") {
-    clearSessions(uid, "mlb");
-    S.sport[uid] = "mlb";
-    S.mlb[uid] = { mode: "menu", games: [] };
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-⚾ 黑域MLB AI
-━━━━━━━━━━
-
-請選擇功能：
-
-• 近日賽程
-
-━━━━━━━━━━`,
-      quickReply: quickMLB(),
-    });
-  }
-
-  if (text === "MLB近日賽程") {
-    S.sport[uid] = "mlb";
-    let games = [];
-
-    try {
-      for (let i = 0; i < 7; i++) {
-        const data = await fetchMlbGames(i);
-
-        if (data.games?.length) {
-          games = data.games;
-          break;
-        }
-      }
-    } catch (err) {
-      console.log("MLB API ERROR:", err.message);
-
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "MLB賽程資料暫時無法同步，請稍後再試。",
-        quickReply: quickMLB(),
-      });
     }
 
-    if (!games.length) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "目前查無MLB近日賽程。",
-        quickReply: quickMLB(),
-      });
+    // ========= 戰神賽特2 =========
+
+    if (text === "戰神賽特2") {
+
+        const electronic = require("./modules/electronic");
+
+        return electronic.slot2(event);
+
     }
 
-    const showGames = games.slice(0, 10);
-    S.mlb[uid] = { mode: "selectGame", games: showGames };
+    // ========= 古神巴風特 =========
 
-    const msg = showGames
-      .map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`)
-      .join("\n\n");
+    if (text === "古神巴風特") {
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-⚾ MLB近日賽程（台灣時間）
-━━━━━━━━━━
+        const electronic = require("./modules/electronic");
 
-${msg}
+        return electronic.baphomet(event);
 
-━━━━━━━━━━
-請選擇場次查看AI分析`,
-      quickReply: q(showGames.map((_, i) => [`${i + 1}`, `MLB場次:${i + 1}`])),
-    });
-  }
-
-  if (text === "NBA") {
-    clearSessions(uid, "nba");
-    S.sport[uid] = "nba";
-    S.nba[uid] = { mode: "menu", games: [] };
-
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-🏀 黑域NBA AI
-━━━━━━━━━━
-
-請選擇功能：
-
-• NBA近日賽程
-
-━━━━━━━━━━`,
-      quickReply: quickNBA(),
-    });
-  }
-
-  if (text === "NBA近日賽程") {
-    S.sport[uid] = "nba";
-    let games = [];
-
-    try {
-      for (let i = 0; i < 30; i++) {
-        const data = await fetchNbaGames(i);
-
-        if (data.games?.length) {
-          games = data.games;
-          break;
-        }
-      }
-    } catch (err) {
-      console.log("NBA API ERROR:", err.message);
-
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "NBA賽程資料暫時無法同步，請稍後再試。",
-        quickReply: quickNBA(),
-      });
     }
 
-    if (!games.length) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: `━━━━━━━━━━
-🏀 NBA近日賽程
-━━━━━━━━━━
+    // ========= 世界盃 =========
 
-目前查無NBA可分析賽事。
+    if (text === "世界盃") {
 
-可能原因：
-• NBA目前休賽期
-• 近期無正式賽程
-• API暫無更新資料
+        const sports = require("./modules/sports");
 
-請改查 MLB 或世足賽程。`,
-        quickReply: quickSports(),
-      });
+        return sports.worldCup(event);
+
     }
 
-    const showGames = games.slice(0, 10);
-    S.nba[uid] = { mode: "selectGame", games: showGames };
+    // ========= MLB =========
 
-    const msg = showGames
-      .map((g, i) => `${i + 1}️⃣ ${g.away} vs ${g.home}\n🕒 ${g.time}`)
-      .join("\n\n");
+    if (text === "MLB") {
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `━━━━━━━━━━
-🏀 NBA近日賽程（台灣時間）
-━━━━━━━━━━
+        const sports = require("./modules/sports");
 
-${msg}
+        return sports.mlb(event);
 
-━━━━━━━━━━
-請選擇場次查看AI分析`,
-      quickReply: q(showGames.map((_, i) => [`${i + 1}`, `NBA場次:${i + 1}`])),
-    });
-  }
+    }
 
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: `━━━━━━━━━━
-🤖 歡迎使用黑域AI
-━━━━━━━━━━
+    // ========= NBA =========
 
-請選擇功能：
+    if (text === "NBA") {
 
-• 百家樂
-• 電子
-• 539
-• 體育`,
-    quickReply: quickMain(),
-  });
+        const sports = require("./modules/sports");
+
+        return sports.nba(event);
+
+    }
+
 }
-
-try {
-  startAtgSocket();
-} catch (err) {
-  console.log("ATG Socket skipped:", err.message);
-}
-
-app.listen(process.env.PORT || 8080, () => {
-  console.log("Server running");
-});
