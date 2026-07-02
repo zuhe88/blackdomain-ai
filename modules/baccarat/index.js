@@ -242,64 +242,155 @@ AI配注
 
     }
 
-    /*
-    STEP3
+  /*
+STEP3
 
-    開始分析
-    */
+AI分析
+*/
 
-    if(session.step==="play"){
+if(session.step==="play"){
 
-        if(
+    if(
 
-            text!=="莊"
+        text!=="莊"
 
-            &&
+        &&
 
-            text!=="閒"
+        text!=="閒"
 
-            &&
+        &&
 
-            text!=="和"
+        text!=="和"
 
-        ){
+    ){
 
-            return;
-
-        }
-
-        session.history.push(text);
-
-        userSessions.set(userId,session);
-
-        return client.replyMessage({
-
-            replyToken:event.replyToken,
-
-            messages:[
-
-                {
-
-                    type:"text",
-
-                    text:
-`目前紀錄
-
-${session.history.join(" ")}
-
-（AI演算法下一回開始加入）`
-
-                }
-
-            ]
-
-        });
+        return;
 
     }
 
+    session.history.push(text);
+
+    const ai = calculateAI(session);
+
+    userSessions.set(userId,session);
+
+    return client.replyMessage({
+
+        replyToken:event.replyToken,
+
+        messages:[
+
+            {
+
+                type:"text",
+
+                text:
+
+`━━━━━━━━━━━━━━
+
+🤖 BLACKDOMAIN AI
+
+平台：${session.platform}
+
+模式：${session.mode}
+
+本金：${session.capital}
+
+━━━━━━━━━━━━━━
+
+目前牌路
+
+${session.history.join(" ")}
+
+━━━━━━━━━━━━━━
+
+AI推薦：
+
+${ai.bet}
+
+建議下注：
+
+${ai.unit}
+
+信心：
+
+${ai.confidence}%
+
+━━━━━━━━━━━━━━`
+
+            }
+
+        ]
+
+    });
+
 }
 
-module.exports={
+    function calculateAI(session){
+
+    const history=session.history;
+
+    const last=history[history.length-1];
+
+    const countZ=history.filter(x=>x==="莊").length;
+
+    const countX=history.filter(x=>x==="閒").length;
+
+    const countH=history.filter(x=>x==="和").length;
+
+    let bet="莊";
+
+    if(countX>countZ){
+
+        bet="閒";
+
+    }
+
+    if(last==="和"){
+
+        bet=countZ>=countX?"莊":"閒";
+
+    }
+
+    let unit=Math.floor(session.capital*0.03);
+
+    if(unit<50){
+
+        unit=50;
+
+    }
+
+    if(unit>5000){
+
+        unit=5000;
+
+    }
+
+    let confidence=70;
+
+    const diff=Math.abs(countZ-countX);
+
+    confidence+=diff*3;
+
+    if(confidence>96){
+
+        confidence=96;
+
+    }
+
+    return{
+
+        bet,
+
+        unit,
+
+        confidence
+
+    };
+
+}
+    
+    module.exports={
 
     startDG,
 
