@@ -147,6 +147,13 @@ function twDateTime() {
   return `${y}/${m}/${d} ${h}:${min}`;
 }
 
+function isUpcomingWorldCupGame(dateKey, game) {
+  const [m, d] = dateKey.split("/");
+  const gameTime = new Date(`2026-${m.padStart(2, "0")}-${d.padStart(2, "0")}T${game.time}:00+08:00`);
+
+  return gameTime.getTime() > Date.now();
+}
+
 function twTime(ts) {
   return new Date(Number(ts)).toLocaleString("zh-TW", {
     timeZone: "Asia/Taipei",
@@ -662,9 +669,16 @@ function gen539(mode) {
 }
 
 function wcDates(page = 0) {
-  const dates = Object.keys(worldCupSchedule || {});
+  const dates = Object.keys(worldCupSchedule || {}).filter((dateKey) => {
+    const games = worldCupSchedule[dateKey] || [];
+    return games.some((g) => isUpcomingWorldCupGame(dateKey, g));
+  });
+
   const start = page * 10;
-  const items = dates.slice(start, start + 10).map((d) => [d, `世足日期:${d}`]);
+
+  const items = dates
+    .slice(start, start + 10)
+    .map((d) => [d, `世足日期:${d}`]);
 
   if (page > 0) items.push(["上一頁", "世足日期上一頁"]);
   if (start + 10 < dates.length) items.push(["下一頁", "世足日期下一頁"]);
@@ -1573,28 +1587,32 @@ ${twTime(exp)}`,
 
   if (/^世足日期:/.test(text)) {
     const date = text.replace("世足日期:", "");
-    const games = worldCupSchedule[date];
+   const games = worldCupSchedule[date];
 
-    if (!games) {
-      return client.replyMessage(event.replyToken, {
-        type: "text",
-        text: "查無此日期賽程。",
-        quickReply: wcDates(S.wc[uid]?.page || 0),
-      });
-    }
+const upcomingGames = (games || []).filter((g) =>
+  isUpcomingWorldCupGame(date, g)
+);
 
-    S.sport[uid] = "wc";
-    S.wc[uid] = {
-      mode: "selectGame",
-      page: S.wc[uid]?.page || 0,
-      games,
-    };
+if (!upcomingGames.length) {
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: "此日期目前沒有未開賽場次。",
+    quickReply: wcDates(S.wc[uid]?.page || 0),
+  });
+}
 
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: wcGamesText(date, games),
-      quickReply: q(games.map((_, i) => [`${i + 1}`, `世足場次:${i + 1}`])),
-    });
+S.sport[uid] = "wc";
+S.wc[uid] = {
+  mode: "selectGame",
+  page: S.wc[uid]?.page || 0,
+  games: upcomingGames,
+};
+
+return client.replyMessage(event.replyToken, {
+  type: "text",
+  text: wcGamesText(date, upcomingGames),
+  quickReply: q(upcomingGames.map((_, i) => [`${i + 1}`, `世足場次:${i + 1}`])),
+});
   }
 
   if (/^世足場次:\d+$/.test(text)) {
