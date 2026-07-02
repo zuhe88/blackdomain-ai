@@ -2,23 +2,28 @@
   "name": "blackdomain-ai",
   "version": "3.0.0",
   "description": "BLACKDOMAIN AI V3 FINAL",
+  "private": true,
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.0.0"
   },
   "dependencies": {
     "@line/bot-sdk": "^9.5.0",
     "@supabase/supabase-js": "^2.56.0",
+    "axios": "^1.11.0",
+    "dayjs": "^1.11.13",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "luxon": "^3.7.1",
     "node-cache": "^5.1.2",
     "openai": "^5.10.2",
-    "pino": "^9.7.0"
+    "pino": "^9.7.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
