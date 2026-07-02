@@ -1307,6 +1307,72 @@ ${twTime(newExpireTime)}`,
     });
   }
 
+  if (text.startsWith("減VIP ")) {
+  if (!ADMIN_UIDS.includes(uid)) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "❌ 你沒有管理員權限",
+    });
+  }
+
+  const parts = text.trim().split(/\s+/);
+  const account = parts[1];
+  const minusDays = Number(parts[2]);
+
+  if (!account || !minusDays) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "格式錯誤\n\n範例：\n減VIP tel690723 7",
+    });
+  }
+
+  const { data } = await supabase
+    .from("vip_users")
+    .select("*")
+    .eq("account", account)
+    .maybeSingle();
+
+  if (!data) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "查無此VIP帳號",
+    });
+  }
+
+  const newExpireTime = Number(data.expire_time) - minusDays * 86400000;
+
+  await supabase
+    .from("vip_users")
+    .update({
+      expire_time: newExpireTime,
+    })
+    .eq("account", account);
+
+  const remainDays = Math.max(
+    0,
+    Math.ceil((newExpireTime - Date.now()) / 86400000)
+  );
+
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: `━━━━━━━━━━
+➖ VIP時間已扣除
+━━━━━━━━━━
+
+3A帳號：
+${account}
+
+扣除：
+${minusDays} 天
+
+目前剩餘：
+${remainDays} 天
+
+到期時間：
+${twTime(newExpireTime)}`,
+  });
+}
+
   if (text.startsWith("刪除VIP ")) {
     if (!ADMIN_UIDS.includes(uid)) {
       return client.replyMessage(event.replyToken, {
