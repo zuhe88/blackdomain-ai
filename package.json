@@ -1,25 +1,26 @@
 {
   "name": "blackdomain-ai",
-  "version": "1.0.0",
-  "description": "BLACKDOMAIN AI LINE BOT",
+  "version": "3.0.0",
+  "description": "BLACKDOMAIN AI V3 FINAL",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "engines": {
-    "node": ">=20 <21"
+    "node": ">=22"
   },
   "dependencies": {
     "@line/bot-sdk": "^9.5.0",
-    "@supabase/supabase-js": "^2.49.4",
-    "axios": "^1.7.2",
-    "cheerio": "^1.0.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "node-fetch": "^2.7.0",
-    "openai": "^5.12.2",
-    "socket.io-client": "^2.5.0",
-    "ws": "^8.18.0"
+    "@supabase/supabase-js": "^2.56.0",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "luxon": "^3.7.1",
+    "node-cache": "^5.1.2",
+    "openai": "^5.10.2",
+    "pino": "^9.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }
